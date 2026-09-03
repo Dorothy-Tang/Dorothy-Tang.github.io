@@ -1813,6 +1813,9 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     function isGrossTabletop() {
         return [ "2", "3", "4", "67" ].includes(state.level);
     }
+    function needsGrossPoseInference() {
+        return isGrossTabletop() && !isLevel6();
+    }
     function isShoulderFlexionLevel() {
         return "3" === state.level || "4" === state.level;
     }
@@ -3313,7 +3316,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                 shoulderFlexionController.setExerciseMode(state.shoulderExerciseMode), shoulderFlexionState = shoulderFlexionController.snapshot()), 
                 level4Wipe.reset(), level4DimSumCycle.reset(), level4MiniGames.reset(), level4UpdateCalibrationBar(), 
                 level3RoundVariant = null, level3PreviousVariantType = "", (isLevel3Tabletop() || isShoulderFlexionLevel()) && chooseLevel3RoundVariant(), 
-                isGrossTabletop() && ensurePoseLandmarker().catch(() => null), isLevel6ToolGestureTask() && ensureHandLandmarker().catch(() => null), 
+                needsGrossPoseInference() && ensurePoseLandmarker().catch(() => null), isLevel6() && ensureHandLandmarker().catch(() => null),
                 timeLeft = state.duration, updateHUD(), resizeGameCanvas();
                 const gameStage = document.querySelector(".game-stage");
                 if (state.selfieMode = !1, syncGameBackgroundMode(), gameStage && gameStage.classList.toggle("level4-selfie-window", isLevel4WipeGame()), 
@@ -5643,7 +5646,14 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         hideTargetHoldCountdown(), shoulderHoldSpokenSecond = null;
     }
     function resizeGameCanvas() {
-        const stage = document.querySelector(".game-stage"), w = Math.round(stage.clientWidth || window.innerWidth || 390), h = Math.round(stage.clientHeight || window.innerHeight || 844);
+        const stage = document.querySelector(".game-stage"), backing = function(width, height) {
+            const w = Math.max(1, Math.round(Number(width) || 1)), h = Math.max(1, Math.round(Number(height) || 1)), edgeScale = Math.min(1, PUBLIC_CANVAS_MAX_EDGE / Math.max(w, h)), pixelScale = Math.min(1, Math.sqrt(PUBLIC_CANVAS_MAX_PIXELS / (w * h))), scale = Math.min(edgeScale, pixelScale);
+            return {
+                width: Math.max(1, Math.round(w * scale)),
+                height: Math.max(1, Math.round(h * scale)),
+                scale: scale
+            };
+        }(Math.round(stage.clientWidth || window.innerWidth || 390), Math.round(stage.clientHeight || window.innerHeight || 844)), w = backing.width, h = backing.height;
         if (gameCanvas.width === w && gameCanvas.height === h) return;
         const oldVase = void 0 !== flowers && flowers.layout && flowers.layout.vase ? {
             ...flowers.layout.vase
@@ -5662,6 +5672,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             });
         }
     }
+    const PUBLIC_CANVAS_MAX_EDGE = 1600, PUBLIC_CANVAS_MAX_PIXELS = 144e4;
     function isPortrait() {
         return gameCanvas.height > gameCanvas.width;
     }
@@ -6087,7 +6098,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                         state.qaMode || frame.fresh || resetHandFrameAdmission();
                         const productionFrameFresh = !state.qaMode && frame.fresh;
                         let detectedPose = null;
-                        isGrossTabletop() && (state.qaMode ? grossPose = qaHand?.poseLm : productionFrameFresh && (detectedPose = detectPose(gameVideo, frame.generation), 
+                        needsGrossPoseInference() && (state.qaMode ? grossPose = qaHand?.poseLm : productionFrameFresh && (detectedPose = detectPose(gameVideo, frame.generation),
                         grossPose = detectedPose || (lastPoseFrameGeneration === frame.generation ? lastPoseLm : null)));
                         const level3Motion = function(lm, frame) {
                             if (!isLevel2HorizontalAbduction()) return level3Lateral;
@@ -6129,7 +6140,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                             basicContactUntil && (basicContactUntil += pausedFor), detectedGestureState.candidateAt && (detectedGestureState.candidateAt += pausedFor), 
                             interactionTrackingPauseAt = 0;
                         }(now);
-                        const res = isGrossTabletop() && !isLevel6ToolGestureTask() ? function(lm) {
+                        const res = needsGrossPoseInference() ? function(lm) {
                             if (state.qaMode && qaHand && !Array.isArray(lm)) return {
                                 detected: !0,
                                 nx: qaHand.nx,
@@ -6232,7 +6243,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                 const visualProgress = clamp01(Number(shoulderMotion.progress) || 0);
                                 mapped.y = ch * (.8 - .48 * visualProgress);
                             }
-                            const publicLevel5Realtime = "5" === state.level, stablePoint = publicLevel5Realtime ? {
+                            const publicLevel56Realtime = "5" === state.level || "67" === state.level, stablePoint = publicLevel56Realtime ? {
                                 x: mapped.x,
                                 y: mapped.y
                             } : function(x, y) {
@@ -6247,7 +6258,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                     y: medianValue(trackingPointHistory.map(point => point.y))
                                 };
                             }(mapped.x, mapped.y), px = stablePoint.x, py = stablePoint.y;
-                            if (publicLevel5Realtime) dotEmaX = px, dotEmaY = py; else if (dotEmaX < 0) dotEmaX = px, 
+                            if (publicLevel56Realtime) dotEmaX = px, dotEmaY = py; else if (dotEmaX < 0) dotEmaX = px,
                             dotEmaY = py; else {
                                 const dx = px - dotEmaX, dy = py - dotEmaY, movement = Math.hypot(dx, dy);
                                 if (movement > TRACKING_DEAD_ZONE_PX) {
@@ -10256,7 +10267,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
 <script src="level4-three-games-module.js"></script>
 <script>
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
-  const LEVEL_APP_BUILD = "v96-20260903-level5-6-detection-robustness";
+  const LEVEL_APP_BUILD = "v97-20260903-level5-6-low-latency";
   const levelAppHadController = Boolean(navigator.serviceWorker.controller);
   let levelAppReloading = false;
 
