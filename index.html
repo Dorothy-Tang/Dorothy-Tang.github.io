@@ -163,6 +163,10 @@ html[data-screen="game"] .language-switcher{ top:max(68px,calc(env(safe-area-ins
 }
 .calib-wrap video{ transform:scaleX(-1); }
 .calib-wrap canvas{ pointer-events:none; transform:none; }
+/* v99 privacy blur: the live video is hidden and the overlay canvas repaints a
+   heavily downscaled copy (soft blur) plus a sharp window around the tracked
+   hand only, so other patients in the ward are never shown clearly. */
+.calib-wrap.privacy-blur video{ opacity:0; }
 .calib-controls{
   display:flex; flex-direction:column; align-items:stretch;
   width:min(520px,100%); min-width:0;
@@ -1306,6 +1310,14 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
           <button class="option-btn" data-side="right" data-testid="button-affected-right">右患側</button>
         </div>
         <p id="affectedSideError" style="min-height:20px;margin:8px 0 0;color:#a1261b;font-weight:800;text-align:center;"></p>
+        <div id="handCheckBlock" hidden>
+          <p class="settings-sub-label" style="margin:6px 0 6px;font-weight:800;">左右手檢查</p>
+          <div class="option-row" id="handCheckOptions" role="group" aria-label="左右手檢查">
+            <button class="option-btn selected" data-check="on" data-testid="button-handcheck-on" aria-pressed="true">開（預設）</button>
+            <button class="option-btn" data-check="off" data-testid="button-handcheck-off" aria-pressed="false">關</button>
+          </div>
+          <p id="handCheckNote" data-testid="text-handcheck-note" style="margin:8px 0 0;font-size:14px;line-height:1.5;color:#4a4a4a;"></p>
+        </div>
       </div>
     </div>
     <div class="card collapsible" id="shoulderExerciseModeCard" data-accordion="shoulder-exercise-mode" hidden>
@@ -1491,6 +1503,8 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
       </div>
       <button class="btn-secondary" id="btnMirrorX" type="button"
         style="padding:9px;margin-top:8px;">左右反轉</button>
+      <button class="btn-secondary" id="btnPrivacyBlur" type="button" data-testid="button-privacy-blur"
+        aria-pressed="true" style="padding:9px;margin-top:8px;">背景模糊：開</button>
       <div class="calib-checklist" id="calibChecklist" hidden>
         <span id="calibDetectCheck">○ 偵測</span>
         <span id="calibOpenCheck">○ 張手</span>
@@ -1740,6 +1754,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         level6LockedTheme: "",
         graspType: "any",
         affectedSide: "",
+        handednessCheck: !0,
         qaMode: !1,
         calibration: {
             detectedStart: 0,
@@ -1764,6 +1779,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         personalToolPinch: null,
         personalChopstickFlex: null,
         mirrorX: !0,
+        privacyBlur: !0,
         selfieMode: !1,
         sessionMode: "training",
         level4SessionThemes: [ "bilateral" ],
@@ -2750,8 +2766,8 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                 document.getElementById("settingsContext").textContent = currentLevel().tag + " · " + th.title + " · " + th.actionLabelFor(state.level) + (shoulderExerciseModeAvailable() ? " · " + shoulderExerciseProfile().label : "");
                 const setupGuide = document.getElementById("cameraSetupGuide");
                 setupGuide && (setupGuide.textContent = "2" === state.level ? "相機：患側前斜約 45°；肩、肘、腕及桌面入鏡。" : "3" === state.level || "4" === state.level ? "相機：橫放，患側前斜約 30–45°；軀幹及全臂入鏡。" : "相機：患手及手指入鏡。"), 
-                renderShoulderExerciseModeSettings(), renderShoulderTargetSettings(), renderLaundryDifficultySettings(), 
-                renderDimsumDifficultySettings(), renderTimingSettings();
+                renderShoulderExerciseModeSettings(), renderHandCheckSettings(), renderShoulderTargetSettings(), 
+                renderLaundryDifficultySettings(), renderDimsumDifficultySettings(), renderTimingSettings();
                 const go = document.getElementById("btnGoCalib");
                 go && (go.textContent = isShoulderFlexionLevel() ? "開始追蹤" : "相機校準"), renderLevel4ScenarioDemo(), 
                 showScreen("start");
@@ -2765,6 +2781,50 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                 }), syncBar(), grid.appendChild(bar);
             }
         });
+    }
+    btnSessionRestResume && btnSessionRestResume.addEventListener("click", () => {
+        endRest();
+    }), document.getElementById("btnBackToLevel").addEventListener("click", () => exitToLevelSelection()), 
+    document.getElementById("btnBackToLibrary").addEventListener("click", () => {
+        renderActivityLibrary(), showScreen("library");
+    }), document.getElementById("durationOptions").addEventListener("click", e => {
+        const btn = e.target.closest(".option-btn");
+        btn && (document.querySelectorAll("#durationOptions .option-btn").forEach(b => b.classList.remove("selected")), 
+        btn.classList.add("selected"), state.duration = parseInt(btn.dataset.duration));
+    }), document.getElementById("dwellOptions").addEventListener("click", e => {
+        const btn = e.target.closest(".option-btn");
+        btn && (document.querySelectorAll("#dwellOptions .option-btn").forEach(b => b.classList.remove("selected")), 
+        btn.classList.add("selected"), state.dwellMs = parseInt(btn.dataset.dwell), renderTimingSettings());
+    }), document.getElementById("targetHoldOptions").addEventListener("click", e => {
+        const btn = e.target.closest("[data-target-hold]");
+        if (!btn) return;
+        const value = Number(btn.dataset.targetHold);
+        [ 0, 1e3, 2e3, 3e3, 4e3, 5e3 ].includes(value) && (state.dwellMs = value, renderTimingSettings());
+    }), document.getElementById("fontOptions").addEventListener("click", e => {
+        const btn = e.target.closest(".option-btn");
+        btn && (document.querySelectorAll("#fontOptions .option-btn").forEach(b => b.classList.remove("selected")), 
+        btn.classList.add("selected"), state.labelFont = parseInt(btn.dataset.font));
+    }), document.getElementById("affectedSideOptions").addEventListener("click", e => {
+        const btn = e.target.closest(".option-btn");
+        if (!btn) return;
+        document.querySelectorAll("#affectedSideOptions .option-btn").forEach(b => b.classList.remove("selected")), 
+        btn.classList.add("selected"), state.affectedSide = btn.dataset.side, document.getElementById("preview-affected-side").textContent = "right" === state.affectedSide ? "右患側" : "左患側", 
+        document.getElementById("affectedSideError").textContent = "";
+        const goCalibError = document.getElementById("goCalibError");
+        goCalibError && (goCalibError.textContent = "");
+    });
+    const HAND_CHECK_NOTE_ON = "預設：只接納患側手。校準後會鎖定病人隻手繼續追蹤，標籤不穩定時亦不會突然跳去其他手。", HAND_CHECK_NOTE_OFF = "關閉後畫面內任何一隻手都可以操作（仍會優先鎖定校準時嗰隻手）。只適合認知清醒、明白要用患側手、而且治療師在旁監督嘅病人。";
+    function renderHandCheckSettings() {
+        const block = document.getElementById("handCheckBlock");
+        if (!block) return;
+        block.hidden = !("5" === state.level || "67" === state.level);
+        const on = !1 !== state.handednessCheck;
+        document.querySelectorAll("#handCheckOptions .option-btn").forEach(b => {
+            const selected = "on" === b.dataset.check === on;
+            b.classList.toggle("selected", selected), b.setAttribute("aria-pressed", selected ? "true" : "false");
+        });
+        const note = document.getElementById("handCheckNote");
+        note && (note.textContent = on ? HAND_CHECK_NOTE_ON : HAND_CHECK_NOTE_OFF, note.style.color = on ? "#4a4a4a" : "#8a2f0a");
     }
     function updatePreview(id, text) {
         const el = document.getElementById(id);
@@ -2837,6 +2897,21 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                 calibCanvas.width !== rectW && (calibCanvas.width = rectW), calibCanvas.height !== rectH && (calibCanvas.height = rectH);
                 const ctx = calibCanvas.getContext("2d");
                 ctx.clearRect(0, 0, rectW, rectH);
+                const privacyOn = privacyBlurEnabled();
+                privacyOn && function(ctx, video, rectW, rectH) {
+                    if (!(video && video.readyState >= 2 && video.videoWidth > 0)) return !1;
+                    const cover = privacyCoverRect(video, rectW, rectH);
+                    privacyBlurSmall || (privacyBlurSmall = document.createElement("canvas"), privacyBlurMid = document.createElement("canvas"));
+                    const sw = PRIVACY_BLUR_SMALL_W, sh = Math.max(2, Math.round(sw * cover.dh / cover.dw)), mw = PRIVACY_BLUR_MID_W, mh = Math.max(2, Math.round(mw * cover.dh / cover.dw));
+                    privacyBlurSmall.width === sw && privacyBlurSmall.height === sh || (privacyBlurSmall.width = sw, 
+                    privacyBlurSmall.height = sh), privacyBlurMid.width === mw && privacyBlurMid.height === mh || (privacyBlurMid.width = mw, 
+                    privacyBlurMid.height = mh);
+                    const sctx = privacyBlurSmall.getContext("2d"), mctx = privacyBlurMid.getContext("2d");
+                    sctx.imageSmoothingEnabled = !0, mctx.imageSmoothingEnabled = !0, sctx.drawImage(video, 0, 0, sw, sh), 
+                    mctx.drawImage(privacyBlurSmall, 0, 0, mw, mh), ctx.save(), ctx.imageSmoothingEnabled = !0, 
+                    state.mirrorX && (ctx.translate(rectW, 0), ctx.scale(-1, 1)), ctx.drawImage(privacyBlurMid, cover.dx, cover.dy, cover.dw, cover.dh), 
+                    ctx.restore(), ctx.fillStyle = "rgba(20,32,40,0.22)", ctx.fillRect(0, 0, rectW, rectH);
+                }(ctx, video, rectW, rectH);
                 const frame = level4FrameStatus(video);
                 let res;
                 try {
@@ -2862,7 +2937,37 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                 }
                 if (res.detected) {
                     if (document.getElementById("pixelCount").textContent = isShoulderFlexionLevel() ? "✅ 偵測到已選患側肩及手肘" : "✅ 偵測到手部", 
-                    isGraspStyleMode()) {
+                    privacyOn) {
+                        let windowPts = null;
+                        if (isGrossTabletop() && Array.isArray(res.lm) && res.lm.length > 16) {
+                            const left = "left" === activeAffectedSide();
+                            windowPts = [ res.lm[left ? 11 : 12], res.lm[left ? 13 : 14], res.lm[left ? 15 : 16] ];
+                        } else windowPts = Array.isArray(res.lm) && res.lm.length >= 21 ? res.lm : [ {
+                            x: state.mirrorX ? 1 - res.nx : res.nx,
+                            y: res.ny
+                        } ];
+                        !function(ctx, video, rectW, rectH, points) {
+                            if (!(video && video.readyState >= 2 && video.videoWidth > 0)) return null;
+                            const pts = (points || []).filter(p => p && Number.isFinite(p.x) && Number.isFinite(p.y));
+                            if (!pts.length) return null;
+                            const cover = privacyCoverRect(video, rectW, rectH);
+                            let minX = 1, maxX = 0, minY = 1, maxY = 0;
+                            for (const p of pts) {
+                                const u = state.mirrorX ? 1 - p.x : p.x;
+                                minX = Math.min(minX, u), maxX = Math.max(maxX, u), minY = Math.min(minY, p.y), 
+                                maxY = Math.max(maxY, p.y);
+                            }
+                            let x0 = cover.dx + minX * cover.dw, x1 = cover.dx + maxX * cover.dw, y0 = cover.dy + minY * cover.dh, y1 = cover.dy + maxY * cover.dh;
+                            const minSide = Math.min(rectW, rectH) * PRIVACY_WINDOW_MIN, padX = Math.max((x1 - x0) * PRIVACY_WINDOW_PAD, (minSide - (x1 - x0)) / 2, 18), padY = Math.max((y1 - y0) * PRIVACY_WINDOW_PAD, (minSide - (y1 - y0)) / 2, 18);
+                            x0 -= padX, x1 += padX, y0 -= padY, y1 += padY;
+                            const w = x1 - x0, h = y1 - y0, r = Math.min(26, w / 2, h / 2);
+                            ctx.save(), rrPath(ctx, x0, y0, w, h, r), ctx.clip(), ctx.imageSmoothingEnabled = !0, 
+                            state.mirrorX && (ctx.translate(rectW, 0), ctx.scale(-1, 1)), ctx.drawImage(video, cover.dx, cover.dy, cover.dw, cover.dh), 
+                            ctx.restore(), ctx.save(), ctx.lineWidth = 3, ctx.strokeStyle = "rgba(255,255,255,0.85)", 
+                            rrPath(ctx, x0, y0, w, h, r), ctx.stroke(), ctx.restore();
+                        }(ctx, video, rectW, rectH, windowPts);
+                    }
+                    if (isGraspStyleMode()) {
                         const now = nowMs(), c = state.calibration, thresholds = state;
                         if (c.lastSeenAt = now, c.detectedStart || (c.detectedStart = now), !c.detectedDone && now - c.detectedStart >= 800 && (c.detectedDone = !0), 
                         isGraspStyleMode()) {
@@ -2987,36 +3092,10 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             name: "ModelLoadError"
         }, cameraErrorContext);
     }
-    btnSessionRestResume && btnSessionRestResume.addEventListener("click", () => {
-        endRest();
-    }), document.getElementById("btnBackToLevel").addEventListener("click", () => exitToLevelSelection()), 
-    document.getElementById("btnBackToLibrary").addEventListener("click", () => {
-        renderActivityLibrary(), showScreen("library");
-    }), document.getElementById("durationOptions").addEventListener("click", e => {
+    document.getElementById("handCheckOptions").addEventListener("click", e => {
         const btn = e.target.closest(".option-btn");
-        btn && (document.querySelectorAll("#durationOptions .option-btn").forEach(b => b.classList.remove("selected")), 
-        btn.classList.add("selected"), state.duration = parseInt(btn.dataset.duration));
-    }), document.getElementById("dwellOptions").addEventListener("click", e => {
-        const btn = e.target.closest(".option-btn");
-        btn && (document.querySelectorAll("#dwellOptions .option-btn").forEach(b => b.classList.remove("selected")), 
-        btn.classList.add("selected"), state.dwellMs = parseInt(btn.dataset.dwell), renderTimingSettings());
-    }), document.getElementById("targetHoldOptions").addEventListener("click", e => {
-        const btn = e.target.closest("[data-target-hold]");
-        if (!btn) return;
-        const value = Number(btn.dataset.targetHold);
-        [ 0, 1e3, 2e3, 3e3, 4e3, 5e3 ].includes(value) && (state.dwellMs = value, renderTimingSettings());
-    }), document.getElementById("fontOptions").addEventListener("click", e => {
-        const btn = e.target.closest(".option-btn");
-        btn && (document.querySelectorAll("#fontOptions .option-btn").forEach(b => b.classList.remove("selected")), 
-        btn.classList.add("selected"), state.labelFont = parseInt(btn.dataset.font));
-    }), document.getElementById("affectedSideOptions").addEventListener("click", e => {
-        const btn = e.target.closest(".option-btn");
-        if (!btn) return;
-        document.querySelectorAll("#affectedSideOptions .option-btn").forEach(b => b.classList.remove("selected")), 
-        btn.classList.add("selected"), state.affectedSide = btn.dataset.side, document.getElementById("preview-affected-side").textContent = "right" === state.affectedSide ? "右患側" : "左患側", 
-        document.getElementById("affectedSideError").textContent = "";
-        const goCalibError = document.getElementById("goCalibError");
-        goCalibError && (goCalibError.textContent = "");
+        var on;
+        btn && (on = "off" !== btn.dataset.check, state.handednessCheck = !1 !== on, renderHandCheckSettings());
     }), document.getElementById("shoulderTargetOptions").addEventListener("click", e => {
         const button = e.target.closest("[data-shoulder-target]");
         if (!button) return;
@@ -3027,7 +3106,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         button && function(mode) {
             if (!shoulderExerciseModeAvailable() || !SHOULDER_EXERCISE_MODES[mode]) return !1;
             state.shoulderExerciseMode = mode, shoulderFlexionController && shoulderFlexionController.setExerciseMode(mode), 
-            renderShoulderExerciseModeSettings();
+            renderShoulderExerciseModeSettings(), renderHandCheckSettings();
             const context = document.getElementById("settingsContext");
             if (context) {
                 const th = getTheme();
@@ -3164,7 +3243,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         }
     }
     function waitForLiveCameraFrame(videoEl, timeoutMs = 1800) {
-        level4VideoFreshness?.start(videoEl), resetGamePoseFrameAdmission(), resetHandFrameAdmission(), 
+        level4VideoFreshness?.start(videoEl), resetGamePoseFrameAdmission(), resetHandAdmissionAndLock(), 
         resetPublicGameWorkAdmission();
         const decodedReady = () => {
             const frame = level4FrameStatus(videoEl);
@@ -3310,11 +3389,11 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                     candidateAt: 0
                 }, interactionTrackingPauseAt = 0, resetHandFrameAdmission(), resetPublicGameWorkAdmission(), 
                 handAdmitDiag.rejected = 0, handAdmitDiag.strict = 0, handAdmitDiag.continuity = 0, 
-                handAdmitDiag.lone = 0, framePerf.trackMs = 0, framePerf.renderMs = 0, framePerf.frameMs = 0, 
-                framePerf.fps = 0, framePerf.samples = 0, framePerf.longFrames = 0, framePerf.lastAt = 0, 
-                cursorX = -1, cursorY = -1, dotEmaX = -1, dotEmaY = -1, handDetected = !1, posHistory = [], 
-                trackingPointHistory = [], level3Lateral.reset(), level2LateralLastTargetHit = 0, 
-                level4Reach.reset(), shoulderFlexionController && (shoulderFlexionController.reset(state.level, state.shoulderTargetDeg), 
+                handAdmitDiag.lone = 0, handAdmitDiag.sizeRejected = 0, handAdmitDiag.farRejected = 0, 
+                framePerf.trackMs = 0, framePerf.renderMs = 0, framePerf.frameMs = 0, framePerf.fps = 0, 
+                framePerf.samples = 0, framePerf.longFrames = 0, framePerf.lastAt = 0, cursorX = -1, 
+                cursorY = -1, dotEmaX = -1, dotEmaY = -1, handDetected = !1, posHistory = [], trackingPointHistory = [], 
+                level3Lateral.reset(), level2LateralLastTargetHit = 0, level4Reach.reset(), shoulderFlexionController && (shoulderFlexionController.reset(state.level, state.shoulderTargetDeg), 
                 shoulderFlexionController.setTarget(state.shoulderTargetDeg, state.level), shoulderFlexionController.setHoldDuration(isShoulderFlexionLevel() ? Number(state.dwellMs) / 1e3 : 0), 
                 shoulderFlexionController.setExerciseMode(state.shoulderExerciseMode), shoulderFlexionState = shoulderFlexionController.snapshot()), 
                 level4Wipe.reset(), level4DimSumCycle.reset(), level4MiniGames.reset(), level4UpdateCalibrationBar(), 
@@ -3677,7 +3756,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         }
     }
     function stopCamera(release = !1) {
-        level4VideoFreshness?.stop(), resetGamePoseFrameAdmission(), resetHandFrameAdmission(), 
+        level4VideoFreshness?.stop(), resetGamePoseFrameAdmission(), resetHandAdmissionAndLock(), 
         resetPublicGameWorkAdmission(), release && state.stream && (state.stream.getTracks().forEach(t => t.stop()), 
         state.stream = null);
     }
@@ -3719,18 +3798,27 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             video: null,
             generation: null,
             result: null
-        }, lastAcceptedToolHandGeneration = -1, affectedHandTrack = {
+        }, lastAcceptedToolHandGeneration = -1, resetAffectedHandTrack();
+    }
+    function resetHandAdmissionAndLock() {
+        resetHandFrameAdmission(), handLock = {
             x: NaN,
             y: NaN,
+            size: NaN,
             at: 0
-        }, loneOppositeSince = 0;
+        }, farHandSince = 0, sizeRejectSince = 0, resetAffectedHandTrack();
     }
-    const AFFECTED_HAND_TRACK_MS = 1500, AFFECTED_HAND_TRACK_DIST = .16, AFFECTED_HAND_OPPOSITE_REJECT = .8, LONE_HAND_ADMIT_MS = 1e3;
+    const AFFECTED_HAND_TRACK_MS = 1500, AFFECTED_HAND_TRACK_DIST = .16, AFFECTED_HAND_OPPOSITE_REJECT = .8, LONE_HAND_ADMIT_MS = 1e3, HAND_LOCK_SIZE_MIN_RATIO = .55, HAND_LOCK_SIZE_MAX_RATIO = 1.9, HAND_LOCK_FAR_DIST = .3, HAND_LOCK_REACQUIRE_MS = 400, HAND_LOCK_SIZE_FORGET_MS = 3e3, HAND_LOCK_SIZE_EMA = .15;
     let affectedHandTrack = {
         x: NaN,
         y: NaN,
         at: 0
-    }, loneOppositeSince = 0;
+    }, handLock = {
+        x: NaN,
+        y: NaN,
+        size: NaN,
+        at: 0
+    }, loneOppositeSince = 0, farHandSince = 0, sizeRejectSince = 0;
     const handAdmitDiag = {
         hands: 0,
         label: "",
@@ -3739,10 +3827,37 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         rejected: 0,
         strict: 0,
         continuity: 0,
-        lone: 0
+        lone: 0,
+        sizeRejected: 0,
+        farRejected: 0,
+        lockSize: 0,
+        check: "on"
     };
+    function resetAffectedHandTrack() {
+        affectedHandTrack = {
+            x: NaN,
+            y: NaN,
+            at: 0
+        }, loneOppositeSince = 0;
+    }
     function affectedHandContinuityEnabled() {
         return "5" === state.level || "67" === state.level;
+    }
+    function handLockEnabled() {
+        return affectedHandContinuityEnabled();
+    }
+    function handSpanOf(lm) {
+        const wrist = lm?.[0], ref = lm?.[9] || lm?.[5];
+        if (!(wrist && ref && Number.isFinite(wrist.x) && Number.isFinite(wrist.y) && Number.isFinite(ref.x) && Number.isFinite(ref.y))) return NaN;
+        const d = Math.hypot(ref.x - wrist.x, ref.y - wrist.y);
+        return d > 0 ? d : NaN;
+    }
+    function handSizeAdmissible(lm) {
+        if (!Number.isFinite(handLock.size)) return !0;
+        const span = handSpanOf(lm);
+        if (!Number.isFinite(span)) return !0;
+        const ratio = span / handLock.size;
+        return ratio >= HAND_LOCK_SIZE_MIN_RATIO && ratio <= HAND_LOCK_SIZE_MAX_RATIO;
     }
     function isAppleTouchDevice() {
         return /iPad|iPhone|iPod/.test(navigator.userAgent) || "MacIntel" === navigator.platform && navigator.maxTouchPoints > 1;
@@ -3808,57 +3923,91 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             return point && Number.isFinite(point.x) && Number.isFinite(point.y) && Number.isFinite(point.z);
         });
     }
-    function mediaPipeAnatomicalHand(results, index, inputMirrored = !1) {
-        const groups = results && (results.handednesses || results.handedness), category = Array.isArray(groups?.[index]) ? groups[index][0] : null, raw = String(category?.categoryName || category?.displayName || "").toLowerCase();
-        return "left" !== raw && "right" !== raw ? null : inputMirrored ? "left" === raw ? "right" : "left" : raw;
-    }
     function interpretHandResults(results, inputMirrored = !1, videoEl = null) {
         if (results && results.landmarks && results.landmarks.length > 0) {
             const selectedHandIndex = function(results, inputMirrored = !1) {
-                const landmarks = Array.isArray(results?.landmarks) ? results.landmarks : [], affected = activeAffectedSide();
-                let selected = -1, selectedConfidence = -1 / 0, admitPath = "";
-                1 !== landmarks.length && (loneOppositeSince = 0);
-                for (let index = 0; index < landmarks.length; index++) {
-                    if (mediaPipeAnatomicalHand(results, index, inputMirrored) !== affected) continue;
-                    const groups = results.handednesses || results.handedness, confidence = Number(groups?.[index]?.[0]?.score);
-                    !Number.isFinite(confidence) || confidence < .55 || (selected < 0 || Number.isFinite(confidence) && confidence > selectedConfidence) && (selected = index, 
-                    selectedConfidence = Number.isFinite(confidence) ? confidence : selectedConfidence, 
-                    admitPath = "strict");
-                }
-                if (selected < 0 && affectedHandContinuityEnabled() && Number.isFinite(affectedHandTrack.x) && nowMs() - affectedHandTrack.at <= AFFECTED_HAND_TRACK_MS) {
-                    const groups = results.handednesses || results.handedness;
-                    let bestDistance = 1 / 0;
-                    for (let index = 0; index < landmarks.length; index++) {
-                        const wrist = landmarks[index]?.[0];
-                        if (!wrist || !Number.isFinite(wrist.x) || !Number.isFinite(wrist.y)) continue;
-                        const side = mediaPipeAnatomicalHand(results, index, inputMirrored), confidence = Number(groups?.[index]?.[0]?.score);
-                        if (side && side !== affected && Number.isFinite(confidence) && confidence >= AFFECTED_HAND_OPPOSITE_REJECT) continue;
-                        const dist = Math.hypot(wrist.x - affectedHandTrack.x, wrist.y - affectedHandTrack.y);
+                const allLandmarks = Array.isArray(results?.landmarks) ? results.landmarks : [], affected = activeAffectedSide(), groups = results?.handednesses || results?.handedness, lockOn = handLockEnabled(), checkOff = handLockEnabled() && !1 === state.handednessCheck, now = nowMs();
+                let eligible = [], sizeRejected = 0;
+                for (let index = 0; index < allLandmarks.length; index++) !lockOn || handSizeAdmissible(allLandmarks[index]) ? eligible.push(index) : sizeRejected++;
+                lockOn && allLandmarks.length && !eligible.length ? (sizeRejectSince || (sizeRejectSince = now), 
+                now - sizeRejectSince >= HAND_LOCK_SIZE_FORGET_MS && (handLock.size = NaN, sizeRejectSince = 0, 
+                eligible = allLandmarks.map((_, index) => index), sizeRejected = 0)) : sizeRejectSince = 0;
+                const distTo = (index, ref) => {
+                    const w = (index => allLandmarks[index]?.[0])(index);
+                    return w && Number.isFinite(w.x) && Number.isFinite(w.y) && Number.isFinite(ref?.x) ? Math.hypot(w.x - ref.x, w.y - ref.y) : 1 / 0;
+                }, sideOf = index => function(results, index, inputMirrored = !1) {
+                    const groups = results && (results.handednesses || results.handedness), category = Array.isArray(groups?.[index]) ? groups[index][0] : null, raw = String(category?.categoryName || category?.displayName || "").toLowerCase();
+                    return "left" !== raw && "right" !== raw ? null : inputMirrored ? "left" === raw ? "right" : "left" : raw;
+                }(results, index, inputMirrored), confOf = index => Number(groups?.[index]?.[0]?.score), confidentOpposite = (index, floor) => {
+                    const side = sideOf(index), c = confOf(index);
+                    return !!side && side !== affected && Number.isFinite(c) && c >= floor;
+                }, trackFresh = Number.isFinite(affectedHandTrack.x) && now - affectedHandTrack.at <= AFFECTED_HAND_TRACK_MS, nearestToTrack = allowOpposite => {
+                    let best = -1, bestDistance = 1 / 0;
+                    for (const index of eligible) {
+                        if (!allowOpposite && confidentOpposite(index, AFFECTED_HAND_OPPOSITE_REJECT)) continue;
+                        const dist = distTo(index, affectedHandTrack);
                         dist <= AFFECTED_HAND_TRACK_DIST && dist < bestDistance && (bestDistance = dist, 
-                        selected = index, admitPath = "continuity");
+                        best = index);
                     }
+                    return best;
+                };
+                let selected = -1, selectedConfidence = -1 / 0, admitPath = "";
+                if (1 !== eligible.length && (loneOppositeSince = 0), checkOff) {
+                    if (trackFresh && (selected = nearestToTrack(!0), selected >= 0 && (admitPath = "continuity")), 
+                    selected < 0 && 1 === eligible.length && (selected = eligible[0], admitPath = "lone"), 
+                    selected < 0 && eligible.length > 1 && Number.isFinite(handLock.x)) {
+                        let bestDistance = 1 / 0;
+                        for (const index of eligible) {
+                            const dist = distTo(index, handLock);
+                            dist <= HAND_LOCK_FAR_DIST && dist < bestDistance && (bestDistance = dist, selected = index, 
+                            admitPath = "continuity");
+                        }
+                    }
+                } else {
+                    for (const index of eligible) {
+                        if (sideOf(index) !== affected) continue;
+                        const confidence = confOf(index);
+                        !Number.isFinite(confidence) || confidence < .55 || (selected < 0 || Number.isFinite(confidence) && confidence > selectedConfidence) && (selected = index, 
+                        selectedConfidence = Number.isFinite(confidence) ? confidence : selectedConfidence, 
+                        admitPath = "strict");
+                    }
+                    if (lockOn && selected >= 0 && trackFresh && eligible.length > 1 && distTo(selected, affectedHandTrack) > HAND_LOCK_FAR_DIST) {
+                        const near = nearestToTrack(!1);
+                        near >= 0 && near !== selected && (selected = near, admitPath = "continuity");
+                    }
+                    if (selected < 0 && affectedHandContinuityEnabled() && trackFresh && (selected = nearestToTrack(!1), 
+                    selected >= 0 && (admitPath = "continuity")), selected < 0 && affectedHandContinuityEnabled() && 1 === eligible.length) {
+                        const only = eligible[0];
+                        confidentOpposite(only, .55) ? (loneOppositeSince || (loneOppositeSince = now), 
+                        now - loneOppositeSince >= LONE_HAND_ADMIT_MS && (selected = only, admitPath = "lone")) : (loneOppositeSince = 0, 
+                        selected = only, admitPath = "lone");
+                    } else 1 === eligible.length && (loneOppositeSince = 0);
                 }
-                if (selected < 0 && affectedHandContinuityEnabled() && 1 === landmarks.length) {
-                    const groups = results.handednesses || results.handedness, side = mediaPipeAnatomicalHand(results, 0, inputMirrored), confidence = Number(groups?.[0]?.[0]?.score);
-                    side && side !== affected && Number.isFinite(confidence) && confidence >= .55 ? (loneOppositeSince || (loneOppositeSince = nowMs()), 
-                    nowMs() - loneOppositeSince >= LONE_HAND_ADMIT_MS && (selected = 0, admitPath = "lone")) : (loneOppositeSince = 0, 
-                    selected = 0, admitPath = "lone");
-                } else 1 === landmarks.length && (loneOppositeSince = 0);
+                let farRejected = !1;
+                lockOn && selected >= 0 && "continuity" !== admitPath && !trackFresh && Number.isFinite(handLock.x) && distTo(selected, handLock) > HAND_LOCK_FAR_DIST ? (farHandSince || (farHandSince = now), 
+                now - farHandSince < HAND_LOCK_REACQUIRE_MS && (selected = -1, admitPath = "", farRejected = !0)) : farHandSince = 0;
                 {
-                    const groups = results?.handednesses || results?.handedness, idx = selected >= 0 ? selected : 0;
-                    handAdmitDiag.hands = landmarks.length, handAdmitDiag.label = landmarks.length ? mediaPipeAnatomicalHand(results, idx, inputMirrored) || "?" : "", 
-                    handAdmitDiag.score = landmarks.length ? +(Number(groups?.[idx]?.[0]?.score) || 0).toFixed(2) : 0, 
-                    handAdmitDiag.path = selected >= 0 ? admitPath : landmarks.length ? "rejected" : "none", 
-                    selected >= 0 ? admitPath && handAdmitDiag[admitPath]++ : landmarks.length && handAdmitDiag.rejected++;
+                    const idx = selected >= 0 ? selected : eligible[0] ?? 0;
+                    handAdmitDiag.hands = allLandmarks.length, handAdmitDiag.label = allLandmarks.length ? sideOf(idx) || "?" : "", 
+                    handAdmitDiag.score = allLandmarks.length ? +(Number(confOf(idx)) || 0).toFixed(2) : 0, 
+                    handAdmitDiag.path = selected >= 0 ? admitPath : farRejected ? "far" : allLandmarks.length ? eligible.length ? "rejected" : "size" : "none", 
+                    handAdmitDiag.check = checkOff ? "off" : "on", handAdmitDiag.lockSize = Number.isFinite(handLock.size) ? +handLock.size.toFixed(3) : 0, 
+                    selected >= 0 ? admitPath && handAdmitDiag[admitPath]++ : allLandmarks.length && (handAdmitDiag.rejected++, 
+                    farRejected ? handAdmitDiag.farRejected++ : !eligible.length && sizeRejected && handAdmitDiag.sizeRejected++);
                 }
                 return selected >= 0 && function(lm) {
                     const wrist = lm?.[0];
-                    wrist && Number.isFinite(wrist.x) && Number.isFinite(wrist.y) && (affectedHandTrack = {
-                        x: wrist.x,
-                        y: wrist.y,
-                        at: nowMs()
-                    });
-                }(landmarks[selected]), selected;
+                    if (wrist && Number.isFinite(wrist.x) && Number.isFinite(wrist.y)) {
+                        const now = nowMs();
+                        affectedHandTrack = {
+                            x: wrist.x,
+                            y: wrist.y,
+                            at: now
+                        };
+                        const span = handSpanOf(lm);
+                        handLock.x = wrist.x, handLock.y = wrist.y, handLock.at = now, Number.isFinite(span) && (handLock.size = Number.isFinite(handLock.size) ? handLock.size + HAND_LOCK_SIZE_EMA * (span - handLock.size) : span);
+                    }
+                }(allLandmarks[selected]), selected;
             }(results, inputMirrored);
             if (selectedHandIndex < 0) return {
                 detected: !1,
@@ -4188,6 +4337,30 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         state.mirrorX = !state.mirrorX, calibDotEmaX = -1, calibDotEmaY = -1, trackingPointHistory = [], 
         applyMirrorMode();
     }), applyMirrorMode();
+    const PRIVACY_BLUR_SMALL_W = 40, PRIVACY_BLUR_MID_W = 160, PRIVACY_WINDOW_PAD = .28, PRIVACY_WINDOW_MIN = .18;
+    let privacyBlurSmall = null, privacyBlurMid = null;
+    function privacyBlurEnabled() {
+        return !1 !== state.privacyBlur;
+    }
+    function applyPrivacyBlurMode() {
+        const wrap = calibCanvas.parentElement;
+        wrap && wrap.classList.toggle("privacy-blur", privacyBlurEnabled());
+        const btn = document.getElementById("btnPrivacyBlur");
+        btn && (btn.textContent = "背景模糊：" + (privacyBlurEnabled() ? "開" : "關"), btn.setAttribute("aria-pressed", privacyBlurEnabled() ? "true" : "false"));
+    }
+    function privacyCoverRect(video, rectW, rectH) {
+        const vw = video.videoWidth || 4, vh = video.videoHeight || 3, scale = Math.max(rectW / vw, rectH / vh), dw = vw * scale, dh = vh * scale;
+        return {
+            dx: (rectW - dw) / 2,
+            dy: (rectH - dh) / 2,
+            dw: dw,
+            dh: dh
+        };
+    }
+    document.getElementById("btnPrivacyBlur").addEventListener("click", () => {
+        var on;
+        on = !privacyBlurEnabled(), state.privacyBlur = !!on, applyPrivacyBlurMode();
+    }), applyPrivacyBlurMode();
     const CALIB_DROPOUT_GRACE_MS = 1500, TOOL_CALIB_MIN_RANGE = .012, TOOL_CALIB_MIN_SAMPLES = 8;
     function renderCalibCheck(id, done) {
         const el = document.getElementById(id);
@@ -7673,7 +7846,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                         el.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:99998;pointer-events:none;background:rgba(10,20,18,.82);color:#e8fff6;font:12px/1.4 -apple-system,"PingFang TC",sans-serif;padding:6px 9px;border-radius:10px;white-space:pre;', 
                         document.body.appendChild(el), framePerf.overlayEl = el);
                         const p = framePerfSnapshot();
-                        el.textContent = `perf v98  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}`, 
+                        el.textContent = `perf v99  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}\n左右手檢查 ${"off" === p.hand.check ? "關" : "開"}  鎖定手形 ${p.hand.lockSize || "-"}  大小拒絕 ${p.hand.sizeRejected}  遠處拒絕 ${p.hand.farRejected}`, 
                         el.style.display = state.running ? "block" : "none";
                     }(perfT2);
                 } catch (e) {
@@ -10449,9 +10622,9 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     }), window.addEventListener("ychlanguagechange", () => {
         "library" === currentScreen && (document.getElementById("libraryLevelLabel").textContent = currentLevel().tag + " · " + currentLevel().name, 
         renderActivityLibrary()), "start" === currentScreen && (renderShoulderExerciseModeSettings(), 
-        renderShoulderTargetSettings(), renderTimingSettings(), renderLevel4ScenarioDemo()), 
-        "rules" === currentScreen && updateRulesForActivity(), "game" === currentScreen && updateHUD(), 
-        window.requestAnimationFrame(() => {
+        renderHandCheckSettings(), renderShoulderTargetSettings(), renderTimingSettings(), 
+        renderLevel4ScenarioDemo()), "rules" === currentScreen && updateRulesForActivity(), 
+        "game" === currentScreen && updateHUD(), window.requestAnimationFrame(() => {
             window.YCHLanguage?.apply(screens[currentScreen] || document);
         });
     });
@@ -10460,7 +10633,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
 <script src="level4-three-games-module.js"></script>
 <script>
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
-  const LEVEL_APP_BUILD = "v98-20260904-level56-hand-admission-render-cache-hold30s";
+  const LEVEL_APP_BUILD = "v99-20260904-hand-check-switch-lock-privacy-blur";
   const levelAppHadController = Boolean(navigator.serviceWorker.controller);
   let levelAppReloading = false;
 
