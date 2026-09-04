@@ -708,6 +708,12 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
 }
 .movement-download{ border:2px solid var(--teal); background:var(--teal); color:#fff; }
 .movement-delete{ border:2px solid #8b4a43; background:#fff; color:#7a302a; }
+.cert-entry{
+  display:block; width:100%; max-width:760px; margin:20px auto 0; padding:14px 18px;
+  border:2px dashed #b88a3a; border-radius:18px; background:#fbf6ec; text-decoration:none;
+  color:#6b4a12; font:800 17px/1.35 inherit; text-align:center;
+}
+.cert-entry small{ display:block; margin-top:4px; color:#7a6a4a; font-size:12.5px; font-weight:650; }
 @media (max-width:520px){
 }
 .session-rest{ position:absolute; inset:0; z-index:60; display:none; flex-direction:column; align-items:center; justify-content:center; gap:12px; padding:24px; background:rgba(12,38,34,.92); color:#fff; text-align:center; }
@@ -840,6 +846,24 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
   border-radius:999px; background:linear-gradient(90deg,var(--orange),var(--gold));
 }
 .home-head .lead{ margin:0; font-size:17px; color:var(--muted); }
+/* v102：港式神功修煉品牌行（細過「中風上肢復康訓練」）＋口號 */
+.home-head .brand-title{
+  margin:8px 0 0; color:var(--teal-dark); font-size:clamp(16px,1.7vw,19px);
+  line-height:1.4; font-weight:800; letter-spacing:.14em;
+}
+.home-head .brand-title .brand-en{
+  color:var(--orange); font-size:.86em; letter-spacing:.04em; margin-right:4px;
+}
+.home-head .motto{
+  margin:6px 0 0; color:#8a5a12; font-size:clamp(15px,1.6vw,18px);
+  font-weight:900; letter-spacing:.12em;
+}
+/* v102：Level 卡片神功名稱（h3）＋口號＋臨床名稱 */
+.level-card h3.kungfu{ font-size:26px; letter-spacing:.06em; }
+.level-card .lv-kungfu-sub{ margin:0 0 4px; font-size:14px; font-weight:800; color:#8a5a12; letter-spacing:.06em; }
+.level-card .lv-clinical{ margin:0 0 6px; font-size:15px; font-weight:800; color:var(--muted); }
+/* v102：Level 2 卡片暫時收埋（程式碼保留，唔顯示） */
+.level-card.level-card--archived{ display:none !important; }
 .level-grid{
   display:grid; grid-template-columns:1fr; gap:16px;
   width:100%; max-width:1180px; margin:0 auto;
@@ -1074,12 +1098,16 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
   <div id="screen-level" class="screen active">
     <div class="page-head home-head">
       <h1 class="institution-title">仁濟醫院職業治療部</h1>
-      <h2 class="service-title">中風上肢訓練</h2>
+      <h2 class="service-title">中風上肢復康訓練</h2>
+      <p class="brand-title"><span class="brand-en">FTHUE-HK</span> 港式神功修煉</p>
+      <p class="motto">欲要成功，必先勤功！</p>
       <span class="title-rule" aria-hidden="true"></span>
-      <p class="lead">選擇 Level</p>
+      <p class="lead">請選擇 Level 開始修煉</p>
     </div>
     <div class="level-grid">
-      <article class="level-card">
+      <!-- v102：FTHUE Level 2 卡片暫時收埋（唔刪除程式碼／圖片／測試 ID），
+           要重新顯示：刪走 hidden 同 level-card--archived 即可 -->
+      <article class="level-card level-card--archived" hidden data-archived-level="2">
         <button class="level-select" id="btnLevel2" data-level="2">
           <div class="level-copy">
             <span class="lv-tag">FTHUE Level 2</span>
@@ -1114,11 +1142,15 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         <button class="level-select has-shoulder-demos" id="btnLevel3" data-level="3">
           <div class="level-copy">
             <span class="lv-tag">FTHUE Level 3</span>
-            <h3>肩屈曲 30–60°</h3>
+            <h3 class="kungfu">佛光初現</h3>
+            <p class="lv-kungfu-sub">初現曙光，神功開竅</p>
+            <p class="lv-clinical">肩屈曲 30–60°</p>
           </div>
           <div class="level-motion shoulder-demos" aria-label="Level 3 肩屈曲動作示範">
             <figure>
-              <img src="img/advanced/shoulder_active_30_60.svg"
+              <!-- v102：改用鄧姑娘卡通造型示範（由 img/advanced/level4_cartoon_side_forward.png 左邊人物製成）；
+                   原本 SVG shoulder_active_30_60.svg 保留喺 img/advanced/ -->
+              <img src="img/advanced/level3_therapist_shoulder_30_60.gif"
                 alt="肩屈曲動作示範：患者以患手持杯，在三十至六十度範圍內重複抬高手臂"
                 data-testid="demo-level-3-active">
               <figcaption>主動肩屈曲 (Active shoulder flexion)</figcaption>
@@ -1150,7 +1182,9 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         <button class="level-select has-shoulder-demos" id="btnLevel4" data-level="4">
           <div class="level-copy">
             <span class="lv-tag">FTHUE Level 4</span>
-            <h3>肩屈曲 60° 或以上</h3>
+            <h3 class="kungfu">大鵬展翅</h3>
+            <p class="lv-kungfu-sub">舉高膊頭，生龍活虎</p>
+            <p class="lv-clinical">肩屈曲 60° 或以上</p>
             <p class="lv-action">患臂離桌｜個人化高位主動活動</p>
           </div>
           <div class="level-motion shoulder-demos" aria-label="Level 4 肩屈曲動作示範">
@@ -1187,7 +1221,9 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         <button class="level-select" id="btnLevel5" data-level="5">
           <div class="level-copy">
             <span class="lv-tag">FTHUE Level 5</span>
-            <h3>患手握放練習</h3>
+            <h3 class="kungfu">如來神掌</h3>
+            <p class="lv-kungfu-sub">揮灑自如，大開大合</p>
+            <p class="lv-clinical">患手握放練習</p>
             <p class="lv-action">伸手 → 輕握 → 張手</p>
           </div>
           <div class="level-motion single">
@@ -1217,7 +1253,9 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         <button class="level-select" id="btnLevel67" data-level="67">
           <div class="level-copy">
             <span class="lv-tag">FTHUE Level 6</span>
-            <h3>患手三點捏握功能任務</h3>
+            <h3 class="kungfu">萬佛朝宗</h3>
+            <p class="lv-kungfu-sub">終極境界，彈指神通</p>
+            <p class="lv-clinical">患手三點捏握功能任務</p>
             <p class="lv-action">三指張開 → 輕捏拿起 → 移動 → 張開放下</p>
           </div>
           <div class="level-motion double">
@@ -1256,6 +1294,11 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         </details>
       </article>
     </div>
+    <!-- v102：治療師用——病人完成第十日訓練後，開啟 A4 橫向「參與嘉許狀」列印頁（新分頁） -->
+    <a class="cert-entry" id="lnkCertificate" href="certificate.html" target="_blank" rel="noopener"
+      data-testid="link-certificate">
+      頒發參與嘉許狀<small>完成十天訓練後由治療師開啟，A4 橫向列印，姓名及日期手寫</small>
+    </a>
     <footer style="margin-top:32px;padding:16px 12px 8px;text-align:center;font-size:11px;color:var(--muted);line-height:1.6;border-top:1px solid var(--border);opacity:0.75;max-width:760px;width:100%;">
       訓練由仁濟醫院職業治療師鄧姑娘設計，網頁由 AI 協助製作
       <details style="margin-top:8px;text-align:left;">
@@ -1363,6 +1406,22 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
           <button class="option-btn" type="button" data-laundry-difficulty="complex">
             較複雜
             <small>依照晾衫單的衣物及數量</small>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="card collapsible" id="fridgeDifficultyCard" data-accordion="fridge-difficulty" hidden>
+      <h2><span>雪櫃難度</span>
+        <span class="selected-preview" id="preview-fridge-difficulty">基本</span></h2>
+      <div class="card-body">
+        <div class="option-row" id="fridgeDifficultyOptions">
+          <button class="option-btn selected" type="button" data-fridge-difficulty="basic">
+            基本
+            <small>食物可放到雪櫃內任何位置</small>
+          </button>
+          <button class="option-btn" type="button" data-fridge-difficulty="zones">
+            進階：着燈六格
+            <small>雪櫃分六格，每次隨機着燈一格，要放入着燈嗰格；練習向唔同高度及角度遞手</small>
           </button>
         </div>
       </div>
@@ -1738,6 +1797,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         shoulderTargetDeg: 60,
         shoulderExerciseMode: "active",
         laundryDifficulty: "basic",
+        fridgeDifficulty: "basic",
         dimsumDifficulty: "basic",
         theme: "dimsum",
         dimsumSceneMode: "teahouse",
@@ -1891,10 +1951,11 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         el && (el.textContent = function() {
             const isLevel5Flow = isPublicLevel5VerticalFlow(), isSideCardGame = isPublicSideCardGame();
             if (!isLevel5Flow && !isSideCardGame) return "";
-            if ("laundry" === state.theme) return "拿起衣物，放到上方同色衫籃。";
+            if ("laundry" === state.theme) return "拿起衣物，放入同色衫籃。";
             if ("dimsum" === state.theme) return "拿起點心，放到上方同款蒸籠。";
             if ("flowers" === state.theme) return "拿起花朵，放到上方花盆。";
             if ("cards" === state.theme) {
+                if ("67" === state.level) return "拿起啤牌，放到相同花色牌堆。";
                 const suit = void 0 !== cards && cards.suit ? CARD_SUIT_NAME[cards.suit] : "";
                 return isSideCardGame ? "拿起" + suit + "牌，放到" + ("right" === activeAffectedSide() ? "右邊" : "左邊") + "收牌區。" : "拿起" + suit + "牌，放到上方收牌區。";
             }
@@ -2550,7 +2611,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         if ("chopsticks" !== task.id) return task;
         const basic = "complex" !== state.dimsumDifficulty;
         return Object.assign({}, task, {
-            hint: basic ? "患手揸住真筷子。食指尖對準任何點心，停住夾起，再移到中央大碗停住放下" : "患手揸住真筷子。食指尖對準落單點心，停住夾起，再移到中央大碟停住放下"
+            hint: basic ? "患手揸住真筷子。食指尖對準任何點心，停住夾起，再移到中央大碟停住放下" : "患手揸住真筷子。食指尖對準落單點心，停住夾起，再移到中央大碟停住放下"
         });
     }
     function level6TaskForTheme(themeId) {
@@ -2632,6 +2693,18 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         document.getElementById("preview-laundry-difficulty").textContent = basic ? "基本" : "較複雜", 
         document.querySelectorAll("#laundryDifficultyOptions [data-laundry-difficulty]").forEach(button => {
             const selected = button.dataset.laundryDifficulty === state.laundryDifficulty;
+            button.classList.toggle("selected", selected), button.setAttribute("aria-pressed", selected ? "true" : "false");
+        });
+    }
+    function renderFridgeDifficultySettings() {
+        const card = document.getElementById("fridgeDifficultyCard");
+        if (!card) return;
+        const enabled = isFridgeGame();
+        if (card.hidden = !enabled, !enabled) return;
+        const zones = "zones" === state.fridgeDifficulty;
+        document.getElementById("preview-fridge-difficulty").textContent = zones ? "進階：着燈六格" : "基本", 
+        document.querySelectorAll("#fridgeDifficultyOptions [data-fridge-difficulty]").forEach(button => {
+            const selected = button.dataset.fridgeDifficulty === state.fridgeDifficulty;
             button.classList.toggle("selected", selected), button.setAttribute("aria-pressed", selected ? "true" : "false");
         });
     }
@@ -2767,7 +2840,8 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                 const setupGuide = document.getElementById("cameraSetupGuide");
                 setupGuide && (setupGuide.textContent = "2" === state.level ? "相機：患側前斜約 45°；肩、肘、腕及桌面入鏡。" : "3" === state.level || "4" === state.level ? "相機：橫放，患側前斜約 30–45°；軀幹及全臂入鏡。" : "相機：患手及手指入鏡。"), 
                 renderShoulderExerciseModeSettings(), renderHandCheckSettings(), renderShoulderTargetSettings(), 
-                renderLaundryDifficultySettings(), renderDimsumDifficultySettings(), renderTimingSettings();
+                renderLaundryDifficultySettings(), renderFridgeDifficultySettings(), renderDimsumDifficultySettings(), 
+                renderTimingSettings();
                 const go = document.getElementById("btnGoCalib");
                 go && (go.textContent = isShoulderFlexionLevel() ? "開始追蹤" : "相機校準"), renderLevel4ScenarioDemo(), 
                 showScreen("start");
@@ -3240,6 +3314,10 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         const button = e.target.closest("[data-laundry-difficulty]");
         button && isLaundryRackGame() && (state.laundryDifficulty = "complex" === button.dataset.laundryDifficulty ? "complex" : "basic", 
         renderLaundryDifficultySettings());
+    }), document.getElementById("fridgeDifficultyOptions").addEventListener("click", e => {
+        const button = e.target.closest("[data-fridge-difficulty]");
+        button && isFridgeGame() && (state.fridgeDifficulty = "zones" === button.dataset.fridgeDifficulty ? "zones" : "basic", 
+        renderFridgeDifficultySettings());
     }), document.getElementById("dimsumDifficultyOptions").addEventListener("click", e => {
         const button = e.target.closest("[data-dimsum-difficulty]");
         button && isDimsumBowlGame() && (state.dimsumDifficulty = "complex" === button.dataset.dimsumDifficulty ? "complex" : "basic", 
@@ -3496,11 +3574,12 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                 resetTeahouseServe(), dimsumOrderBannerRect = null, dimsumOrder = null, dimsumPlateContents = [], 
                 dimsumOrdersCompleted = 0, dimsumOrderCelebrateUntil = 0, dimsumOrderTimerId && (clearTimeout(dimsumOrderTimerId), 
                 dimsumOrderTimerId = null), laundryOrderBannerRect = null, laundryOrder = null, 
-                laundryRackContents = [], laundryOrdersCompleted = 0, laundryOrderCelebrateUntil = 0, 
-                laundryOrderTimerId && (clearTimeout(laundryOrderTimerId), laundryOrderTimerId = null), 
-                fridgeBannerRect = null, fridgeQueue = [], fridgeQueueIndex = 0, fridgePlacedFoods = [], 
-                fridgeRoundsCompleted = 0, fridgeCelebrateUntil = 0, fridgeCrashUntil = 0, fridgeCrashMsg = "", 
-                fridgeCrashPoint = null, fridgeRoundTimerId && (clearTimeout(fridgeRoundTimerId), 
+                laundryRackContents = [], laundryOrdersCompleted = 0, laundryBatchesCompleted = 0, 
+                laundryOrderCelebrateUntil = 0, laundryOrderTimerId && (clearTimeout(laundryOrderTimerId), 
+                laundryOrderTimerId = null), laundryRackClearTimerId && (clearTimeout(laundryRackClearTimerId), 
+                laundryRackClearTimerId = null), fridgeBannerRect = null, fridgeQueue = [], fridgeZoneOrder = [], 
+                fridgeQueueIndex = 0, fridgePlacedFoods = [], fridgeRoundsCompleted = 0, fridgeCelebrateUntil = 0, 
+                fridgeCrashUntil = 0, fridgeCrashMsg = "", fridgeCrashPoint = null, fridgeRoundTimerId && (clearTimeout(fridgeRoundTimerId), 
                 fridgeRoundTimerId = null), releaseDwellStart = 0, releaseDwellPlate = null, releaseDwellPauseAt = 0, 
                 releaseDwellLastOpenAt = 0, basicOpenStart = 0, basicGraspStart = 0, basicGraspCandidate = "", 
                 basicGraspArmed = !1, basicPostReleaseOpenStart = 0, basicContactCandidate = "", 
@@ -4554,8 +4633,10 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     imgFridgeCharsiuRice.src = "img/fridge_charsiu_rice.png";
     const imgFridgeRibs = new Image;
     imgFridgeRibs.src = "img/fridge_ribs.png";
-    const imgFridgeTofu = new Image;
-    imgFridgeTofu.src = "img/fridge_tofu.png";
+    const imgFridgeApple = new Image;
+    imgFridgeApple.src = "img/fridge_apple.png";
+    const imgFridgeDurian = new Image;
+    imgFridgeDurian.src = "img/fridge_durian.png";
     const imgFridgeShrimp = new Image;
     imgFridgeShrimp.src = "img/fridge_shrimp.png";
     const imgFridgeMeatball = new Image;
@@ -5044,7 +5125,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             targetStyle: "panel",
             thumbnail: "img/hargau.png",
             thumbnailAlt: "蝦餃點心，代表筷子點心任務",
-            verbFor: () => isDimsumBasicGame() ? "可夾任何點心，移到中央大碗，再張開放下" : "睇落單指示，患手三指輕捏拿起點心，移到中央大碟，再張開放下",
+            verbFor: () => isDimsumBasicGame() ? "可夾任何點心，移到中央大碟，再張開放下" : "睇落單指示，患手三指輕捏拿起點心，移到中央大碟，再張開放下",
             actionLabelFor: () => "三指張開 → 輕捏拿起 → 移動 → 張開放下；只偵測已選患手",
             categoriesFor: () => LEVEL3_THEME_VARIANTS.chopstick_dimsum
         }),
@@ -5575,8 +5656,8 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         type: "laundry_socks",
         label: "襪",
         img: () => imgLaundrySocks
-    } ], LAUNDRY_RACK_SLOTS = [ -.34, -.215, -.09, .035, .16, .285, .385, -.28, -.03, .22 ];
-    let laundryOrder = null, laundryRackContents = [], laundryOrdersCompleted = 0, laundryOrderCelebrateUntil = 0, laundryOrderTimerId = null, laundryOrderBannerRect = null;
+    } ], LAUNDRY_RACK_SLOTS = [ -.375, -.225, -.075, .075, .225, .375 ], LAUNDRY_RACK_CAPACITY = 6, LAUNDRY_RACK_CLEAR_DELAY_MS = 1800, LAUNDRY_NEW_BATCH_TEXT = "又有新衫要晾喇！";
+    let laundryOrder = null, laundryRackContents = [], laundryOrdersCompleted = 0, laundryOrderCelebrateUntil = 0, laundryOrderTimerId = null, laundryRackClearTimerId = null, laundryBatchesCompleted = 0, laundryOrderBannerRect = null;
     function isLaundryOrderGame() {
         return isLaundryRackGame() && "complex" === state.laundryDifficulty;
     }
@@ -5592,19 +5673,25 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             const j = Math.floor(Math.random() * (i + 1));
             [pool[i], pool[j]] = [ pool[j], pool[i] ];
         }
-        const lineCount = 0 === laundryOrdersCompleted ? 1 : 2 + Math.floor(2 * Math.random());
+        const lineCount = 0 === laundryOrdersCompleted ? 1 : 2 + Math.floor(2 * Math.random()), lines = pool.slice(0, lineCount).map(m => ({
+            type: m.type,
+            label: m.label,
+            unit: m.unit,
+            need: 1 === lineCount ? 3 : 1 + Math.floor(3 * Math.random()),
+            placed: 0
+        }));
+        let guard = 0;
+        for (;lines.reduce((sum, l) => sum + l.need, 0) > LAUNDRY_RACK_CAPACITY && guard++ < 20; ) {
+            const biggest = lines.reduce((a, b) => b.need > a.need ? b : a, lines[0]);
+            biggest.need = Math.max(1, biggest.need - 1);
+        }
         laundryOrder = {
-            lines: pool.slice(0, lineCount).map(m => ({
-                type: m.type,
-                label: m.label,
-                unit: m.unit,
-                need: 1 === lineCount ? 3 : 1 + Math.floor(3 * Math.random()),
-                placed: 0
-            })),
+            lines: lines,
             done: !1
         }, laundryRackContents = [], laundryOrderCelebrateUntil = 0;
+        const intro = laundryOrdersCompleted > 0 ? LAUNDRY_NEW_BATCH_TEXT : "";
         try {
-            speakCantonese(laundryOrder ? "請將" + laundryOrder.lines.map(l => l.need + l.unit + l.label).join("、") + "放上晾衫架。" : "", {
+            speakCantonese(intro + (laundryOrder ? "請將" + laundryOrder.lines.map(l => l.need + l.unit + l.label).join("、") + "放上晾衫架。" : ""), {
                 rate: .82
             });
         } catch (e) {}
@@ -5621,20 +5708,27 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     }
     function laundryRackPlace(item) {
         isLaundryBasicGame() ? function(item) {
+            laundryRackClearTimerId && (clearTimeout(laundryRackClearTimerId), laundryRackClearTimerId = null, 
+            laundryRackContents = [], laundryOrderCelebrateUntil = 0);
             const fx = LAUNDRY_RACK_SLOTS[laundryRackContents.length % LAUNDRY_RACK_SLOTS.length];
             if (laundryRackContents.push({
                 img: item && item.img || null,
                 fx: fx
-            }), laundryRackContents.length >= LAUNDRY_RACK_SLOTS.length) {
-                laundryRackContents = [];
+            }), laundryRackContents.length >= LAUNDRY_RACK_CAPACITY) {
+                laundryBatchesCompleted++, laundryOrderCelebrateUntil = nowMs() + LAUNDRY_RACK_CLEAR_DELAY_MS;
                 try {
                     playApplauseSound();
                 } catch (e) {}
-                try {
-                    speakCantonese("好叻呀！繼續晾衫！", {
-                        rate: .85
-                    });
-                } catch (e) {}
+                laundryRackClearTimerId && clearTimeout(laundryRackClearTimerId), laundryRackClearTimerId = setTimeout(() => {
+                    if (laundryRackClearTimerId = null, isLaundryBasicGame() && state.running) {
+                        laundryRackContents = [], laundryOrderCelebrateUntil = 0;
+                        try {
+                            speakCantonese(LAUNDRY_NEW_BATCH_TEXT, {
+                                rate: .85
+                            });
+                        } catch (e) {}
+                    }
+                }, LAUNDRY_RACK_CLEAR_DELAY_MS);
             }
         }(item) : function(item) {
             const line = laundryOrderLineFor(item && item.targetType);
@@ -5669,9 +5763,9 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         label: "排骨",
         img: () => imgFridgeRibs
     }, {
-        type: "fridge_tofu",
-        label: "豆腐",
-        img: () => imgFridgeTofu
+        type: "fridge_apple",
+        label: "蘋果",
+        img: () => imgFridgeApple
     }, {
         type: "fridge_shrimp",
         label: "蝦",
@@ -5708,33 +5802,93 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         type: "fridge_snowpea",
         label: "荷蘭豆",
         img: () => imgFridgeSnowpea
-    } ], FRIDGE_INTERIOR = {
+    }, {
+        type: "fridge_durian",
+        label: "榴槤",
+        img: () => imgFridgeDurian
+    } ], FRIDGE_ROUND_SIZE = 6;
+    function fridgeZoneGrid() {
+        return gameCanvas.width > gameCanvas.height ? {
+            columns: 3,
+            rows: 2
+        } : {
+            columns: 2,
+            rows: 3
+        };
+    }
+    function isFridgeZoneMode() {
+        return isFridgeGame() && "zones" === state.fridgeDifficulty;
+    }
+    function fridgeZoneBounds(rect) {
+        let top = FRIDGE_INTERIOR.top;
+        if (rect && rect.rh > 0) {
+            const cw = gameCanvas.width, ch = gameCanvas.height, hudSafePx = ch > cw ? Math.max(.13 * ch, 150) : Math.max(.09 * ch, 70);
+            top = Math.max(top, (hudSafePx - rect.y0) / rect.rh);
+        }
+        return {
+            left: FRIDGE_INTERIOR.left,
+            right: FRIDGE_INTERIOR.right,
+            top: top,
+            bottom: FRIDGE_INTERIOR.bottom
+        };
+    }
+    function fridgeZoneFrac(zoneIndex, rect) {
+        const {columns: columns, rows: rows} = fridgeZoneGrid(), b = fridgeZoneBounds(rect), column = zoneIndex % columns, row = Math.floor(zoneIndex / columns), w = (b.right - b.left) / columns, h = (b.bottom - b.top) / rows, left = b.left + column * w, top = b.top + row * h;
+        return {
+            left: left,
+            top: top,
+            right: left + w,
+            bottom: top + h,
+            cx: left + w / 2,
+            cy: top + h / 2
+        };
+    }
+    function fridgeLitZone() {
+        return isFridgeZoneMode() && fridgeZoneOrder.length ? fridgeQueueIndex >= fridgeZoneOrder.length ? -1 : fridgeZoneOrder[fridgeQueueIndex] : -1;
+    }
+    const FRIDGE_INTERIOR = {
         left: .05,
         right: .95,
         top: .07,
         bottom: .93
     };
-    let fridgeQueue = [], fridgeQueueIndex = 0, fridgePlacedFoods = [], fridgeRoundsCompleted = 0, fridgeCelebrateUntil = 0, fridgeCrashUntil = 0, fridgeCrashMsg = "", fridgeCrashPoint = null, fridgeRoundTimerId = null, fridgeBannerRect = null;
+    let fridgeQueue = [], fridgeQueueIndex = 0, fridgePlacedFoods = [], fridgeRoundsCompleted = 0, fridgeCelebrateUntil = 0, fridgeCrashUntil = 0, fridgeCrashMsg = "", fridgeCrashPoint = null, fridgeRoundTimerId = null, fridgeBannerRect = null, fridgeZoneOrder = [];
     function isFridgeGame() {
         return "5" === state.level && "fridge" === state.theme && !0;
     }
     function fridgeCurrentDef() {
         return !fridgeQueue.length || fridgeQueueIndex >= fridgeQueue.length ? null : FRIDGE_ORDER_DEFS[fridgeQueue[fridgeQueueIndex]] || null;
     }
-    function newFridgeRound() {
-        const order = FRIDGE_ORDER_DEFS.map((d, i) => i);
-        for (let i = order.length - 1; i > 0; i--) {
+    function fridgeShuffle(list) {
+        for (let i = list.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
-            [order[i], order[j]] = [ order[j], order[i] ];
+            [list[i], list[j]] = [ list[j], list[i] ];
         }
-        fridgeQueue = order, fridgeQueueIndex = 0, fridgePlacedFoods = [], fridgeCelebrateUntil = 0, 
-        fridgeCrashUntil = 0, fridgeCrashMsg = "", fridgeCrashPoint = null;
+        return list;
+    }
+    function newFridgeRound() {
+        const order = fridgeShuffle(FRIDGE_ORDER_DEFS.map((d, i) => i)).slice(0, FRIDGE_ROUND_SIZE), firstRound = 0 === fridgeRoundsCompleted;
+        fridgeQueue = order, fridgeZoneOrder = isFridgeZoneMode() ? fridgeShuffle([ 0, 1, 2, 3, 4, 5 ]) : [], 
+        fridgeQueueIndex = 0, fridgePlacedFoods = [], fridgeCelebrateUntil = 0, fridgeCrashUntil = 0, 
+        fridgeCrashMsg = "", fridgeCrashPoint = null;
         try {
-            speakCantonese("買完餸返嚟喇！請將啲食物一樣一樣放入雪櫃。", {
+            firstRound ? isFridgeZoneMode() ? speakCantonese("買完餸返嚟喇！請將食物放入雪櫃着燈嗰格。", {
                 rate: .82
+            }) : speakCantonese("買完餸返嚟喇！請將啲食物一樣一樣放入雪櫃。", {
+                rate: .82
+            }) : speakCantonese("又有新食物要放喇！", {
+                rate: .85
             });
         } catch (e) {}
         return ensureFoodCount(), fridgeQueue;
+    }
+    function fridgeLaneFrac(cw, ch) {
+        return ch > cw ? .26 : .33;
+    }
+    const FRIDGE_TRAY_LABEL_H = 36;
+    function fridgeTrayVisualRadius(cw, ch, r) {
+        const laneH = ch * fridgeLaneFrac(cw, ch);
+        return Math.min(r, (laneH - FRIDGE_TRAY_LABEL_H - 8) / 2.04);
     }
     function fridgeInteriorRect(t) {
         const rw = t.w, rh = t.h, x0 = t.x - rw / 2, y0 = t.y - rh / 2;
@@ -5751,31 +5905,43 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     }
     function fridgePlacedRadius(rect) {
         const landscape = gameCanvas.width > gameCanvas.height;
-        return Math.min(rect.rh * (landscape ? .1 : .115), rect.rw * (landscape ? .055 : .065));
+        return Math.min(rect.rh * (landscape ? .2 : .15), rect.rw * (landscape ? .13 : .19));
+    }
+    function fridgeNoteCrash(x, y, rect, msg) {
+        const speakable = nowMs() >= fridgeCrashUntil;
+        if (fridgeCrashUntil = nowMs() + 1600, fridgeCrashMsg = msg, fridgeCrashPoint = {
+            fx: (x - rect.x0) / rect.rw,
+            fy: (y - rect.y0) / rect.rh
+        }, speakable) try {
+            speakCantonese(msg, {
+                rate: .9
+            });
+        } catch (e) {}
     }
     function fridgeTryPlace(item, x, y, target) {
         if (!isFridgeGame() || !item || "distractor" === item.targetType) return !1;
         const def = fridgeCurrentDef();
         if (!def || item.targetType !== def.type) return !1;
-        const rect = fridgeInteriorRect(target), pr = fridgePlacedRadius(rect);
-        if (x < rect.left + .6 * pr || x > rect.right - .6 * pr || y < rect.top + .6 * pr || y > rect.bottom - .6 * pr) return function(x, y, rect) {
-            const speakable = nowMs() >= fridgeCrashUntil;
-            if (fridgeCrashUntil = nowMs() + 1600, fridgeCrashMsg = "要放入雪櫃入面呀。", fridgeCrashPoint = {
-                fx: (x - rect.x0) / rect.rw,
-                fy: (y - rect.y0) / rect.rh
-            }, speakable) try {
-                speakCantonese("要放入雪櫃入面呀。", {
-                    rate: .9
-                });
-            } catch (e) {}
-        }(x, y, rect), !1;
+        const rect = fridgeInteriorRect(target), pr = fridgePlacedRadius(rect), zone = fridgeLitZone();
+        if (zone >= 0) {
+            const z = fridgeZoneFrac(zone, rect), fx = (x - rect.x0) / rect.rw, fy = (y - rect.y0) / rect.rh;
+            if (fx < z.left || fx > z.right || fy < z.top || fy > z.bottom) return fridgeNoteCrash(x, y, rect, "要放喺着燈嗰格呀。"), 
+            !1;
+        } else if (x < rect.left + .6 * pr || x > rect.right - .6 * pr || y < rect.top + .6 * pr || y > rect.bottom - .6 * pr) return fridgeNoteCrash(x, y, rect, "要放入雪櫃入面呀。"), 
+        !1;
         if (fridgePlacedFoods.push({
             img: item && item.img || null,
             label: item.label,
             fx: (x - rect.x0) / rect.rw,
-            fy: (y - rect.y0) / rect.rh
+            fy: (y - rect.y0) / rect.rh,
+            zone: zone >= 0 ? zone : null
         }), function(rect) {
-            const columns = gameCanvas.width > gameCanvas.height ? 6 : 4, rows = Math.ceil(FRIDGE_ORDER_DEFS.length / columns), left = FRIDGE_INTERIOR.left + .055, right = FRIDGE_INTERIOR.right - .055, top = FRIDGE_INTERIOR.top + .075, bottom = FRIDGE_INTERIOR.bottom - .075, candidates = [];
+            if (isFridgeZoneMode()) return void fridgePlacedFoods.forEach(food => {
+                if ("number" != typeof food.zone) return;
+                const z = fridgeZoneFrac(food.zone, rect);
+                food.fx = z.cx, food.fy = z.cy;
+            });
+            const {columns: columns, rows: rows} = fridgeZoneGrid(), left = FRIDGE_INTERIOR.left + .055, right = FRIDGE_INTERIOR.right - .055, top = FRIDGE_INTERIOR.top + .075, bottom = FRIDGE_INTERIOR.bottom - .075, candidates = [];
             for (let row = 0; row < rows; row++) for (let column = 0; column < columns; column++) {
                 const fx = 1 === columns ? .5 : left + (right - left) * column / (columns - 1), fy = 1 === rows ? .5 : top + (bottom - top) * row / (rows - 1), px = rect.x0 + fx * rect.rw, py = rect.y0 + fy * rect.rh;
                 fridgeBannerRect && px > fridgeBannerRect.left && px < fridgeBannerRect.right && py > fridgeBannerRect.top && py < fridgeBannerRect.bottom || candidates.push({
@@ -5796,7 +5962,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                 playApplauseSound();
             } catch (e) {}
             try {
-                speakCantonese("好叻呀！全部餸菜都放入雪櫃喇！", {
+                speakCantonese("好叻呀！全部食物都放入雪櫃喇！", {
                     rate: .85
                 });
             } catch (e) {}
@@ -6066,9 +6232,9 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             const basic = isDimsumBasicGame(), tw = Math.min(portrait ? cw * (basic ? .66 : .58) : cw * (basic ? .36 : .3), basic ? 620 : 560), th = .8 * tw;
             return void (targets = [ {
                 type: "dimsum_plate",
-                label: basic ? "大碗" : "大碟",
-                img: basic ? null : imgRoosterPlate,
-                drawIcon: basic ? drawRiceBowl : null,
+                label: "大碟",
+                img: imgRoosterPlate,
+                drawIcon: null,
                 style: "bigplate",
                 x: cw / 2,
                 y: ch - th / 2 - 14,
@@ -6095,7 +6261,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             } ]);
         }
         if (isFridgeGame()) {
-            const th = .8 * ch;
+            const tw = cw, th = ch * (1 - fridgeLaneFrac(cw, ch));
             return void (targets = [ {
                 type: "fridge",
                 label: "雪櫃",
@@ -6104,7 +6270,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                 style: "fridge",
                 x: cw / 2,
                 y: th / 2,
-                w: cw,
+                w: tw,
                 h: th,
                 color: "#2E6DA4"
             } ]);
@@ -6314,7 +6480,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             x: x,
             y: y,
             r: r,
-            visualR: isFridgeGame() ? .5 * r : r,
+            visualR: isFridgeGame() ? fridgeTrayVisualRadius(cw, ch, r) : r,
             baseX: x,
             baseY: y,
             held: !1,
@@ -6329,10 +6495,9 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         }
         if (isFridgeGame() && "distractor" !== def.targetType) {
             const spot = function(cw, ch, r) {
-                const visualR = .5 * r;
                 return {
                     x: .5 * cw,
-                    y: Math.min(ch - visualR - 18, .9 * ch)
+                    y: ch * (1 - fridgeLaneFrac(cw, ch)) + 8 + fridgeTrayVisualRadius(cw, ch, r)
                 };
             }(cw, ch, r);
             return createFood(spot.x, spot.y);
@@ -6350,7 +6515,8 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                 if (Math.hypot(x - f.x, y - f.y) < r + (f.r || baseR) + visibleGap) return !1;
             }
             return !0;
-        }, slotRatios = isLevel4Tabletop() ? [ [ .4, .8 ], [ .6, .8 ] ] : publicLevel5Dimsum ? portrait ? [ [ .24, .66 ], [ .24, .88 ], [ .76, .88 ] ] : [ [ .18, .76 ], [ .5, .76 ], [ .82, .76 ] ] : isPublicLevel5VerticalFlow() ? portrait ? [ [ .24, .68 ], [ .76, .68 ], [ .5, .86 ] ] : [ [ .2, .72 ], [ .5, .78 ], [ .8, .72 ] ] : level67DimSum ? portrait ? [ [ .24, .34 ], [ .76, .34 ], [ .5, .55 ] ] : isDimsumOrderGame() ? [ [ .2, .3 ], [ .8, .3 ], [ .5, .44 ] ] : [ [ .22, .39 ], [ .5, .5 ], [ .78, .39 ] ] : isLaundryRackGame() ? portrait ? [ [ .2, .66 ], [ .8, .66 ], [ .5, .88 ] ] : [ [ .18, .78 ], [ .46, .78 ], [ .72, .78 ] ] : portrait ? dimSumTheme ? [ [ .22, .34 ], [ .5, .45 ], [ .78, .34 ] ] : [ [ .22, .45 ], [ .5, .45 ], [ .78, .45 ] ] : dimSumTheme ? [ [ .22, .42 ], [ .5, .54 ], [ .78, .42 ] ] : [ [ .22, .54 ], [ .5, .54 ], [ .78, .54 ] ], activeCount = existingFoods.filter(food => !food.removed).length;
+        }, slotRatios = isLevel4Tabletop() ? [ [ .4, .8 ], [ .6, .8 ] ] : publicLevel5Dimsum ? portrait ? [ [ .24, .66 ], [ .24, .88 ], [ .76, .88 ] ] : [ [ .18, .76 ], [ .5, .76 ], [ .82, .76 ] ] : isPublicLevel5VerticalFlow() ? portrait ? [ [ .24, .68 ], [ .76, .68 ], [ .5, .86 ] ] : [ [ .2, .72 ], [ .5, .78 ], [ .8, .72 ] ] : level67DimSum ? portrait ? [ [ .24, .34 ], [ .76, .34 ], [ .5, .55 ] ] : isDimsumOrderGame() ? [ [ .2, .3 ], [ .8, .3 ], [ .5, .44 ] ] : [ [ .22, .39 ], [ .5, .5 ], [ .78, .39 ] ] : isLaundryRackGame() ? portrait ? [ [ .2, .66 ], [ .8, .66 ], [ .5, .88 ] ] : [ [ .18, .78 ], [ .46, .78 ], [ .72, .78 ] ] : isDimsumBowlGame() ? portrait ? [ [ .22, .45 ], [ .5, .45 ], [ .78, .45 ] ] : [ [ .2, .3 ], [ .5, .34 ], [ .8, .3 ] ] : portrait ? dimSumTheme ? [ [ .22, .34 ], [ .5, .45 ], [ .78, .34 ] ] : [ [ .22, .45 ], [ .5, .45 ], [ .78, .45 ] ] : dimSumTheme ? [ [ .22, .42 ], [ .5, .54 ], [ .78, .42 ] ] : [ [ .22, .54 ], [ .5, .54 ], [ .78, .54 ] ], activeCount = existingFoods.filter(food => !food.removed).length;
+        if (isLaundryRackGame() && 1 === dimSumTargetCount() && 0 === activeCount) return createFood(Math.max(centerMin, Math.min(centerMax, .5 * cw)), Math.max(spawnYmin, Math.min(spawnYmax, ch * (portrait ? .8 : .78))));
         if (publicLevel5Dimsum) {
             const slot = function(existingFoods, cw, ch, r) {
                 const geometry = publicLevel5DimsumGeometry(cw, ch), activeFoods = existingFoods.filter(food => !food.removed);
@@ -6371,6 +6537,10 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             const x = randRange(centerMin, centerMax), y = randRange(spawnYmin, spawnYmax);
             if (positionIsClear(x, y)) return createFood(x, y);
         }
+        for (let row = 0; row < 9; row++) for (let column = 0; column < 9; column++) {
+            const x = centerMin + column / 8 * (centerMax - centerMin), y = spawnYmin + row / 8 * (spawnYmax - spawnYmin);
+            if (positionIsClear(x, y)) return createFood(x, y);
+        }
         for (let row = 0; row < 7; row++) for (let column = 0; column < 7; column++) {
             const x = centerMin + column / 6 * (centerMax - centerMin), y = spawnYmin + row / 6 * (spawnYmax - spawnYmin);
             if (clearsProtectedZones(x, y)) return createFood(x, y);
@@ -6387,7 +6557,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     }
     const DIM_SUM_TARGET = 3;
     function dimSumTargetCount() {
-        return isFridgeGame() ? fridgeCurrentDef() ? 1 : 0 : isLevel3Tabletop() || isShoulderFlexionLevel() ? 1 : isLevel4Tabletop() ? 2 : DIM_SUM_TARGET;
+        return isFridgeGame() ? fridgeCurrentDef() ? 1 : 0 : isLaundryRackGame() || isLevel3Tabletop() || isShoulderFlexionLevel() ? 1 : isLevel4Tabletop() ? 2 : DIM_SUM_TARGET;
     }
     function countActive(pred) {
         return foods.filter(f => !f.removed && pred(f)).length;
@@ -7362,12 +7532,16 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                             const cw = gameCanvas.width, ch = gameCanvas.height;
                             ctx.save(), ctx.fillStyle = isPatientVisualCueMode() ? "#184230" : "rgba(24,66,48,0.80)", 
                             isPatientVisualCueMode() ? ctx.fillRect(0, 0, cw, ch) : (rrPath(ctx, 8, .3 * ch, cw - 16, .66 * ch, 20), 
-                            ctx.fill()), ctx.restore(), drawLevel4MidlineGuide(ctx), ctx.save();
-                            const chipY = ch * (isPatientVisualCueMode() ? .17 : gameCanvas.width < 700 ? .395 : .315);
-                            ctx.fillStyle = "rgba(255,255,255,0.95)", rrPath(ctx, cw / 2 - 118, chipY, 236, 44, 14), 
-                            ctx.fill(), ctx.fillStyle = CARD_SUIT_COLOR[cards.suit], ctx.font = 'bold 26px -apple-system,"PingFang TC",sans-serif', 
-                            ctx.textAlign = "center", ctx.textBaseline = "middle", ctx.fillText(CARD_SUIT_SYM[cards.suit] + " " + CARD_SUIT_NAME[cards.suit] + "　" + cards.got + "/" + cards.need, cw / 2, chipY + 23), 
-                            ctx.restore();
+                            ctx.fill()), ctx.restore(), drawLevel4MidlineGuide(ctx);
+                            const chipText = CARD_SUIT_SYM[cards.suit] + " " + CARD_SUIT_NAME[cards.suit] + "　" + cards.got + "/" + cards.need;
+                            if (isPatientVisualCueMode()) drawCardsBigChip(ctx, chipText, CARD_SUIT_COLOR[cards.suit], cardsBigChipY(cw, ch)); else {
+                                ctx.save();
+                                const chipY = ch * (gameCanvas.width < 700 ? .395 : .315);
+                                ctx.fillStyle = "rgba(255,255,255,0.95)", rrPath(ctx, cw / 2 - 118, chipY, 236, 44, 14), 
+                                ctx.fill(), ctx.fillStyle = CARD_SUIT_COLOR[cards.suit], ctx.font = 'bold 26px -apple-system,"PingFang TC",sans-serif', 
+                                ctx.textAlign = "center", ctx.textBaseline = "middle", ctx.fillText(chipText, cw / 2, chipY + 23), 
+                                ctx.restore();
+                            }
                             const hover = picker.hoverId, held = picker.heldId;
                             drawAffectedSelectionZone(ctx, "收牌區");
                             for (const c of cards.field) {
@@ -7922,7 +8096,9 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                             ctx.strokeStyle = "#D4A017", ctx.lineWidth = 3, ctx.stroke()), ctx.restore();
                         }
                         isDimsumOrderGame() && dimsumOrder && (dimsumOrderBannerRect = null), isLaundryOrderGame() && laundryOrder && (laundryOrderBannerRect = null), 
-                        isFridgeGame() && fridgeQueue.length && (fridgeBannerRect = null);
+                        isFridgeGame() && fridgeQueue.length && (fridgeBannerRect = null), function(ctx, cw, ch) {
+                            "67" === state.level && "cards" === state.theme && isPatientVisualCueMode() && drawCardsBigChip(ctx, "♥ 放紅心牌堆　♠ 放黑桃牌堆", "#2C3E50", cardsBigChipY(cw, ch));
+                        }(ctx, cw, ch);
                         const cursorPoint = level4StandardCarryPoint() || {
                             x: cursorX,
                             y: cursorY
@@ -8009,7 +8185,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                         el.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:99998;pointer-events:none;background:rgba(10,20,18,.82);color:#e8fff6;font:12px/1.4 -apple-system,"PingFang TC",sans-serif;padding:6px 9px;border-radius:10px;white-space:pre;', 
                         document.body.appendChild(el), framePerf.overlayEl = el);
                         const p = framePerfSnapshot();
-                        el.textContent = `perf v100  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}\n左右手檢查 ${"off" === p.hand.check ? "關" : "開"}  鎖定手形 ${p.hand.lockSize || "-"}  大小拒絕 ${p.hand.sizeRejected}  遠處拒絕 ${p.hand.farRejected}`, 
+                        el.textContent = `perf v102  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}\n左右手檢查 ${"off" === p.hand.check ? "關" : "開"}  鎖定手形 ${p.hand.lockSize || "-"}  大小拒絕 ${p.hand.sizeRejected}  遠處拒絕 ${p.hand.farRejected}`, 
                         el.style.display = state.running ? "block" : "none";
                     }(perfT2);
                 } catch (e) {
@@ -8644,6 +8820,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     function drawItemLabel(ctx, text, x, y) {
         if (!text) return;
         const size = Math.max(22, Math.round(.74 * (state.labelFont || 36)));
+        gameCanvas && gameCanvas.height && (y = Math.min(y, gameCanvas.height - size - 4)), 
         ctx.save(), ctx.font = `bold ${size}px "PingFang TC","Noto Sans TC",-apple-system,sans-serif`, 
         ctx.textAlign = "center", ctx.textBaseline = "top", ctx.lineWidth = Math.max(4, .28 * size), 
         ctx.strokeStyle = "rgba(255,255,255,0.95)", ctx.strokeText(text, x, y), ctx.fillStyle = "#1a1a1a", 
@@ -8714,13 +8891,13 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         rrPath(ctx, t.x - rw / 2 - 12, t.y - rh / 2 - 12, rw + 24, rh + 24, 22), ctx.fill(), 
         ctx.stroke(), ctx.fillStyle = "rgba(0,0,0,0.14)", ctx.beginPath(), ctx.ellipse(t.x, t.y + .46 * t.h, .46 * t.w, .06 * t.h, 0, 0, 2 * Math.PI), 
         ctx.fill(), t.img && t.img.complete && t.img.naturalWidth > 0 ? drawImageScaled(ctx, t.img, t.x - rw / 2, t.y - rh / 2, rw, rh) : drawDryingPole(ctx, t.x, t.y, .45 * Math.min(t.w, t.h));
-        const railY = t.y - .42 * rh;
+        const cw = gameCanvas.width, ch = gameCanvas.height, railW = Math.min(rw, .96 * cw), hudSafeTop = ch * (ch > cw ? .15 : .11), railY = Math.max(t.y - .42 * rh, hudSafeTop);
         for (const c of laundryRackContents) {
-            const px = t.x + c.fx * rw;
+            const px = t.x + c.fx * railW;
             if (c.img && c.img.complete && c.img.naturalWidth > 0) {
                 const iw = c.img.naturalWidth, ih = c.img.naturalHeight;
-                let dh = .66 * rh, dw = dh * iw / ih;
-                const maxW = .2 * rw;
+                let dh = Math.min(.66 * rh, .2 * ch), dw = dh * iw / ih;
+                const maxW = .13 * railW;
                 dw > maxW && (dw = maxW, dh = dw * ih / iw), drawImageScaled(ctx, c.img, px - dw / 2, railY, dw, dh);
             }
         }
@@ -8732,7 +8909,33 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         const rect = fridgeInteriorRect(t), rw = rect.rw, rh = rect.rh;
         ctx.fillStyle = "rgba(0,0,0,0.14)", ctx.beginPath(), ctx.ellipse(t.x, rect.y0 + rh + .03 * rh, .46 * rw, .05 * rh, 0, 0, 2 * Math.PI), 
         ctx.fill(), t.img && t.img.complete && t.img.naturalWidth > 0 ? drawImageScaled(ctx, t.img, rect.x0, rect.y0, rw, rh) : (ctx.fillStyle = "#EAF2F8", 
-        rrPath(ctx, rect.x0, rect.y0, rw, rh, 18), ctx.fill());
+        rrPath(ctx, rect.x0, rect.y0, rw, rh, 18), ctx.fill()), isFridgeZoneMode() && function(ctx, rect) {
+            const {columns: columns, rows: rows} = fridgeZoneGrid(), lit = fridgeLitZone();
+            ctx.save(), ctx.strokeStyle = "rgba(255,255,255,0.85)", ctx.lineWidth = 6;
+            const b = fridgeZoneBounds(rect), gridTop = rect.y0 + b.top * rect.rh;
+            for (let c = 1; c < columns; c++) {
+                const fx = b.left + (b.right - b.left) * c / columns, x = rect.x0 + fx * rect.rw;
+                ctx.beginPath(), ctx.moveTo(x, gridTop), ctx.lineTo(x, rect.bottom), ctx.stroke();
+            }
+            for (let r = 0; r < rows; r++) {
+                if (0 === r && b.top <= FRIDGE_INTERIOR.top) continue;
+                const fy = b.top + (b.bottom - b.top) * r / rows, y = rect.y0 + fy * rect.rh;
+                ctx.beginPath(), ctx.moveTo(rect.left, y), ctx.lineTo(rect.right, y), ctx.stroke();
+            }
+            if (lit >= 0) {
+                const z = fridgeZoneFrac(lit, rect), x = rect.x0 + z.left * rect.rw, y = rect.y0 + z.top * rect.rh, w = (z.right - z.left) * rect.rw, h = (z.bottom - z.top) * rect.rh, pulse = .5 + .5 * Math.sin(nowMs() / 175), inset = 8;
+                ctx.fillStyle = `rgba(255, 214, 0, ${(.22 + .28 * pulse).toFixed(3)})`, rrPath(ctx, x + inset, y + inset, w - 2 * inset, h - 2 * inset, 16), 
+                ctx.fill(), ctx.strokeStyle = `rgba(255, 160, 0, ${(.55 + .45 * pulse).toFixed(3)})`, 
+                ctx.lineWidth = 10, rrPath(ctx, x + inset, y + inset, w - 2 * inset, h - 2 * inset, 16), 
+                ctx.stroke();
+                const bulbR = Math.max(14, .07 * Math.min(w, h)), bx = x + w / 2, by = y + inset + 1.6 * bulbR;
+                ctx.fillStyle = `rgba(255, 244, 150, ${(.75 + .25 * pulse).toFixed(3)})`, ctx.beginPath(), 
+                ctx.arc(bx, by, bulbR, 0, 2 * Math.PI), ctx.fill(), ctx.strokeStyle = "#B8860B", 
+                ctx.lineWidth = 3, ctx.beginPath(), ctx.arc(bx, by, bulbR, 0, 2 * Math.PI), ctx.stroke(), 
+                ctx.fillStyle = "#8B6508", ctx.fillRect(bx - .4 * bulbR, by + bulbR, .8 * bulbR, .55 * bulbR);
+            }
+            ctx.restore();
+        }(ctx, rect);
         const pr = fridgePlacedRadius(rect);
         for (const p of fridgePlacedFoods) {
             const px = rect.x0 + p.fx * rw, py = rect.y0 + p.fy * rh;
@@ -10211,6 +10414,32 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             buttons: []
         });
     }
+    const CARDS_BIG_CHIP_FONT_PX = 78, CARDS_BIG_CHIP_H = 104;
+    function cardsBigChipY(cw, ch) {
+        return ch > cw ? Math.max(.14 * ch, 150) : Math.max(.1 * ch, 70);
+    }
+    function drawCardsBigChip(ctx, text, color, chipY) {
+        const cw = gameCanvas.width;
+        ctx.save();
+        let fontPx = CARDS_BIG_CHIP_FONT_PX;
+        const fontFor = px => "bold " + px + 'px -apple-system,"PingFang TC","Noto Sans TC",sans-serif';
+        ctx.font = fontFor(fontPx);
+        let tw = ctx.measureText(text).width;
+        const maxW = .94 * cw - 68;
+        tw > maxW && (fontPx = Math.max(30, Math.floor(fontPx * maxW / tw)), ctx.font = fontFor(fontPx), 
+        tw = ctx.measureText(text).width);
+        const w = tw + 68, h = Math.round(CARDS_BIG_CHIP_H * fontPx / CARDS_BIG_CHIP_FONT_PX);
+        return ctx.fillStyle = "rgba(255,255,255,0.96)", ctx.shadowColor = "rgba(0,0,0,0.18)", 
+        ctx.shadowBlur = 10, ctx.shadowOffsetY = 3, rrPath(ctx, cw / 2 - w / 2, chipY, w, h, 22), 
+        ctx.fill(), ctx.shadowColor = "transparent", ctx.shadowBlur = 0, ctx.shadowOffsetY = 0, 
+        ctx.fillStyle = color, ctx.textAlign = "center", ctx.textBaseline = "middle", ctx.fillText(text, cw / 2, chipY + h / 2), 
+        ctx.restore(), {
+            x: cw / 2 - w / 2,
+            y: chipY,
+            w: w,
+            h: h
+        };
+    }
     const LAUNDRY_COLORS = {
         red: {
             name: "紅色",
@@ -10264,12 +10493,13 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         }
     };
     function laundryConfig(tier) {
-        return isLevel4Tabletop() ? {
+        if (isLevel4Tabletop()) return {
             colors: [ "red", "blue" ],
             items: 3,
             types: 3,
             cue: 1
-        } : [ null, {
+        };
+        const cfg = [ null, {
             colors: [ "red", "blue" ],
             items: 3,
             types: 3,
@@ -10290,6 +10520,55 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             types: 6,
             cue: 4
         } ][tier];
+        return cfg && isLaundrySingleGarmentMode() ? Object.assign({}, cfg, {
+            items: 1
+        }) : cfg;
+    }
+    function isLaundrySingleGarmentMode() {
+        return isPublicLevel5VerticalFlow() && isPatientVisualCueMode();
+    }
+    const LAUNDRY_BASKET_IMG_ASPECT = .66;
+    function laundrySingleGarmentLayout(cw, ch, n) {
+        const portrait = ch > cw, spec = (portrait ? {
+            2: {
+                bw: .44,
+                pos: [ [ .25, .4 ], [ .75, .4 ] ]
+            },
+            3: {
+                bw: .34,
+                pos: [ [ .5, .26 ], [ .25, .53 ], [ .75, .53 ] ]
+            },
+            4: {
+                bw: .34,
+                pos: [ [ .26, .26 ], [ .74, .26 ], [ .26, .53 ], [ .74, .53 ] ]
+            }
+        } : {
+            2: {
+                bw: .36,
+                pos: [ [ .27, .33 ], [ .73, .33 ] ]
+            },
+            3: {
+                bw: .27,
+                pos: [ [ .17, .34 ], [ .5, .34 ], [ .83, .34 ] ]
+            },
+            4: {
+                bw: .27,
+                pos: [ [ .31, .24 ], [ .69, .24 ], [ .15, .64 ], [ .85, .64 ] ]
+            }
+        })[Math.max(2, Math.min(4, n))], bw = Math.min(cw * spec.bw, 460);
+        return {
+            bw: bw,
+            bh: .92 * bw * LAUNDRY_BASKET_IMG_ASPECT,
+            baskets: spec.pos.slice(0, n).map(([fx, fy]) => ({
+                x: cw * fx,
+                y: ch * fy
+            })),
+            garment: {
+                x: .5 * cw,
+                y: ch * (portrait ? .81 : .78),
+                size: Math.max(210, Math.min(330, Math.min(cw, ch) * (portrait ? .35 : .38)))
+            }
+        };
     }
     function laundrySetup() {
         const cfg = laundryConfig(laundry.tier);
@@ -10300,8 +10579,15 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             const compactBh = Math.min(bh, .14 * ch), BASKET_IMG_ASPECT = .66, sizeMultiplier = patientLarge && cw >= 900 ? 2 : 1, maxBwForRow = .8 * compactBh / (.92 * BASKET_IMG_ASPECT) * sizeMultiplier;
             bw = Math.min(bw, maxBwForRow), bh = sizeMultiplier > 1 ? Math.min(.24 * ch, bw * BASKET_IMG_ASPECT) : compactBh;
         }
-        const basketTop = .25 * ch, basketRowGap = bh + Math.max(12, .02 * ch);
-        laundry.baskets = laundry.colors.map((c, i) => ({
+        const basketTop = .25 * ch, basketRowGap = bh + Math.max(12, .02 * ch), single = isLaundrySingleGarmentMode() ? laundrySingleGarmentLayout(cw, ch, n) : null;
+        laundry.layout = single, laundry.baskets = single ? laundry.colors.map((c, i) => ({
+            id: "b" + c,
+            color: c,
+            x: single.baskets[i].x,
+            y: single.baskets[i].y,
+            w: single.bw,
+            h: single.bh
+        })) : laundry.colors.map((c, i) => ({
             id: "b" + c,
             color: c,
             x: patientLarge ? cw * (.3 + i % cols * .4) : (isLevel4Tabletop() ? .5 * cw : sideRight ? .76 * cw : .24 * cw) + (i % cols - (Math.min(cols, n - Math.floor(i / cols) * cols) - 1) / 2) * Math.min(1.06 * bw, .22 * cw),
@@ -10311,7 +10597,11 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         })), laundry.garments = [], laundryRefill(), carrier.reset(), laundryPanel(), speakCantonese("把衣物放入相同顏色的衫籃。");
     }
     function laundryRefill() {
-        const cfg = laundryConfig(laundry.tier), cw = gameCanvas.width, ch = gameCanvas.height, narrow = cw < 700, patientLarge = isPatientVisualCueMode(), level5VerticalFlow = isPublicLevel5VerticalFlow(), size = patientLarge ? Math.max(narrow ? 176 : 210, Math.min(narrow ? 230 : 280, .34 * Math.min(cw, ch))) : Math.max(narrow ? 96 : 110, Math.min(narrow ? 132 : 170, .22 * Math.min(cw, ch))), types = GARMENT_TYPES.slice(0, cfg.types), cols = narrow ? 2 : Math.min(4, cfg.items), rows = Math.ceil(cfg.items / cols), slot = index => {
+        const cfg = laundryConfig(laundry.tier), cw = gameCanvas.width, ch = gameCanvas.height, narrow = cw < 700, patientLarge = isPatientVisualCueMode(), level5VerticalFlow = isPublicLevel5VerticalFlow(), single = isLaundrySingleGarmentMode() ? laundrySingleGarmentLayout(cw, ch, laundry.colors.length) : null, size = single ? single.garment.size : patientLarge ? Math.max(narrow ? 176 : 210, Math.min(narrow ? 230 : 280, .34 * Math.min(cw, ch))) : Math.max(narrow ? 96 : 110, Math.min(narrow ? 132 : 170, .22 * Math.min(cw, ch))), types = GARMENT_TYPES.slice(0, cfg.types), cols = narrow ? 2 : Math.min(4, cfg.items), rows = Math.ceil(cfg.items / cols), slot = index => {
+            if (single) return {
+                x: single.garment.x,
+                y: single.garment.y
+            };
             const row = Math.floor(index / cols), col = index % cols, rowCount = Math.min(cols, cfg.items - row * cols), x = cw / 2 + (col - (rowCount - 1) / 2) * Math.min(size * (patientLarge ? 1.35 : 1.05), cw * (patientLarge ? .25 : .16)), top = ch * (isLevel4Tabletop() ? .69 : level5VerticalFlow ? .62 : patientLarge ? .3 : narrow ? .42 : .4);
             return {
                 x: x,
@@ -10796,7 +11086,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
 <script src="level4-three-games-module.js"></script>
 <script>
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
-  const LEVEL_APP_BUILD = "v100-20260904-privacy-person-segmentation";
+  const LEVEL_APP_BUILD = "v102-20260905-kungfu-theme-certificate";
   const levelAppHadController = Boolean(navigator.serviceWorker.controller);
   let levelAppReloading = false;
 

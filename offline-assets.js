@@ -1,5 +1,6 @@
 self.__OFFLINE_ASSETS = [
   "./audio/haobo_cheer.mp3",
+  "./certificate.html",
   "./fthue-adaptive-progression.js",
   "./icons/app-icon.svg",
   "./icons/icon-192.png",
@@ -67,6 +68,7 @@ self.__OFFLINE_ASSETS = [
   "./img/advanced/level3_shoulder_flexion_30_60.gif",
   "./img/advanced/level3_shoulder_flexion_30_60.png",
   "./img/advanced/level3_small_towel_side_slide.gif",
+  "./img/advanced/level3_therapist_shoulder_30_60.gif",
   "./img/advanced/level3_towel_abduction.gif",
   "./img/advanced/level4_bowling_real_life.gif",
   "./img/advanced/level4_buspay_real_life.gif",
@@ -114,6 +116,8 @@ self.__OFFLINE_ASSETS = [
   "./img/bowling_ball.png",
   "./img/bowling_pin.png",
   "./img/cat.png",
+  "./img/cert/inkwash_bg.jpg",
+  "./img/cert/yan_chai_logo_full.png",
   "./img/charsiu.jpeg",
   "./img/charsiu.png",
   "./img/dog.png",

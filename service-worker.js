@@ -1,4 +1,4 @@
-const CACHE_VERSION = "fthue-rehab-v100-20260904-privacy-person-segmentation";
+const CACHE_VERSION = "fthue-rehab-v102-20260905-kungfu-theme-certificate";
 const OFFLINE_PAGE = "./offline.html";
 
 importScripts("./offline-assets.js");
