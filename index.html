@@ -2890,7 +2890,9 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                 openCheck.textContent = "○ 放鬆打開", closeCheck.textContent = "○ 輕輕合手指") : isChopsticksMode() ? hint.textContent = "食指尖／筷子前端方向入鏡；見綠點即可。" : "grasp" === state.gameType ? (hint.textContent = "掌心向鏡頭。張到可達幅度，再輕合手。", 
                 openCheck.textContent = "○ 張手", closeCheck.textContent = "○ 輕合手") : hint.textContent = "手掌／滑墊入鏡；見綠點即可。";
             }();
-            const video = document.getElementById("calibVideo"), hint = document.getElementById("calibHint");
+            const video = document.getElementById("calibVideo");
+            resetPrivacySegmentation(), privacyBlurEnabled() && ensurePrivacySegmenter();
+            const hint = document.getElementById("calibHint");
             calibRAF = requestAnimationFrame(function loop() {
                 if (!screens.calib.classList.contains("active")) return;
                 const wrap = calibCanvas.parentElement, rectW = wrap.clientWidth, rectH = wrap.clientHeight;
@@ -2935,39 +2937,160 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                         reason: "calib-frame-error"
                     };
                 }
+                let privacyWindowPts = null;
+                if (privacyOn) {
+                    if (res.detected) if (isGrossTabletop() && Array.isArray(res.lm) && res.lm.length > 16) {
+                        const left = "left" === activeAffectedSide();
+                        privacyWindowPts = [ res.lm[left ? 11 : 12], res.lm[left ? 13 : 14], res.lm[left ? 15 : 16] ];
+                    } else privacyWindowPts = Array.isArray(res.lm) && res.lm.length >= 21 ? res.lm : [ {
+                        x: state.mirrorX ? 1 - res.nx : res.nx,
+                        y: res.ny
+                    } ];
+                    const seedPt = privacyWindowPts ? privacyWindowPts.length >= 21 ? privacyWindowPts[0] : privacyWindowPts[privacyWindowPts.length - 1] : null;
+                    !function(video, seedPt) {
+                        var pt;
+                        if (seedPt && (pt = seedPt) && Number.isFinite(pt.x) && Number.isFinite(pt.y) && (privacySeed = {
+                            x: pt.x,
+                            y: pt.y,
+                            at: nowMs()
+                        }), privacySegmenterFailed) return !1;
+                        if (!privacySegmenter) return ensurePrivacySegmenter(), !1;
+                        if (!(video && video.readyState >= 2 && video.videoWidth > 0)) return !1;
+                        const runAt = nowMs();
+                        if (runAt - privacySegLastRunAt < (privacySegCostEma > PRIVACY_SEG_SLOW_MS ? PRIVACY_SEG_SLOW_INTERVAL_MS : PRIVACY_SEG_INTERVAL_MS)) return !1;
+                        privacySegLastRunAt = runAt;
+                        const vw = video.videoWidth, vh = video.videoHeight, w = PRIVACY_SEG_W, h = Math.max(8, Math.round(w * vh / vw));
+                        privacySegInput || (privacySegInput = document.createElement("canvas")), privacySegInput.width === w && privacySegInput.height === h || (privacySegInput.width = w, 
+                        privacySegInput.height = h), privacySegInput.getContext("2d").drawImage(video, 0, 0, w, h);
+                        let ts = Math.round(performance.now());
+                        ts <= privacySegLastTs && (ts = privacySegLastTs + 1), privacySegLastTs = ts;
+                        let result = null;
+                        try {
+                            result = privacySegmenter.segmentForVideo(privacySegInput, ts);
+                            const m = result && result.confidenceMasks && result.confidenceMasks[0];
+                            if (!m) return !1;
+                            const prob = m.getAsFloat32Array(), mw = m.width, mh = m.height, comp = function(prob, w, h, seed, threshold) {
+                                const n = w * h;
+                                if (!(prob && prob.length >= n) || n <= 0) return null;
+                                const bin = new Uint8Array(n);
+                                let count = 0;
+                                for (let i = 0; i < n; i++) prob[i] >= threshold && (bin[i] = 1, count++);
+                                if (!count) return null;
+                                const labels = new Int32Array(n), stack = new Int32Array(n), sizes = [ 0 ];
+                                let nextLabel = 1;
+                                for (let start = 0; start < n; start++) {
+                                    if (!bin[start] || labels[start]) continue;
+                                    let sp = 0, size = 0;
+                                    for (stack[sp++] = start, labels[start] = nextLabel; sp; ) {
+                                        const i = stack[--sp];
+                                        size++;
+                                        const x = i % w, y = (i - x) / w;
+                                        x > 0 && bin[i - 1] && !labels[i - 1] && (labels[i - 1] = nextLabel, stack[sp++] = i - 1), 
+                                        x < w - 1 && bin[i + 1] && !labels[i + 1] && (labels[i + 1] = nextLabel, stack[sp++] = i + 1), 
+                                        y > 0 && bin[i - w] && !labels[i - w] && (labels[i - w] = nextLabel, stack[sp++] = i - w), 
+                                        y < h - 1 && bin[i + w] && !labels[i + w] && (labels[i + w] = nextLabel, stack[sp++] = i + w);
+                                    }
+                                    sizes.push(size), nextLabel++;
+                                }
+                                let chosen = 0, seeded = !1;
+                                if (seed && Number.isFinite(seed.x) && Number.isFinite(seed.y)) {
+                                    const sx = Math.min(w - 1, Math.max(0, Math.round(seed.x * w))), sy = Math.min(h - 1, Math.max(0, Math.round(seed.y * h))), r = Math.max(1, Math.round(PRIVACY_SEG_SEED_RADIUS * w));
+                                    let best = 1 / 0;
+                                    for (let dy = -r; dy <= r; dy++) {
+                                        const y = sy + dy;
+                                        if (!(y < 0 || y >= h)) for (let dx = -r; dx <= r; dx++) {
+                                            const x = sx + dx;
+                                            if (x < 0 || x >= w) continue;
+                                            const l = labels[y * w + x];
+                                            if (l) {
+                                                const d = dx * dx + dy * dy;
+                                                d < best && (best = d, chosen = l);
+                                            }
+                                        }
+                                    }
+                                    seeded = chosen > 0;
+                                }
+                                if (!chosen) {
+                                    let bestSize = 0;
+                                    for (let l = 1; l < nextLabel; l++) sizes[l] > bestSize && (bestSize = sizes[l], 
+                                    chosen = l);
+                                }
+                                const alpha = new Uint8Array(n);
+                                for (let i = 0; i < n; i++) labels[i] === chosen && (alpha[i] = 255);
+                                return {
+                                    alpha: alpha,
+                                    label: chosen,
+                                    components: nextLabel - 1,
+                                    size: sizes[chosen],
+                                    seeded: seeded
+                                };
+                            }(prob, mw, mh, privacySeed ? nowMs() - privacySeed.at > PRIVACY_SEG_SEED_HOLD_MS ? (privacySeed = null, 
+                            null) : privacySeed : null, PRIVACY_SEG_THRESHOLD);
+                            privacySegMask = comp ? {
+                                alpha: comp.alpha,
+                                w: mw,
+                                h: mh,
+                                components: comp.components,
+                                seeded: comp.seeded
+                            } : {
+                                alpha: null,
+                                w: mw,
+                                h: mh,
+                                components: 0,
+                                seeded: !1
+                            };
+                            const cost = nowMs() - runAt;
+                            return privacySegCostEma = privacySegCostEma ? .8 * privacySegCostEma + .2 * cost : cost, 
+                            !0;
+                        } catch (err) {
+                            return console.warn("privacy segmentation frame failed", err), !1;
+                        } finally {
+                            try {
+                                result && "function" == typeof result.close && result.close();
+                            } catch (_e) {}
+                        }
+                    }(video, seedPt), function(ctx, video, rectW, rectH) {
+                        const mask = privacySegMask;
+                        if (!mask || !mask.alpha || !(video && video.readyState >= 2 && video.videoWidth > 0)) return !1;
+                        const {alpha: alpha, w: w, h: h} = mask;
+                        privacySegMaskCanvas || (privacySegMaskCanvas = document.createElement("canvas"), 
+                        privacySegLayer = document.createElement("canvas")), privacySegMaskCanvas.width === w && privacySegMaskCanvas.height === h || (privacySegMaskCanvas.width = w, 
+                        privacySegMaskCanvas.height = h);
+                        const mctx = privacySegMaskCanvas.getContext("2d"), img = mctx.createImageData(w, h), d = img.data;
+                        for (let i = 0, j = 0; i < alpha.length; i++, j += 4) d[j] = 255, d[j + 1] = 255, 
+                        d[j + 2] = 255, d[j + 3] = alpha[i];
+                        mctx.putImageData(img, 0, 0), (privacySegLayer.width !== rectW || privacySegLayer.height !== rectH) && (privacySegLayer.width = rectW, 
+                        privacySegLayer.height = rectH);
+                        const lctx = privacySegLayer.getContext("2d"), cover = privacyCoverRect(video, rectW, rectH);
+                        lctx.save(), lctx.clearRect(0, 0, rectW, rectH), lctx.imageSmoothingEnabled = !0, 
+                        state.mirrorX && (lctx.translate(rectW, 0), lctx.scale(-1, 1)), lctx.drawImage(video, cover.dx, cover.dy, cover.dw, cover.dh), 
+                        lctx.globalCompositeOperation = "destination-in", "filter" in lctx && (lctx.filter = "blur(" + PRIVACY_SEG_EDGE_BLUR_PX + "px)"), 
+                        lctx.drawImage(privacySegMaskCanvas, cover.dx, cover.dy, cover.dw, cover.dh), lctx.restore(), 
+                        ctx.drawImage(privacySegLayer, 0, 0);
+                    }(ctx, video, rectW, rectH);
+                }
                 if (res.detected) {
                     if (document.getElementById("pixelCount").textContent = isShoulderFlexionLevel() ? "✅ 偵測到已選患側肩及手肘" : "✅ 偵測到手部", 
-                    privacyOn) {
-                        let windowPts = null;
-                        if (isGrossTabletop() && Array.isArray(res.lm) && res.lm.length > 16) {
-                            const left = "left" === activeAffectedSide();
-                            windowPts = [ res.lm[left ? 11 : 12], res.lm[left ? 13 : 14], res.lm[left ? 15 : 16] ];
-                        } else windowPts = Array.isArray(res.lm) && res.lm.length >= 21 ? res.lm : [ {
-                            x: state.mirrorX ? 1 - res.nx : res.nx,
-                            y: res.ny
-                        } ];
-                        !function(ctx, video, rectW, rectH, points) {
-                            if (!(video && video.readyState >= 2 && video.videoWidth > 0)) return null;
-                            const pts = (points || []).filter(p => p && Number.isFinite(p.x) && Number.isFinite(p.y));
-                            if (!pts.length) return null;
-                            const cover = privacyCoverRect(video, rectW, rectH);
-                            let minX = 1, maxX = 0, minY = 1, maxY = 0;
-                            for (const p of pts) {
-                                const u = state.mirrorX ? 1 - p.x : p.x;
-                                minX = Math.min(minX, u), maxX = Math.max(maxX, u), minY = Math.min(minY, p.y), 
-                                maxY = Math.max(maxY, p.y);
-                            }
-                            let x0 = cover.dx + minX * cover.dw, x1 = cover.dx + maxX * cover.dw, y0 = cover.dy + minY * cover.dh, y1 = cover.dy + maxY * cover.dh;
-                            const minSide = Math.min(rectW, rectH) * PRIVACY_WINDOW_MIN, padX = Math.max((x1 - x0) * PRIVACY_WINDOW_PAD, (minSide - (x1 - x0)) / 2, 18), padY = Math.max((y1 - y0) * PRIVACY_WINDOW_PAD, (minSide - (y1 - y0)) / 2, 18);
-                            x0 -= padX, x1 += padX, y0 -= padY, y1 += padY;
-                            const w = x1 - x0, h = y1 - y0, r = Math.min(26, w / 2, h / 2);
-                            ctx.save(), rrPath(ctx, x0, y0, w, h, r), ctx.clip(), ctx.imageSmoothingEnabled = !0, 
-                            state.mirrorX && (ctx.translate(rectW, 0), ctx.scale(-1, 1)), ctx.drawImage(video, cover.dx, cover.dy, cover.dw, cover.dh), 
-                            ctx.restore(), ctx.save(), ctx.lineWidth = 3, ctx.strokeStyle = "rgba(255,255,255,0.85)", 
-                            rrPath(ctx, x0, y0, w, h, r), ctx.stroke(), ctx.restore();
-                        }(ctx, video, rectW, rectH, windowPts);
-                    }
-                    if (isGraspStyleMode()) {
+                    privacyOn && privacyWindowPts && function(ctx, video, rectW, rectH, points) {
+                        if (!(video && video.readyState >= 2 && video.videoWidth > 0)) return null;
+                        const pts = (points || []).filter(p => p && Number.isFinite(p.x) && Number.isFinite(p.y));
+                        if (!pts.length) return null;
+                        const cover = privacyCoverRect(video, rectW, rectH);
+                        let minX = 1, maxX = 0, minY = 1, maxY = 0;
+                        for (const p of pts) {
+                            const u = state.mirrorX ? 1 - p.x : p.x;
+                            minX = Math.min(minX, u), maxX = Math.max(maxX, u), minY = Math.min(minY, p.y), 
+                            maxY = Math.max(maxY, p.y);
+                        }
+                        let x0 = cover.dx + minX * cover.dw, x1 = cover.dx + maxX * cover.dw, y0 = cover.dy + minY * cover.dh, y1 = cover.dy + maxY * cover.dh;
+                        const minSide = Math.min(rectW, rectH) * PRIVACY_WINDOW_MIN, padX = Math.max((x1 - x0) * PRIVACY_WINDOW_PAD, (minSide - (x1 - x0)) / 2, 18), padY = Math.max((y1 - y0) * PRIVACY_WINDOW_PAD, (minSide - (y1 - y0)) / 2, 18);
+                        x0 -= padX, x1 += padX, y0 -= padY, y1 += padY;
+                        const w = x1 - x0, h = y1 - y0, r = Math.min(26, w / 2, h / 2);
+                        ctx.save(), rrPath(ctx, x0, y0, w, h, r), ctx.clip(), ctx.imageSmoothingEnabled = !0, 
+                        state.mirrorX && (ctx.translate(rectW, 0), ctx.scale(-1, 1)), ctx.drawImage(video, cover.dx, cover.dy, cover.dw, cover.dh), 
+                        ctx.restore(), ctx.save(), ctx.lineWidth = 3, ctx.strokeStyle = "rgba(255,255,255,0.85)", 
+                        rrPath(ctx, x0, y0, w, h, r), ctx.stroke(), ctx.restore();
+                    }(ctx, video, rectW, rectH, privacyWindowPts), isGraspStyleMode()) {
                         const now = nowMs(), c = state.calibration, thresholds = state;
                         if (c.lastSeenAt = now, c.detectedStart || (c.detectedStart = now), !c.detectedDone && now - c.detectedStart >= 800 && (c.detectedDone = !0), 
                         isGraspStyleMode()) {
@@ -3757,7 +3880,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     }
     function stopCamera(release = !1) {
         level4VideoFreshness?.stop(), resetGamePoseFrameAdmission(), resetHandAdmissionAndLock(), 
-        resetPublicGameWorkAdmission(), release && state.stream && (state.stream.getTracks().forEach(t => t.stop()), 
+        resetPrivacySegmentation(), resetPublicGameWorkAdmission(), release && state.stream && (state.stream.getTracks().forEach(t => t.stop()), 
         state.stream = null);
     }
     document.getElementById("btnDownloadMovementVideo").addEventListener("click", async function() {
@@ -3882,6 +4005,9 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             return {};
         }
     }
+    function preferredHandDelegate() {
+        return handDelegateOverride() || (isAppleTouchDevice() || "CPU" === readHandDelegateRecord().pref ? "CPU" : "GPU");
+    }
     async function ensureHandLandmarker() {
         if (handLandmarker) return handLandmarker;
         if (handLandmarkerPromise) return handLandmarkerPromise;
@@ -3889,7 +4015,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             const mpVision = await import("./vendor/mediapipe/vision_bundle.mjs"), {HandLandmarker: HandLandmarker, FilesetResolver: FilesetResolver} = mpVision, vision = await FilesetResolver.forVisionTasks("./vendor/mediapipe/wasm"), options = {
                 baseOptions: {
                     modelAssetPath: "./vendor/mediapipe/models/hand_landmarker.task",
-                    delegate: handDelegateOverride() || (isAppleTouchDevice() || "CPU" === readHandDelegateRecord().pref ? "CPU" : "GPU")
+                    delegate: preferredHandDelegate()
                 },
                 runningMode: "VIDEO",
                 numHands: 2,
@@ -4361,6 +4487,43 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         var on;
         on = !privacyBlurEnabled(), state.privacyBlur = !!on, applyPrivacyBlurMode();
     }), applyPrivacyBlurMode();
+    const PRIVACY_SEG_W = 192, PRIVACY_SEG_THRESHOLD = .5, PRIVACY_SEG_SEED_RADIUS = .08, PRIVACY_SEG_SEED_HOLD_MS = 2500, PRIVACY_SEG_EDGE_BLUR_PX = 3, PRIVACY_SEG_INTERVAL_MS = 100, PRIVACY_SEG_SLOW_INTERVAL_MS = 250, PRIVACY_SEG_SLOW_MS = 50;
+    let privacySegLastRunAt = 0, privacySegCostEma = 0, privacySegmenter = null, privacySegmenterPromise = null, privacySegmenterFailed = !1, privacySegInput = null, privacySegMaskCanvas = null, privacySegLayer = null, privacySegLastTs = 0, privacySegMask = null, privacySeed = null;
+    async function ensurePrivacySegmenter() {
+        return privacySegmenter || (privacySegmenterFailed ? null : privacySegmenterPromise || (privacySegmenterPromise = (async () => {
+            try {
+                const mpVision = await import("./vendor/mediapipe/vision_bundle.mjs"), {ImageSegmenter: ImageSegmenter, FilesetResolver: FilesetResolver} = mpVision, vision = await FilesetResolver.forVisionTasks("./vendor/mediapipe/wasm"), options = {
+                    baseOptions: {
+                        modelAssetPath: "./vendor/mediapipe/models/selfie_segmenter.tflite",
+                        delegate: preferredHandDelegate()
+                    },
+                    runningMode: "VIDEO",
+                    outputCategoryMask: !1,
+                    outputConfidenceMasks: !0
+                };
+                try {
+                    privacySegmenter = await ImageSegmenter.createFromOptions(vision, options);
+                } catch (_e) {
+                    privacySegmenter = await ImageSegmenter.createFromOptions(vision, {
+                        ...options,
+                        baseOptions: {
+                            ...options.baseOptions,
+                            delegate: "CPU"
+                        }
+                    });
+                }
+                return privacySegmenter;
+            } catch (err) {
+                return privacySegmenterFailed = !0, console.warn("privacy segmenter unavailable; falling back to hand window only", err), 
+                null;
+            } finally {
+                privacySegmenterPromise = null;
+            }
+        })(), privacySegmenterPromise));
+    }
+    function resetPrivacySegmentation() {
+        privacySegMask = null, privacySeed = null, privacySegLastTs = 0, privacySegLastRunAt = 0;
+    }
     const CALIB_DROPOUT_GRACE_MS = 1500, TOOL_CALIB_MIN_RANGE = .012, TOOL_CALIB_MIN_SAMPLES = 8;
     function renderCalibCheck(id, done) {
         const el = document.getElementById(id);
@@ -7846,7 +8009,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                         el.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:99998;pointer-events:none;background:rgba(10,20,18,.82);color:#e8fff6;font:12px/1.4 -apple-system,"PingFang TC",sans-serif;padding:6px 9px;border-radius:10px;white-space:pre;', 
                         document.body.appendChild(el), framePerf.overlayEl = el);
                         const p = framePerfSnapshot();
-                        el.textContent = `perf v99  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}\n左右手檢查 ${"off" === p.hand.check ? "關" : "開"}  鎖定手形 ${p.hand.lockSize || "-"}  大小拒絕 ${p.hand.sizeRejected}  遠處拒絕 ${p.hand.farRejected}`, 
+                        el.textContent = `perf v100  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}\n左右手檢查 ${"off" === p.hand.check ? "關" : "開"}  鎖定手形 ${p.hand.lockSize || "-"}  大小拒絕 ${p.hand.sizeRejected}  遠處拒絕 ${p.hand.farRejected}`, 
                         el.style.display = state.running ? "block" : "none";
                     }(perfT2);
                 } catch (e) {
@@ -10633,7 +10796,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
 <script src="level4-three-games-module.js"></script>
 <script>
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
-  const LEVEL_APP_BUILD = "v99-20260904-hand-check-switch-lock-privacy-blur";
+  const LEVEL_APP_BUILD = "v100-20260904-privacy-person-segmentation";
   const levelAppHadController = Boolean(navigator.serviceWorker.controller);
   let levelAppReloading = false;
 

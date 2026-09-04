@@ -184,6 +184,7 @@ self.__OFFLINE_ASSETS = [
   "./shoulder-flexion-controller.js",
   "./vendor/mediapipe/models/hand_landmarker.task",
   "./vendor/mediapipe/models/pose_landmarker_lite.task",
+  "./vendor/mediapipe/models/selfie_segmenter.tflite",
   "./vendor/mediapipe/vision_bundle.mjs",
   "./vendor/mediapipe/wasm/vision_wasm_internal.js",
   "./vendor/mediapipe/wasm/vision_wasm_internal.wasm",
