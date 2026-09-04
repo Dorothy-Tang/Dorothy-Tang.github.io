@@ -2007,7 +2007,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             const iw = img.naturalWidth, ih = img.naturalHeight;
             let dw, dh;
             iw >= ih ? (dw = 2 * r, dh = 2 * r * ih / iw) : (dh = 2 * r, dw = 2 * r * iw / ih), 
-            ctx.drawImage(img, x - dw / 2, y - dh / 2, dw, dh);
+            drawImageScaled(ctx, img, x - dw / 2, y - dh / 2, dw, dh);
         } else ctx.fillStyle = "#E8B04B", ctx.beginPath(), ctx.arc(x, y, .9 * r, 0, 2 * Math.PI), 
         ctx.fill();
     }
@@ -2392,8 +2392,8 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         holdStartedAtMs = 0, holdTimeoutFired = !1;
     }
     function checkHoldTimeout() {
-        return !(!holdStartedAtMs || holdTimeoutFired || nowMs() - holdStartedAtMs < 5e3 || (holdTimeoutFired = !0, 
-        sessionSafety.holdTimeoutCount++, sessionSafety.holdTimeoutCount, showSafetyPause("放下物件、張開手、放鬆", "已經拿住物件超過 " + Math.round(5) + " 秒。請放下物件、慢慢張開手、放鬆手指和肩膀，由治療師確認手部無愈來愈繃緊後才繼續。", {
+        return !(!holdStartedAtMs || holdTimeoutFired || nowMs() - holdStartedAtMs < 3e4 || (holdTimeoutFired = !0, 
+        sessionSafety.holdTimeoutCount++, sessionSafety.holdTimeoutCount, showSafetyPause("放下物件、張開手、放鬆", "已經拿住物件超過 " + Math.round(30) + " 秒。請放下物件、慢慢張開手、放鬆手指和肩膀，由治療師確認手部無愈來愈繃緊後才繼續。", {
             reason: "hold_timeout"
         }), 0));
     }
@@ -2422,7 +2422,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     window.noteHoldStart = noteHoldStart, window.noteHoldEnd = noteHoldEnd, window.checkHoldTimeout = checkHoldTimeout, 
     window.noteReleaseAttemptStart = noteReleaseAttemptStart, window.noteReleaseAttemptEnd = noteReleaseAttemptEnd, 
     window.resetSessionSafety = resetSessionSafety, window.resetSafetyRuntime = resetSafetyRuntime, 
-    window.sessionSafety = sessionSafety, window.MAX_HOLD_MS = 5e3, window.RELEASE_DIFFICULTY_LIMIT = 3, 
+    window.sessionSafety = sessionSafety, window.MAX_HOLD_MS = 3e4, window.RELEASE_DIFFICULTY_LIMIT = 3, 
     window.SAFETY_LEVEL_NOTES = SAFETY_LEVEL_NOTES;
     const CALIB_LEVEL_BRIEF = {
         3: '<b>Level 3 肩屈曲設定</b><br>患者持續握住所選物件；不需對鏡頭做抓放。治療師選擇 30–60° 相機估算目標。<br><span lang="en">OT selects a 30–60° camera-estimated target. Practise 3 slow, steady attempts.</span><br><span style="color:#7d1a12;">注意：角度不是量角器 ROM；軟件不會自動 FTHUE 分級。</span>',
@@ -3309,6 +3309,9 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                     candidate: !1,
                     candidateAt: 0
                 }, interactionTrackingPauseAt = 0, resetHandFrameAdmission(), resetPublicGameWorkAdmission(), 
+                handAdmitDiag.rejected = 0, handAdmitDiag.strict = 0, handAdmitDiag.continuity = 0, 
+                handAdmitDiag.lone = 0, framePerf.trackMs = 0, framePerf.renderMs = 0, framePerf.frameMs = 0, 
+                framePerf.fps = 0, framePerf.samples = 0, framePerf.longFrames = 0, framePerf.lastAt = 0, 
                 cursorX = -1, cursorY = -1, dotEmaX = -1, dotEmaY = -1, handDetected = !1, posHistory = [], 
                 trackingPointHistory = [], level3Lateral.reset(), level2LateralLastTargetHit = 0, 
                 level4Reach.reset(), shoulderFlexionController && (shoulderFlexionController.reset(state.level, state.shoulderTargetDeg), 
@@ -3316,7 +3319,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                 shoulderFlexionController.setExerciseMode(state.shoulderExerciseMode), shoulderFlexionState = shoulderFlexionController.snapshot()), 
                 level4Wipe.reset(), level4DimSumCycle.reset(), level4MiniGames.reset(), level4UpdateCalibrationBar(), 
                 level3RoundVariant = null, level3PreviousVariantType = "", (isLevel3Tabletop() || isShoulderFlexionLevel()) && chooseLevel3RoundVariant(), 
-                needsGrossPoseInference() && ensurePoseLandmarker().catch(() => null), isLevel6() && ensureHandLandmarker().catch(() => null),
+                needsGrossPoseInference() && ensurePoseLandmarker().catch(() => null), isLevel6() && ensureHandLandmarker().catch(() => null), 
                 timeLeft = state.duration, updateHUD(), resizeGameCanvas();
                 const gameStage = document.querySelector(".game-stage");
                 if (state.selfieMode = !1, syncGameBackgroundMode(), gameStage && gameStage.classList.toggle("level4-selfie-window", isLevel4WipeGame()), 
@@ -3720,19 +3723,49 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             x: NaN,
             y: NaN,
             at: 0
-        };
+        }, loneOppositeSince = 0;
     }
-    const AFFECTED_HAND_TRACK_MS = 600, AFFECTED_HAND_TRACK_DIST = .16, AFFECTED_HAND_OPPOSITE_REJECT = .8;
+    const AFFECTED_HAND_TRACK_MS = 1500, AFFECTED_HAND_TRACK_DIST = .16, AFFECTED_HAND_OPPOSITE_REJECT = .8, LONE_HAND_ADMIT_MS = 1e3;
     let affectedHandTrack = {
         x: NaN,
         y: NaN,
         at: 0
+    }, loneOppositeSince = 0;
+    const handAdmitDiag = {
+        hands: 0,
+        label: "",
+        score: 0,
+        path: "",
+        rejected: 0,
+        strict: 0,
+        continuity: 0,
+        lone: 0
     };
+    function affectedHandContinuityEnabled() {
+        return "5" === state.level || "67" === state.level;
+    }
     function isAppleTouchDevice() {
         return /iPad|iPhone|iPod/.test(navigator.userAgent) || "MacIntel" === navigator.platform && navigator.maxTouchPoints > 1;
     }
     function interactionX(rawX) {
         return state.mirrorX ? 1 - rawX : rawX;
+    }
+    const HAND_DELEGATE_STORAGE_KEY = "fthue.handDelegate.v98", HAND_DELEGATE_SLOW_MS = 70, HAND_DELEGATE_MIN_SAMPLES = 90;
+    function handDelegateOverride() {
+        try {
+            const v = String(new URLSearchParams(window.location.search).get("handDelegate") || "").toLowerCase();
+            if ("cpu" === v) return "CPU";
+            if ("gpu" === v) return "GPU";
+        } catch (_e) {}
+        return null;
+    }
+    function readHandDelegateRecord() {
+        try {
+            const raw = localStorage.getItem(HAND_DELEGATE_STORAGE_KEY), rec = raw ? JSON.parse(raw) : null;
+            return rec && "object" == typeof rec ? rec : {};
+        } catch (_e) {
+            return {};
+        }
     }
     async function ensureHandLandmarker() {
         if (handLandmarker) return handLandmarker;
@@ -3741,7 +3774,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             const mpVision = await import("./vendor/mediapipe/vision_bundle.mjs"), {HandLandmarker: HandLandmarker, FilesetResolver: FilesetResolver} = mpVision, vision = await FilesetResolver.forVisionTasks("./vendor/mediapipe/wasm"), options = {
                 baseOptions: {
                     modelAssetPath: "./vendor/mediapipe/models/hand_landmarker.task",
-                    delegate: isAppleTouchDevice() ? "CPU" : "GPU"
+                    delegate: handDelegateOverride() || (isAppleTouchDevice() || "CPU" === readHandDelegateRecord().pref ? "CPU" : "GPU")
                 },
                 runningMode: "VIDEO",
                 numHands: 2,
@@ -3750,7 +3783,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                 minTrackingConfidence: .18
             };
             try {
-                handLandmarker = await HandLandmarker.createFromOptions(vision, options);
+                handLandmarker = await HandLandmarker.createFromOptions(vision, options), framePerf.handDelegate = options.baseOptions.delegate;
             } catch (error) {
                 handLandmarker = await HandLandmarker.createFromOptions(vision, {
                     ...options,
@@ -3758,7 +3791,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                         ...options.baseOptions,
                         delegate: "CPU"
                     }
-                });
+                }), framePerf.handDelegate = "CPU";
             }
             return handLandmarker;
         })();
@@ -3783,14 +3816,16 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         if (results && results.landmarks && results.landmarks.length > 0) {
             const selectedHandIndex = function(results, inputMirrored = !1) {
                 const landmarks = Array.isArray(results?.landmarks) ? results.landmarks : [], affected = activeAffectedSide();
-                let selected = -1, selectedConfidence = -1 / 0;
+                let selected = -1, selectedConfidence = -1 / 0, admitPath = "";
+                1 !== landmarks.length && (loneOppositeSince = 0);
                 for (let index = 0; index < landmarks.length; index++) {
                     if (mediaPipeAnatomicalHand(results, index, inputMirrored) !== affected) continue;
                     const groups = results.handednesses || results.handedness, confidence = Number(groups?.[index]?.[0]?.score);
                     !Number.isFinite(confidence) || confidence < .55 || (selected < 0 || Number.isFinite(confidence) && confidence > selectedConfidence) && (selected = index, 
-                    selectedConfidence = Number.isFinite(confidence) ? confidence : selectedConfidence);
+                    selectedConfidence = Number.isFinite(confidence) ? confidence : selectedConfidence, 
+                    admitPath = "strict");
                 }
-                if (selected < 0 && "5" === state.level && Number.isFinite(affectedHandTrack.x) && nowMs() - affectedHandTrack.at <= AFFECTED_HAND_TRACK_MS) {
+                if (selected < 0 && affectedHandContinuityEnabled() && Number.isFinite(affectedHandTrack.x) && nowMs() - affectedHandTrack.at <= AFFECTED_HAND_TRACK_MS) {
                     const groups = results.handednesses || results.handedness;
                     let bestDistance = 1 / 0;
                     for (let index = 0; index < landmarks.length; index++) {
@@ -3800,8 +3835,21 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                         if (side && side !== affected && Number.isFinite(confidence) && confidence >= AFFECTED_HAND_OPPOSITE_REJECT) continue;
                         const dist = Math.hypot(wrist.x - affectedHandTrack.x, wrist.y - affectedHandTrack.y);
                         dist <= AFFECTED_HAND_TRACK_DIST && dist < bestDistance && (bestDistance = dist, 
-                        selected = index);
+                        selected = index, admitPath = "continuity");
                     }
+                }
+                if (selected < 0 && affectedHandContinuityEnabled() && 1 === landmarks.length) {
+                    const groups = results.handednesses || results.handedness, side = mediaPipeAnatomicalHand(results, 0, inputMirrored), confidence = Number(groups?.[0]?.[0]?.score);
+                    side && side !== affected && Number.isFinite(confidence) && confidence >= .55 ? (loneOppositeSince || (loneOppositeSince = nowMs()), 
+                    nowMs() - loneOppositeSince >= LONE_HAND_ADMIT_MS && (selected = 0, admitPath = "lone")) : (loneOppositeSince = 0, 
+                    selected = 0, admitPath = "lone");
+                } else 1 === landmarks.length && (loneOppositeSince = 0);
+                {
+                    const groups = results?.handednesses || results?.handedness, idx = selected >= 0 ? selected : 0;
+                    handAdmitDiag.hands = landmarks.length, handAdmitDiag.label = landmarks.length ? mediaPipeAnatomicalHand(results, idx, inputMirrored) || "?" : "", 
+                    handAdmitDiag.score = landmarks.length ? +(Number(groups?.[idx]?.[0]?.score) || 0).toFixed(2) : 0, 
+                    handAdmitDiag.path = selected >= 0 ? admitPath : landmarks.length ? "rejected" : "none", 
+                    selected >= 0 ? admitPath && handAdmitDiag[admitPath]++ : landmarks.length && handAdmitDiag.rejected++;
                 }
                 return selected >= 0 && function(lm) {
                     const wrist = lm?.[0];
@@ -4098,7 +4146,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         detectedGestureState.candidateAt = now, detectedGestureState.stable;
         if (rawValue !== detectedGestureState.candidate) return detectedGestureState.candidate = rawValue, 
         detectedGestureState.candidateAt = now, detectedGestureState.stable;
-        const confirmMs = "grasp" === mode && "5" === state.level ? 30 : "pinch" === mode && isLevel6RealToolTask() ? PUBLIC_LEVEL6_TOOL_GESTURE_CONFIRM_MS : GESTURE_CONFIRM_MS;
+        const confirmMs = "grasp" === mode && "5" === state.level ? 60 : "pinch" === mode && isLevel6RealToolTask() ? PUBLIC_LEVEL6_TOOL_GESTURE_CONFIRM_MS : GESTURE_CONFIRM_MS;
         return now - detectedGestureState.candidateAt >= confirmMs && (detectedGestureState.stable = rawValue), 
         detectedGestureState.stable;
     }
@@ -4417,7 +4465,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         if (img && img.complete && img.naturalWidth > 0) {
             const iw = img.naturalWidth, ih = img.naturalHeight;
             let dw = 2 * r, dh = dw * ih / iw;
-            ih > iw && (dh = 2 * r, dw = dh * iw / ih), ctx.drawImage(img, x - dw / 2, y - dh / 2, dw, dh);
+            ih > iw && (dh = 2 * r, dw = dh * iw / ih), drawImageScaled(ctx, img, x - dw / 2, y - dh / 2, dw, dh);
         } else drawBeefBall(ctx, x, y, r);
     }
     function drawDryingPole(ctx, x, y, s) {
@@ -6056,6 +6104,38 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         const t = Math.max(0, timeLeft), mm = Math.floor(t / 60).toString().padStart(2, "0"), ss = (t % 60).toString().padStart(2, "0");
         document.getElementById("hudTime").textContent = mm + ":" + ss;
     }
+    const FRAME_PERF_LONG_MS = 50, framePerf = {
+        trackMs: 0,
+        renderMs: 0,
+        frameMs: 0,
+        fps: 0,
+        samples: 0,
+        longFrames: 0,
+        lastAt: 0,
+        handDelegate: null,
+        overlayAt: 0,
+        overlayEl: null
+    };
+    function framePerfSnapshot() {
+        return {
+            trackMs: +framePerf.trackMs.toFixed(1),
+            renderMs: +framePerf.renderMs.toFixed(1),
+            frameMs: +framePerf.frameMs.toFixed(1),
+            fps: +framePerf.fps.toFixed(1),
+            samples: framePerf.samples,
+            longFrames: framePerf.longFrames,
+            handDelegate: framePerf.handDelegate,
+            canvas: [ gameCanvas ? gameCanvas.width : 0, gameCanvas ? gameCanvas.height : 0 ],
+            video: [ gameVideo ? gameVideo.videoWidth : 0, gameVideo ? gameVideo.videoHeight : 0 ],
+            dpr: +(window.devicePixelRatio || 1).toFixed(2),
+            scaledBitmaps: {
+                ...scaledBitmapStats
+            },
+            hand: {
+                ...handAdmitDiag
+            }
+        };
+    }
     const PUBLIC_GAME_WORK_INTERVAL_MS = 1e3 / 30;
     let publicGameWork = {
         at: -1 / 0,
@@ -6091,6 +6171,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                         staleKey: staleKey
                     }, !0);
                 }(rafNow, publicFrame)) try {
+                    const perfT0 = performance.now();
                     !function(frameOverride) {
                         const cw = gameCanvas.width, ch = gameCanvas.height, now = nowMs();
                         let grossPose = null;
@@ -6098,7 +6179,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                         state.qaMode || frame.fresh || resetHandFrameAdmission();
                         const productionFrameFresh = !state.qaMode && frame.fresh;
                         let detectedPose = null;
-                        needsGrossPoseInference() && (state.qaMode ? grossPose = qaHand?.poseLm : productionFrameFresh && (detectedPose = detectPose(gameVideo, frame.generation),
+                        needsGrossPoseInference() && (state.qaMode ? grossPose = qaHand?.poseLm : productionFrameFresh && (detectedPose = detectPose(gameVideo, frame.generation), 
                         grossPose = detectedPose || (lastPoseFrameGeneration === frame.generation ? lastPoseLm : null)));
                         const level3Motion = function(lm, frame) {
                             if (!isLevel2HorizontalAbduction()) return level3Lateral;
@@ -6258,7 +6339,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                     y: medianValue(trackingPointHistory.map(point => point.y))
                                 };
                             }(mapped.x, mapped.y), px = stablePoint.x, py = stablePoint.y;
-                            if (publicLevel56Realtime) dotEmaX = px, dotEmaY = py; else if (dotEmaX < 0) dotEmaX = px,
+                            if (publicLevel56Realtime) dotEmaX = px, dotEmaY = py; else if (dotEmaX < 0) dotEmaX = px, 
                             dotEmaY = py; else {
                                 const dx = px - dotEmaX, dy = py - dotEmaY, movement = Math.hypot(dx, dy);
                                 if (movement > TRACKING_DEAD_ZONE_PX) {
@@ -6275,7 +6356,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                             }), lastPathX = cursorX, lastPathY = cursorY, handOpenPrep = void 0 === res.isOpenPrep ? !res.isGrasping : !!res.isOpenPrep, 
                             isGraspStyleMode() ? isGrasping = res.isGrasping || !1 : usesAdvancedThemeModule() && void 0 !== res.isGrasping && (isGrasping = !!res.isGrasping);
                         } else isGraspStyleMode() && function(res) {
-                            return !res?.reason || "no-hand-detected" === res.reason || "5" === state.level && "required-landmarks-missing" === res.reason || "5" === state.level && "affected-hand-not-detected" === res.reason;
+                            return !res?.reason || "no-hand-detected" === res.reason || "5" === state.level && "required-landmarks-missing" === res.reason || ("5" === state.level || "67" === state.level) && "affected-hand-not-detected" === res.reason;
                         }(res) && cursorX >= 0 && now - lastDetectedAt < DETECTION_LOST_GRACE_MS ? (handDetected = !0, 
                         detectionHeldGrace = !0, function(now) {
                             interactionTrackingPauseAt || (interactionTrackingPauseAt = now);
@@ -6329,7 +6410,9 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                         isLevel4MahjongWashGame() && updateLevel4MahjongWash(level4Motion, level4PathPoint.x / cw, level4PathPoint.y / ch), 
                         isLevel4BusPayGame() && updateLevel4BusPay(level4Motion, level4PathPoint.x / cw, level4PathPoint.y / ch), 
                         isShoulderFlexionLevel() && level4UpdateCalibrationBar();
-                    }(publicFrame), usesAdvancedThemeModule() ? (function() {
+                    }(publicFrame);
+                    const perfT1 = performance.now();
+                    usesAdvancedThemeModule() ? (function() {
                         if (gameCanvas.width === advLastW && gameCanvas.height === advLastH || (advLastW = gameCanvas.width, 
                         advLastH = gameCanvas.height, "cooking" === advCurrent && (cook.layout = cookLayout()), 
                         "mahjong" === advCurrent && (mj.layout = mjLayout()), "cards" === advCurrent && cardsNewBoard(!1), 
@@ -7384,12 +7467,12 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                 const g = teahouseGeometry(cw, ch);
                                 if (imgTeahouseBg.complete && imgTeahouseBg.naturalWidth > 0) {
                                     const iw = imgTeahouseBg.naturalWidth, ih = imgTeahouseBg.naturalHeight, s = Math.max(cw / iw, ch / ih), dw = iw * s, dh = ih * s;
-                                    ctx.drawImage(imgTeahouseBg, (cw - dw) / 2, (ch - dh) / 2, dw, dh);
+                                    drawImageScaled(ctx, imgTeahouseBg, (cw - dw) / 2, (ch - dh) / 2, dw, dh);
                                 } else ctx.fillStyle = "#c9a267", ctx.fillRect(0, 0, cw, ch);
                                 const t = nowMs() - teahouseServe.startedMs;
-                                if (imgThPlate.complete && imgThPlate.naturalWidth > 0 ? ctx.drawImage(imgThPlate, g.laneX - g.plateW / 2, g.plateY - g.plateH / 2, g.plateW, g.plateH) : (drawTeahousePlateEllipse(ctx, g.laneX, g.plateY, g.plateW, .34 * g.plateW), 
-                                imgSteamerEmpty.complete && imgSteamerEmpty.naturalWidth > 0 && ctx.drawImage(imgSteamerEmpty, g.steamerX - g.sw / 2, g.steamerY - .5 * g.sw, g.sw, g.sw)), 
-                                imgThTray.complete && imgThTray.naturalWidth > 0 && ctx.drawImage(imgThTray, g.laneX - g.trayW / 2, g.trayY - g.trayH / 2, g.trayW, g.trayH), 
+                                if (imgThPlate.complete && imgThPlate.naturalWidth > 0 ? drawImageScaled(ctx, imgThPlate, g.laneX - g.plateW / 2, g.plateY - g.plateH / 2, g.plateW, g.plateH) : (drawTeahousePlateEllipse(ctx, g.laneX, g.plateY, g.plateW, .34 * g.plateW), 
+                                imgSteamerEmpty.complete && imgSteamerEmpty.naturalWidth > 0 && drawImageScaled(ctx, imgSteamerEmpty, g.steamerX - g.sw / 2, g.steamerY - .5 * g.sw, g.sw, g.sw)), 
+                                imgThTray.complete && imgThTray.naturalWidth > 0 && drawImageScaled(ctx, imgThTray, g.laneX - g.trayW / 2, g.trayY - g.trayH / 2, g.trayW, g.trayH), 
                                 drawTeahousePlateEllipse(ctx, g.laneX, g.dishY, g.dishW, .3 * g.dishW), function(ctx, x, y0, y1, t) {
                                     const h = y0 - y1;
                                     if (h < 60) return;
@@ -7471,7 +7554,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                             ctx.strokeStyle = "rgba(0,0,0,0.06)", ctx.lineWidth = 1, ctx.beginPath(), ctx.arc(t.x, t.y, .85 * plateR, 0, 2 * Math.PI), 
                             ctx.stroke(), t.img && t.img.complete && t.img.naturalWidth > 0) {
                                 const imgSz = Math.min(2 * plateR, 3.2 * LBL_SIZE);
-                                ctx.drawImage(t.img, t.x - imgSz / 2, t.y - 1 * plateR, imgSz, imgSz), ctx.fillStyle = "#1a1a1a", 
+                                drawImageScaled(ctx, t.img, t.x - imgSz / 2, t.y - 1 * plateR, imgSz, imgSz), ctx.fillStyle = "#1a1a1a", 
                                 ctx.font = `bold ${Math.round(.75 * LBL_SIZE)}px "PingFang TC","Noto Sans TC",-apple-system,sans-serif`, 
                                 ctx.textAlign = "center", ctx.textBaseline = "top";
                                 const labelY = t.y - 1 * plateR + imgSz + 2;
@@ -7494,7 +7577,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                 const iw = f.img.naturalWidth, ih = f.img.naturalHeight, targetMax = 2 * visualR;
                                 let dw, dh;
                                 iw >= ih ? (dw = targetMax, dh = targetMax * ih / iw) : (dh = targetMax, dw = targetMax * iw / ih), 
-                                ctx.drawImage(f.img, drawX - dw / 2, drawY - dh / 2, dw, dh);
+                                drawImageScaled(ctx, f.img, drawX - dw / 2, drawY - dh / 2, dw, dh);
                             } else ctx.beginPath(), ctx.arc(drawX, drawY, visualR, 0, 2 * Math.PI), ctx.fillStyle = f.color || "#D4A017", 
                             ctx.fill(), ctx.strokeStyle = "rgba(0,0,0,0.15)", ctx.lineWidth = 2, ctx.stroke(), 
                             ctx.fillStyle = "#2C1810", ctx.font = 'bold 14px -apple-system,"PingFang TC","Noto Sans TC",sans-serif', 
@@ -7565,6 +7648,34 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                         }
                         ctx.restore();
                     }(gameCtx, gameCanvas.width, gameCanvas.height);
+                    const perfT2 = performance.now();
+                    !function(now, trackMs, renderMs) {
+                        const k = framePerf.samples < 10 ? .3 : .08, ema = (prev, v) => 0 === framePerf.samples ? v : prev + (v - prev) * k;
+                        if (framePerf.trackMs = ema(framePerf.trackMs, trackMs), framePerf.renderMs = ema(framePerf.renderMs, renderMs), 
+                        framePerf.lastAt) {
+                            const dt = now - framePerf.lastAt;
+                            dt > 0 && dt < 2e3 && (framePerf.frameMs = ema(framePerf.frameMs, dt), framePerf.frameMs > 0 && (framePerf.fps = 1e3 / framePerf.frameMs), 
+                            dt > FRAME_PERF_LONG_MS && framePerf.longFrames++);
+                        }
+                        framePerf.lastAt = now, framePerf.samples++;
+                    }(perfT2, perfT1 - perfT0, perfT2 - perfT1), function(now) {
+                        if (!function() {
+                            try {
+                                return "1" === new URLSearchParams(window.location.search).get("perf");
+                            } catch (_e) {
+                                return !1;
+                            }
+                        }()) return;
+                        if (now - framePerf.overlayAt < 500) return;
+                        framePerf.overlayAt = now;
+                        let el = framePerf.overlayEl;
+                        el || (el = document.createElement("div"), el.id = "framePerfOverlay", el.setAttribute("aria-hidden", "true"), 
+                        el.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:99998;pointer-events:none;background:rgba(10,20,18,.82);color:#e8fff6;font:12px/1.4 -apple-system,"PingFang TC",sans-serif;padding:6px 9px;border-radius:10px;white-space:pre;', 
+                        document.body.appendChild(el), framePerf.overlayEl = el);
+                        const p = framePerfSnapshot();
+                        el.textContent = `perf v98  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}`, 
+                        el.style.display = state.running ? "block" : "none";
+                    }(perfT2);
                 } catch (e) {
                     if (state.qaMode) throw e;
                     console.error("game frame failed", e);
@@ -8224,7 +8335,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         ctx.fill(), t.img && t.img.complete && t.img.naturalWidth > 0) {
             const ratio = t.img.naturalWidth / t.img.naturalHeight;
             let dw = maxW, dh = dw / ratio;
-            dh > maxH && (dh = maxH, dw = dh * ratio), ctx.drawImage(t.img, t.x - dw / 2, t.y - dh / 2 - .05 * t.h, dw, dh);
+            dh > maxH && (dh = maxH, dw = dh * ratio), drawImageScaled(ctx, t.img, t.x - dw / 2, t.y - dh / 2 - .05 * t.h, dw, dh);
         }
         ctx.font = `bold ${labelSize}px "PingFang TC","Noto Sans TC",-apple-system,sans-serif`, 
         ctx.textAlign = "center", ctx.textBaseline = "bottom", ctx.lineWidth = Math.max(4, .22 * labelSize), 
@@ -8240,7 +8351,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         if (t.img && t.img.complete && t.img.naturalWidth > 0) {
             const ratio = t.img.naturalWidth / t.img.naturalHeight;
             plateW = t.w, plateH = plateW / ratio, plateH > t.h && (plateH = t.h, plateW = plateH * ratio), 
-            ctx.drawImage(t.img, t.x - plateW / 2, t.y - plateH / 2, plateW, plateH);
+            drawImageScaled(ctx, t.img, t.x - plateW / 2, t.y - plateH / 2, plateW, plateH);
         } else drawRiceBowl(ctx, t.x, t.y, .45 * Math.min(t.w, t.h));
         const itemR = .135 * Math.min(plateW, plateH);
         for (const p of dimsumPlateContents) {
@@ -8248,7 +8359,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             if (p.img && p.img.complete && p.img.naturalWidth > 0) {
                 const iw = p.img.naturalWidth, ih = p.img.naturalHeight;
                 let dw = 2 * itemR, dh = dw * ih / iw;
-                ih > iw && (dh = 2 * itemR, dw = dh * iw / ih), ctx.drawImage(p.img, px - dw / 2, py - dh / 2, dw, dh);
+                ih > iw && (dh = 2 * itemR, dw = dh * iw / ih), drawImageScaled(ctx, p.img, px - dw / 2, py - dh / 2, dw, dh);
             } else drawBeefBall(ctx, px, py, itemR);
         }
         t._hover && (ctx.strokeStyle = t.color || "#2E6DA4", ctx.lineWidth = 8, ctx.beginPath(), 
@@ -8266,7 +8377,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         ctx.strokeStyle = "rgba(46,109,164,0.48)", ctx.lineWidth = Math.max(3, .012 * Math.min(rw, rh)), 
         rrPath(ctx, t.x - rw / 2 - 12, t.y - rh / 2 - 12, rw + 24, rh + 24, 22), ctx.fill(), 
         ctx.stroke(), ctx.fillStyle = "rgba(0,0,0,0.14)", ctx.beginPath(), ctx.ellipse(t.x, t.y + .46 * t.h, .46 * t.w, .06 * t.h, 0, 0, 2 * Math.PI), 
-        ctx.fill(), t.img && t.img.complete && t.img.naturalWidth > 0 ? ctx.drawImage(t.img, t.x - rw / 2, t.y - rh / 2, rw, rh) : drawDryingPole(ctx, t.x, t.y, .45 * Math.min(t.w, t.h));
+        ctx.fill(), t.img && t.img.complete && t.img.naturalWidth > 0 ? drawImageScaled(ctx, t.img, t.x - rw / 2, t.y - rh / 2, rw, rh) : drawDryingPole(ctx, t.x, t.y, .45 * Math.min(t.w, t.h));
         const railY = t.y - .42 * rh;
         for (const c of laundryRackContents) {
             const px = t.x + c.fx * rw;
@@ -8274,7 +8385,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                 const iw = c.img.naturalWidth, ih = c.img.naturalHeight;
                 let dh = .66 * rh, dw = dh * iw / ih;
                 const maxW = .2 * rw;
-                dw > maxW && (dw = maxW, dh = dw * ih / iw), ctx.drawImage(c.img, px - dw / 2, railY, dw, dh);
+                dw > maxW && (dw = maxW, dh = dw * ih / iw), drawImageScaled(ctx, c.img, px - dw / 2, railY, dw, dh);
             }
         }
         t._hover && (ctx.strokeStyle = t.color || "#2E6DA4", ctx.lineWidth = 8, rrPath(ctx, t.x - rw / 2 - 10, t.y - rh / 2 - 10, rw + 20, rh + 20, 22), 
@@ -8284,7 +8395,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         ctx.save();
         const rect = fridgeInteriorRect(t), rw = rect.rw, rh = rect.rh;
         ctx.fillStyle = "rgba(0,0,0,0.14)", ctx.beginPath(), ctx.ellipse(t.x, rect.y0 + rh + .03 * rh, .46 * rw, .05 * rh, 0, 0, 2 * Math.PI), 
-        ctx.fill(), t.img && t.img.complete && t.img.naturalWidth > 0 ? ctx.drawImage(t.img, rect.x0, rect.y0, rw, rh) : (ctx.fillStyle = "#EAF2F8", 
+        ctx.fill(), t.img && t.img.complete && t.img.naturalWidth > 0 ? drawImageScaled(ctx, t.img, rect.x0, rect.y0, rw, rh) : (ctx.fillStyle = "#EAF2F8", 
         rrPath(ctx, rect.x0, rect.y0, rw, rh, 18), ctx.fill());
         const pr = fridgePlacedRadius(rect);
         for (const p of fridgePlacedFoods) {
@@ -8302,6 +8413,50 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     }
     function endGame(endReason) {
         const reason = endReason || "time_up";
+        try {
+            !function() {
+                const p = framePerfSnapshot();
+                if (state.qaMode) return {
+                    action: "skip",
+                    reason: "not-public-play"
+                };
+                if (handDelegateOverride()) return {
+                    action: "skip",
+                    reason: "url-override"
+                };
+                if (isAppleTouchDevice()) return {
+                    action: "skip",
+                    reason: "apple-cpu-fixed"
+                };
+                if (!(p.handDelegate && p.samples >= HAND_DELEGATE_MIN_SAMPLES)) return {
+                    action: "skip",
+                    reason: "too-few-samples"
+                };
+                if ("5" !== state.level && "67" !== state.level) return {
+                    action: "skip",
+                    reason: "not-hand-level"
+                };
+                const rec = readHandDelegateRecord();
+                rec[p.handDelegate] = p.trackMs, rec.updatedAt = Date.now();
+                let action = "keep";
+                if (rec.settled ? action = "settled" : "GPU" === p.handDelegate ? p.trackMs > HAND_DELEGATE_SLOW_MS && !Number.isFinite(rec.CPU) ? (rec.pref = "CPU", 
+                action = "try-cpu") : p.trackMs <= HAND_DELEGATE_SLOW_MS && (rec.pref = "GPU", rec.settled = !0, 
+                action = "settle-gpu") : "CPU" === p.handDelegate && (Number.isFinite(rec.GPU) && p.trackMs >= rec.GPU ? (rec.pref = "GPU", 
+                rec.settled = !0, action = "settle-gpu") : (rec.pref = "CPU", rec.settled = !0, 
+                action = "settle-cpu")), function(rec) {
+                    try {
+                        localStorage.setItem(HAND_DELEGATE_STORAGE_KEY, JSON.stringify(rec));
+                    } catch (_e) {}
+                }(rec), "try-cpu" === action || "settle-gpu" === action && "GPU" !== p.handDelegate) {
+                    const old = handLandmarker;
+                    handLandmarker = null, handLandmarkerPromise = null;
+                    try {
+                        old && "function" == typeof old.close && old.close();
+                    } catch (_e) {}
+                }
+                rec.pref, rec.GPU, rec.CPU, rec.settled;
+            }();
+        } catch (_e) {}
         "object" == typeof sessionSafety && (restPauseActive && endRest(), "safety_stop" !== reason || sessionSafety.stopReason || (sessionSafety.stopReason = "unspecified")), 
         state.running = !1, state.paused = !1, document.querySelector(".game-stage")?.classList.remove("patient-simple-hud"), 
         document.querySelector(".game-stage")?.classList.remove("patient-shoulder-hud"), 
@@ -8363,6 +8518,45 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         }
         return ADV_IMG[name];
     }
+    V75_IMG_SRC.v75_vase = "img/flower_vase.png", V75_IMG_SRC.v77_wide_pot = "img/flower_pot_user.jpeg";
+    const SCALED_BITMAP_MIN_SOURCE_EDGE = 400, SCALED_BITMAP_BUCKET_PX = 64, SCALED_BITMAP_MAX_VARIANTS = 6, scaledBitmapCache = new WeakMap, scaledBitmapStats = {
+        hits: 0,
+        builds: 0,
+        bypass: 0
+    };
+    function drawImageScaled(ctx, img, dx, dy, dw, dh) {
+        const bmp = function(img, dw, dh) {
+            if (!(img && img.complete && img.naturalWidth && img.naturalHeight)) return null;
+            const iw = img.naturalWidth, ih = img.naturalHeight;
+            if (Math.max(iw, ih) < SCALED_BITMAP_MIN_SOURCE_EDGE) return scaledBitmapStats.bypass++, 
+            null;
+            const w = Math.abs(Number(dw)), h = Math.abs(Number(dh));
+            if (!(w >= 1 && h >= 1 && Number.isFinite(w) && Number.isFinite(h))) return scaledBitmapStats.bypass++, 
+            null;
+            const targetW = Math.min(iw, Math.ceil(w / SCALED_BITMAP_BUCKET_PX) * SCALED_BITMAP_BUCKET_PX), targetH = Math.min(ih, Math.ceil(h / SCALED_BITMAP_BUCKET_PX) * SCALED_BITMAP_BUCKET_PX);
+            if (targetW * targetH * 1.5 >= iw * ih) return scaledBitmapStats.bypass++, null;
+            let variants = scaledBitmapCache.get(img);
+            variants || (variants = new Map, scaledBitmapCache.set(img, variants));
+            const key = targetW + "x" + targetH, cached = variants.get(key);
+            if (cached) return scaledBitmapStats.hits++, cached;
+            try {
+                variants.size >= SCALED_BITMAP_MAX_VARIANTS && variants.clear();
+                const c = document.createElement("canvas");
+                c.width = targetW, c.height = targetH;
+                const cctx = c.getContext("2d");
+                if (!cctx) return null;
+                cctx.imageSmoothingEnabled = !0;
+                try {
+                    cctx.imageSmoothingQuality = "high";
+                } catch (_e) {}
+                return cctx.drawImage(img, 0, 0, targetW, targetH), variants.set(key, c), scaledBitmapStats.builds++, 
+                c;
+            } catch (_e) {
+                return null;
+            }
+        }(img, dw, dh);
+        ctx.drawImage(bmp || img, dx, dy, dw, dh);
+    }
     function drawSprite(ctx, img, cx, cy, size, opts) {
         if (!img || !img.complete || !img.naturalWidth) return !1;
         const o = opts || {}, iw = img.naturalWidth, ih = img.naturalHeight;
@@ -8370,8 +8564,8 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         return iw >= ih ? (dw = size, dh = size * ih / iw) : (dh = size, dw = size * iw / ih), 
         ctx.save(), ctx.translate(cx, cy), o.rot && ctx.rotate(o.rot), null != o.alpha && (ctx.globalAlpha = o.alpha), 
         o.shadow && (ctx.shadowColor = "rgba(0,0,0,0.28)", ctx.shadowBlur = 14, ctx.shadowOffsetY = 6), 
-        ctx.drawImage(img, -dw / 2 + (o.ax || 0), -dh / 2 + (o.ay || 0), dw, dh), ctx.restore(), 
-        !0;
+        drawImageScaled(ctx, img, -dw / 2 + (o.ax || 0), -dh / 2 + (o.ay || 0), dw, dh), 
+        ctx.restore(), !0;
     }
     function drawSpriteBottom(ctx, img, cx, byy, size, rot, alpha) {
         if (!img || !img.complete || !img.naturalWidth) return !1;
@@ -8379,9 +8573,8 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         let dw, dh;
         return iw >= ih ? (dw = size, dh = size * ih / iw) : (dh = size, dw = size * iw / ih), 
         ctx.save(), ctx.translate(cx, byy), rot && ctx.rotate(rot), null != alpha && (ctx.globalAlpha = alpha), 
-        ctx.drawImage(img, -dw / 2, -dh, dw, dh), ctx.restore(), !0;
+        drawImageScaled(ctx, img, -dw / 2, -dh, dw, dh), ctx.restore(), !0;
     }
-    V75_IMG_SRC.v75_vase = "img/flower_vase.png", V75_IMG_SRC.v77_wide_pot = "img/flower_pot_user.jpeg";
     const MJ_ATLAS = {
         cw: 132,
         ch: 176,
@@ -10029,7 +10222,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         }), isPatientVisualCueMode()) {
             const pot = advImg("v77_wide_pot");
             pot && pot.complete && pot.naturalWidth && (ctx.save(), ctx.shadowColor = "rgba(0,0,0,0.28)", 
-            ctx.shadowBlur = 14, ctx.shadowOffsetY = 6, ctx.drawImage(pot, vase.x - .5 * vase.w, vase.y - .5 * vase.h, vase.w, vase.h), 
+            ctx.shadowBlur = 14, ctx.shadowOffsetY = 6, drawImageScaled(ctx, pot, vase.x - .5 * vase.w, vase.y - .5 * vase.h, vase.w, vase.h), 
             ctx.restore());
         } else drawSprite(ctx, advImg("v75_vase"), vase.x, vase.y, vase.h, {
             shadow: !0
@@ -10267,7 +10460,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
 <script src="level4-three-games-module.js"></script>
 <script>
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
-  const LEVEL_APP_BUILD = "v97-20260903-level5-6-low-latency";
+  const LEVEL_APP_BUILD = "v98-20260904-level56-hand-admission-render-cache-hold30s";
   const levelAppHadController = Boolean(navigator.serviceWorker.controller);
   let levelAppReloading = false;
 
