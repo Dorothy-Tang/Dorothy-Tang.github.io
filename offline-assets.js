@@ -90,6 +90,8 @@ self.__OFFLINE_ASSETS = [
   "./img/advanced/onion_chopped.png",
   "./img/advanced/plate_empty.png",
   "./img/advanced/real_mahjong_tiles.png",
+  "./img/advanced/result_cheer_go.png",
+  "./img/advanced/result_cheer_like.png",
   "./img/advanced/rice_bowl.png",
   "./img/advanced/salt_dish.png",
   "./img/advanced/shoulder_active_30_60.svg",
