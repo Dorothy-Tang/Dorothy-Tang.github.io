@@ -4035,7 +4035,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             at: 0
         }, farHandSince = 0, sizeRejectSince = 0, resetAffectedHandTrack();
     }
-    const AFFECTED_HAND_TRACK_MS = 1500, AFFECTED_HAND_TRACK_DIST = .16, AFFECTED_HAND_OPPOSITE_REJECT = .8, LONE_HAND_ADMIT_MS = 1e3, HAND_LOCK_SIZE_MIN_RATIO = .55, HAND_LOCK_SIZE_MAX_RATIO = 1.9, HAND_LOCK_FAR_DIST = .3, HAND_LOCK_REACQUIRE_MS = 400, HAND_LOCK_SIZE_FORGET_MS = 3e3, HAND_LOCK_SIZE_EMA = .15;
+    const AFFECTED_HAND_TRACK_MS = 1500, AFFECTED_HAND_TRACK_DIST = .16, AFFECTED_HAND_OPPOSITE_REJECT = .8, LONE_HAND_ADMIT_MS = 1e3, HAND_LOCK_SIZE_MIN_RATIO = .55, HAND_LOCK_SIZE_MAX_RATIO = 1.9, HAND_LOCK_SIZE_LONE_MIN_RATIO = .4, HAND_LOCK_SIZE_LONE_MAX_RATIO = 2.5, HAND_LOCK_FAR_DIST = .3, HAND_LOCK_REACQUIRE_MS = 400, HAND_LOCK_SIZE_FORGET_MS = 3e3, HAND_LOCK_SIZE_FORGET_LONE_MS = 1e3, HAND_LOCK_SIZE_EMA = .15;
     let affectedHandTrack = {
         x: NaN,
         y: NaN,
@@ -4079,12 +4079,12 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         const d = Math.hypot(ref.x - wrist.x, ref.y - wrist.y);
         return d > 0 ? d : NaN;
     }
-    function handSizeAdmissible(lm) {
+    function handSizeAdmissible(lm, lone = !1) {
         if (!Number.isFinite(handLock.size)) return !0;
         const span = handSpanOf(lm);
         if (!Number.isFinite(span)) return !0;
         const ratio = span / handLock.size;
-        return ratio >= HAND_LOCK_SIZE_MIN_RATIO && ratio <= HAND_LOCK_SIZE_MAX_RATIO;
+        return lone ? ratio >= HAND_LOCK_SIZE_LONE_MIN_RATIO && ratio <= HAND_LOCK_SIZE_LONE_MAX_RATIO : ratio >= HAND_LOCK_SIZE_MIN_RATIO && ratio <= HAND_LOCK_SIZE_MAX_RATIO;
     }
     function isAppleTouchDevice() {
         return /iPad|iPhone|iPod/.test(navigator.userAgent) || "MacIntel" === navigator.platform && navigator.maxTouchPoints > 1;
@@ -4158,10 +4158,11 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             const selectedHandIndex = function(results, inputMirrored = !1) {
                 const allLandmarks = Array.isArray(results?.landmarks) ? results.landmarks : [], affected = activeAffectedSide(), groups = results?.handednesses || results?.handedness, lockOn = handLockEnabled(), checkOff = handLockEnabled() && !1 === state.handednessCheck, now = nowMs();
                 let eligible = [], sizeRejected = 0;
-                for (let index = 0; index < allLandmarks.length; index++) !lockOn || handSizeAdmissible(allLandmarks[index]) ? eligible.push(index) : sizeRejected++;
+                const loneHand = 1 === allLandmarks.length;
+                for (let index = 0; index < allLandmarks.length; index++) !lockOn || handSizeAdmissible(allLandmarks[index], loneHand) ? eligible.push(index) : sizeRejected++;
                 lockOn && allLandmarks.length && !eligible.length ? (sizeRejectSince || (sizeRejectSince = now), 
-                now - sizeRejectSince >= HAND_LOCK_SIZE_FORGET_MS && (handLock.size = NaN, sizeRejectSince = 0, 
-                eligible = allLandmarks.map((_, index) => index), sizeRejected = 0)) : sizeRejectSince = 0;
+                now - sizeRejectSince >= (loneHand ? HAND_LOCK_SIZE_FORGET_LONE_MS : HAND_LOCK_SIZE_FORGET_MS) && (handLock.size = NaN, 
+                sizeRejectSince = 0, eligible = allLandmarks.map((_, index) => index), sizeRejected = 0)) : sizeRejectSince = 0;
                 const distTo = (index, ref) => {
                     const w = (index => allLandmarks[index]?.[0])(index);
                     return w && Number.isFinite(w.x) && Number.isFinite(w.y) && Number.isFinite(ref?.x) ? Math.hypot(w.x - ref.x, w.y - ref.y) : 1 / 0;
@@ -4214,8 +4215,8 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                     } else 1 === eligible.length && (loneOppositeSince = 0);
                 }
                 let farRejected = !1;
-                lockOn && selected >= 0 && "continuity" !== admitPath && !trackFresh && Number.isFinite(handLock.x) && distTo(selected, handLock) > HAND_LOCK_FAR_DIST ? (farHandSince || (farHandSince = now), 
-                now - farHandSince < HAND_LOCK_REACQUIRE_MS && (selected = -1, admitPath = "", farRejected = !0)) : farHandSince = 0;
+                lockOn && selected >= 0 && "continuity" !== admitPath && (!loneHand || "strict" !== admitPath) && !trackFresh && Number.isFinite(handLock.x) && distTo(selected, handLock) > HAND_LOCK_FAR_DIST ? (farHandSince || (farHandSince = now), 
+                now - farHandSince < HAND_LOCK_REACQUIRE_MS ? (selected = -1, admitPath = "", farRejected = !0) : farHandSince = 0) : farHandSince = 0;
                 {
                     const idx = selected >= 0 ? selected : eligible[0] ?? 0;
                     handAdmitDiag.hands = allLandmarks.length, handAdmitDiag.label = allLandmarks.length ? sideOf(idx) || "?" : "", 
@@ -4506,7 +4507,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             span: span
         } : null;
     }
-    const GESTURE_CONFIRM_MS = 60, PUBLIC_LEVEL6_TOOL_GESTURE_CONFIRM_MS = 180;
+    const GESTURE_CONFIRM_MS = 60, PUBLIC_LEVEL6_TOOL_GESTURE_CONFIRM_MS = 180, PUBLIC_LEVEL5_GRASP_CONFIRM_MS = 180;
     let detectedGestureState = {
         mode: "",
         stable: !1,
@@ -4525,7 +4526,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         detectedGestureState.candidateAt = now, detectedGestureState.stable;
         if (rawValue !== detectedGestureState.candidate) return detectedGestureState.candidate = rawValue, 
         detectedGestureState.candidateAt = now, detectedGestureState.stable;
-        const confirmMs = "grasp" === mode && "5" === state.level ? 60 : "pinch" === mode && isLevel6RealToolTask() ? PUBLIC_LEVEL6_TOOL_GESTURE_CONFIRM_MS : GESTURE_CONFIRM_MS;
+        const confirmMs = "grasp" === mode && "5" === state.level ? PUBLIC_LEVEL5_GRASP_CONFIRM_MS : "pinch" === mode && isLevel6RealToolTask() ? PUBLIC_LEVEL6_TOOL_GESTURE_CONFIRM_MS : GESTURE_CONFIRM_MS;
         return now - detectedGestureState.candidateAt >= confirmMs && (detectedGestureState.stable = rawValue), 
         detectedGestureState.stable;
     }
@@ -6890,7 +6891,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                             isGraspStyleMode() ? isGrasping = res.isGrasping || !1 : usesAdvancedThemeModule() && void 0 !== res.isGrasping && (isGrasping = !!res.isGrasping);
                         } else isGraspStyleMode() && function(res) {
                             return !res?.reason || "no-hand-detected" === res.reason || "5" === state.level && "required-landmarks-missing" === res.reason || ("5" === state.level || "67" === state.level) && "affected-hand-not-detected" === res.reason;
-                        }(res) && cursorX >= 0 && now - lastDetectedAt < DETECTION_LOST_GRACE_MS ? (handDetected = !0, 
+                        }(res) && cursorX >= 0 && now - lastDetectedAt < ("5" === state.level || "67" === state.level ? PUBLIC_LEVEL56_DETECTION_LOST_GRACE_MS : DETECTION_LOST_GRACE_MS) ? (handDetected = !0, 
                         detectionHeldGrace = !0, function(now) {
                             interactionTrackingPauseAt || (interactionTrackingPauseAt = now);
                         }(now)) : (handDetected = !1, detectionHeldGrace = !1, interactionTrackingPauseAt = 0, 
@@ -8203,7 +8204,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                         el.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:99998;pointer-events:none;background:rgba(10,20,18,.82);color:#e8fff6;font:12px/1.4 -apple-system,"PingFang TC",sans-serif;padding:6px 9px;border-radius:10px;white-space:pre;', 
                         document.body.appendChild(el), framePerf.overlayEl = el);
                         const p = framePerfSnapshot();
-                        el.textContent = `perf v106  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}\n左右手檢查 ${"off" === p.hand.check ? "關" : "開"}  鎖定手形 ${p.hand.lockSize || "-"}  大小拒絕 ${p.hand.sizeRejected}  遠處拒絕 ${p.hand.farRejected}`, 
+                        el.textContent = `perf v107  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}\n左右手檢查 ${"off" === p.hand.check ? "關" : "開"}  鎖定手形 ${p.hand.lockSize || "-"}  大小拒絕 ${p.hand.sizeRejected}  遠處拒絕 ${p.hand.farRejected}`, 
                         el.style.display = state.running ? "block" : "none";
                     }(perfT2);
                 } catch (e) {
@@ -8217,7 +8218,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             gameRAF = requestAnimationFrame(gameLoop);
         }
     }
-    const DETECTION_LOST_GRACE_MS = 750;
+    const DETECTION_LOST_GRACE_MS = 750, PUBLIC_LEVEL56_DETECTION_LOST_GRACE_MS = 1500;
     let lastDetectedAt = 0, detectionHeldGrace = !1, interactionTrackingPauseAt = 0, qaHand = null, qaFrameGeneration = 0, lastAcceptedToolHandGeneration = -1;
     const level2AbductionApi = window.Level2HorizontalAbductionController || null, level2AbductionController = level2AbductionApi ? level2AbductionApi.createController() : null, level3Lateral = {
         calibrated: !1,
@@ -11104,7 +11105,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
 <script src="level4-three-games-module.js"></script>
 <script>
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
-  const LEVEL_APP_BUILD = "v106-20260905-flowers-bowling-sign";
+  const LEVEL_APP_BUILD = "v107-20260907-lone-hand-grasp-stability";
   const levelAppHadController = Boolean(navigator.serviceWorker.controller);
   let levelAppReloading = false;
 
