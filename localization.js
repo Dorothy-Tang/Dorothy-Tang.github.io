@@ -41,7 +41,6 @@
     '揮灑自如，大開大合':'Free and flowing, open and close',
     '萬佛朝宗':'Ten Thousand Buddhas Pay Homage',
     '終極境界，彈指神通':'The ultimate realm: mastery at the fingertips',
-    '頒發參與嘉許狀':'Issue certificate of participation',
     '完成十天訓練後由治療師開啟，A4 橫向列印，姓名及日期手寫':'Opened by the therapist after the ten-day programme; print on A4 landscape and hand-write the name and date',
     '必須由職業治療師選擇 FTHUE Level；本網站不作診斷或自動分級':'An occupational therapist must select the FTHUE level. This website does not diagnose or assign a level automatically.',
     '桌面承托訓練':'Supported tabletop training',

@@ -1,6 +1,5 @@
 self.__OFFLINE_ASSETS = [
   "./audio/haobo_cheer.mp3",
-  "./certificate.html",
   "./fthue-adaptive-progression.js",
   "./icons/app-icon.svg",
   "./icons/icon-192.png",
