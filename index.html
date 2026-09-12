@@ -237,7 +237,6 @@ html[data-screen="game"] .language-switcher{ top:max(68px,calc(env(safe-area-ins
     pointer-events:none;
   }
   .game-stage canvas#gameCanvas{ z-index:2; }
-  .recording-indicator,
   .trial-mode-indicator{ left:auto; right:10px; bottom:calc(min(25dvh,210px) + 22px); }
 }
 .game-stage.level4-movement-alert{
@@ -331,18 +330,6 @@ html[data-screen="game"] .language-switcher{ top:max(68px,calc(env(safe-area-ins
 }
 @media (prefers-reduced-motion:reduce){
   .game-stage.level4-movement-alert{ animation:none; }
-}
-.recording-indicator{
-  position:absolute; left:12px; bottom:12px; z-index:24;
-  display:none; align-items:center; gap:7px;
-  padding:8px 11px; border-radius:999px;
-  background:rgba(255,255,255,.94); border:1px solid rgba(83,70,61,.28);
-  color:#5e211d; font-size:13px; font-weight:850;
-  box-shadow:0 2px 8px rgba(0,0,0,.2); pointer-events:none;
-}
-.recording-indicator.show{ display:flex; }
-.recording-indicator::before{
-  content:''; width:9px; height:9px; border-radius:50%; background:#b52c25;
 }
 .trial-mode-indicator{
   position:absolute; left:12px; bottom:12px; z-index:24;
@@ -664,13 +651,6 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
   font-size:12px; line-height:1.2; font-weight:750; text-align:right;
   pointer-events:none;
 }
-
-/* ---------- RESULT SCREEN ---------- */
-/* v108: justify-content:center in a scrolling column flex clips the TOP of a
-   card taller than the viewport (iPad landscape with the movement-review panel
-   showed the title cut off and unreachable). Auto margins on the stage centre
-   it when there is spare room and fall back to top-aligned + scrollable. */
-#screen-result{ align-items:center; justify-content:flex-start; padding:24px; }
 /* v108: result card flanked by two cheering therapist cartoons. The figures are
    decorative (pointer-events none), never captured for data, and are hidden
    whenever the strict-flow class is applied so that flow is unchanged. */
@@ -712,31 +692,6 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
 }
 .result-grid .r-label{ font-size:12px; color:var(--muted); margin-bottom:4px; }
 .result-grid .r-value{ font-size:22px; font-weight:800; color:var(--teal-dark); }
-.movement-review{
-  margin:0 0 18px; padding:14px; text-align:left;
-  border:1.5px solid var(--border); border-radius:14px; background:#f7faf9;
-}
-.movement-review[hidden]{ display:none; }
-.movement-review-head{
-  display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px;
-}
-.movement-review h3{ margin:0; font-size:18px; color:var(--teal-dark); }
-.movement-review-badge{
-  padding:5px 8px; border-radius:999px; background:#e5efec;
-  color:#315b53; font-size:12px; font-weight:800; white-space:nowrap;
-}
-.movement-review video{
-  display:block; width:100%; max-height:46vh; aspect-ratio:16/9;
-  object-fit:contain; border-radius:10px; background:#e6ecea;
-}
-.movement-review-status{
-  margin:9px 0 10px; color:var(--muted); font-size:13px; line-height:1.45;
-}
-.movement-review-actions{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-.movement-review-actions button{
-  min-height:54px; padding:11px 13px; border-radius:11px;
-  font:850 16px/1.2 inherit; cursor:pointer;
-}
 .movement-download{ border:2px solid var(--teal); background:var(--teal); color:#fff; }
 .movement-delete{ border:2px solid #8b4a43; background:#fff; color:#7a302a; }
 .cert-entry{
@@ -793,8 +748,6 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
   .feedback-field.full{ grid-column:1; }
   #screen-result{ padding:14px 10px; }
   .result-card{ padding:22px 14px; }
-  .movement-review-head{ align-items:flex-start; flex-direction:column; gap:6px; }
-  .movement-review-actions{ grid-template-columns:1fr; }
   .hud{
     top:70px !important; display:grid !important;
     grid-template-columns:repeat(4,minmax(0,1fr));
@@ -929,6 +882,8 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
   cursor:pointer; font-family:inherit;
 }
 .trial-actions button:active{ transform:scale(.985); }
+/* v112: when a level offers a single mode button (public build) it spans the whole card. */
+.trial-actions button:only-child{ grid-column:1 / -1; }
 .trial-actions button:focus-visible{ outline:3px solid rgba(26,107,90,.25); outline-offset:2px; }
 .level-card .lv-tag{
   /* v105：治療師要求 Level 標籤用大標題同一橙色（--orange）橙字、無底色、加粗 */
@@ -1157,9 +1112,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         </button>
         <div class="trial-actions" aria-label="FTHUE Level 2 模式">
           <button type="button" data-session-level="2" data-session-mode="trial"
-            data-testid="button-mode-trial-2" aria-label="FTHUE Level 2 試玩，不錄影及不提示治療師">試玩</button>
-          <button type="button" data-session-level="2" data-session-mode="training"
-            data-testid="button-mode-training-2" aria-label="FTHUE Level 2 訓練，錄影及提示治療師">訓練</button>
+            data-testid="button-mode-trial-2" aria-label="FTHUE Level 2 訓練">訓練</button>
         </div>
         <details class="level-details">
           <summary>詳情</summary>
@@ -1198,9 +1151,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         </button>
         <div class="trial-actions" aria-label="FTHUE Level 3 模式">
           <button type="button" data-session-level="3" data-session-mode="trial"
-            data-testid="button-mode-trial-3" aria-label="FTHUE Level 3 試玩，不錄影及不提示治療師">試玩</button>
-          <button type="button" data-session-level="3" data-session-mode="training"
-            data-testid="button-mode-training-3" aria-label="FTHUE Level 3 訓練，錄影及提示治療師">訓練</button>
+            data-testid="button-mode-trial-3" aria-label="FTHUE Level 3 訓練">訓練</button>
         </div>
         <details class="level-details">
           <summary>詳情</summary>
@@ -1236,9 +1187,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         </button>
         <div class="trial-actions" aria-label="FTHUE Level 4 模式">
           <button type="button" data-session-level="4" data-session-mode="trial"
-            data-testid="button-mode-trial-4" aria-label="FTHUE Level 4 試玩，不錄影及不提示治療師">試玩</button>
-          <button type="button" data-session-level="4" data-session-mode="training"
-            data-testid="button-mode-training-4" aria-label="FTHUE Level 4 訓練，錄影及提示治療師">訓練</button>
+            data-testid="button-mode-trial-4" aria-label="FTHUE Level 4 訓練">訓練</button>
         </div>
         <details class="level-details">
           <summary>詳情</summary>
@@ -1266,9 +1215,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         </button>
         <div class="trial-actions" aria-label="FTHUE Level 5 模式">
           <button type="button" data-session-level="5" data-session-mode="trial"
-            data-testid="button-mode-trial-5" aria-label="FTHUE Level 5 試玩，不錄影及不提示治療師">試玩</button>
-          <button type="button" data-session-level="5" data-session-mode="training"
-            data-testid="button-mode-training-5" aria-label="FTHUE Level 5 訓練，錄影及提示治療師">訓練</button>
+            data-testid="button-mode-trial-5" aria-label="FTHUE Level 5 訓練">訓練</button>
         </div>
         <details class="level-details">
           <summary>詳情</summary>
@@ -1307,9 +1254,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         </button>
         <div class="trial-actions" aria-label="FTHUE Level 6 模式">
           <button type="button" data-session-level="67" data-session-mode="trial"
-            data-testid="button-mode-trial-67" aria-label="FTHUE Level 6 試玩，不錄影及不提示治療師">試玩</button>
-          <button type="button" data-session-level="67" data-session-mode="training"
-            data-testid="button-mode-training-67" aria-label="FTHUE Level 6 訓練，錄影及提示治療師">訓練</button>
+            data-testid="button-mode-trial-67" aria-label="FTHUE Level 6 訓練">訓練</button>
         </div>
         <details class="level-details">
           <summary>詳情</summary>
@@ -1648,8 +1593,6 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         <img id="cookMotionGif" alt="">
         <span>動作示範</span>
       </div>
-      <div class="recording-indicator" id="recordingIndicator" role="status" aria-live="polite"
-        data-testid="indicator-silent-recording">無聲錄影中 · 不錄頭部</div>
       <div class="level4-calib" id="level4CalibBar" role="group" aria-label="Level 4 校準"
         data-testid="panel-level4-calibration">
         <div class="level4-auto-action" id="level4AutoAction" hidden>
@@ -1790,24 +1733,6 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         <div class="r-item"><div class="r-label" id="resultAccuracyLabel">準確率</div><div class="r-value" id="resAccuracy">0%</div></div>
       </div>
       <p id="shoulderResultSummary" hidden style="margin:10px 0;padding:10px 12px;border-radius:12px;background:#edf7f3;font-weight:750;line-height:1.45;"></p>
-      <section class="movement-review" id="movementReview" hidden
-        data-testid="panel-movement-review" aria-labelledby="movementReviewTitle">
-        <div class="movement-review-head">
-          <h3 id="movementReviewTitle">即時動作回看</h3>
-          <span class="movement-review-badge">不錄頭部 · 未自動上傳</span>
-        </div>
-        <video id="movementReviewVideo" controls playsinline muted
-          data-testid="video-movement-review"></video>
-        <p class="movement-review-status" id="movementReviewStatus">
-          影片只暫存在本頁。下載後請按機構私隱要求處理。
-        </p>
-        <div class="movement-review-actions">
-          <button type="button" class="movement-download" id="btnDownloadMovementVideo"
-            data-testid="button-download-movement-video">下載／儲存影片</button>
-          <button type="button" class="movement-delete" id="btnDeleteMovementVideo"
-            data-testid="button-delete-movement-video">刪除影片</button>
-        </div>
-      </section>
       <button class="btn-primary" id="btnRetry">再玩一次</button>
       <button class="btn-secondary" id="btnHome">返回主頁</button>
     </div>
@@ -2832,7 +2757,8 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         return "trial" === state.sessionMode;
     }
     function beginSessionMode(levelId, mode) {
-        state.sessionMode = "trial" === mode ? "trial" : "training", function(levelId) {
+        state.sessionMode = "trial" !== mode && movementRecordingApi.available ? "training" : "trial", 
+        function(levelId) {
             state.level = levelId, state.level6LockedTheme = "", state.shoulderExerciseMode = "active", 
             "3" === levelId && (state.shoulderTargetDeg = 40), "4" === levelId && (state.shoulderTargetDeg = 60), 
             "67" === levelId && (state.shoulderTargetDeg = 60), state.dwellMs = "3" === levelId || "4" === levelId ? 0 : 1e3, 
@@ -3580,63 +3506,10 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             }, cameraErrorContext), void (gameStartInProgress = !1);
             resizeGameCanvas(), function() {
                 const trialIndicator = document.getElementById("trialModeIndicator"), compensationButton = document.getElementById("btnCompObserve"), compensationPanel = document.getElementById("compPanel");
-                isTrialMode() ? (clearMovementRecording(), trialIndicator && trialIndicator.classList.add("show"), 
+                isTrialMode() ? (movementRecordingApi.clear(), trialIndicator && trialIndicator.classList.add("show"), 
                 compensationButton && (compensationButton.hidden = !0), compensationPanel && compensationPanel.classList.remove("show")) : (trialIndicator && trialIndicator.classList.remove("show"), 
-                compensationButton && (compensationButton.hidden = !1), function() {
-                    clearMovementRecording();
-                    const el = recordingElements();
-                    if (!state.stream || "undefined" == typeof MediaRecorder) return el.panel.hidden = !1, 
-                    el.download.disabled = !0, el.status.textContent = "此瀏覽器不支援錄影；遊戲仍可繼續。", !1;
-                    try {
-                        const privacyStream = function(videoEl) {
-                            if (!videoEl || "undefined" == typeof HTMLCanvasElement || "function" != typeof HTMLCanvasElement.prototype.captureStream) return null;
-                            const sourceTrack = state.stream?.getVideoTracks?.()[0], settings = sourceTrack?.getSettings?.() || {}, sourceWidth = videoEl.videoWidth || settings.width || 640, sourceHeight = videoEl.videoHeight || settings.height || 480;
-                            if (sourceWidth < 2 || sourceHeight < 2) return null;
-                            const cropTop = Math.round(sourceHeight * RECORDING_HEAD_EXCLUSION_RATIO), cropHeight = Math.max(2, sourceHeight - cropTop), outputWidth = Math.min(720, sourceWidth), outputHeight = Math.max(240, Math.round(outputWidth * cropHeight / sourceWidth)), canvas = document.createElement("canvas");
-                            canvas.width = outputWidth, canvas.height = outputHeight;
-                            const ctx = canvas.getContext("2d", {
-                                alpha: !1
-                            });
-                            if (!ctx) return null;
-                            let lastDrawAt = -1 / 0, lastDecodedFrameKey = null;
-                            const draw = rafNow => {
-                                const tick = Number.isFinite(rafNow) ? rafNow : performance.now(), frameKey = (() => {
-                                    try {
-                                        const quality = videoEl.getVideoPlaybackQuality?.();
-                                        if (Number.isFinite(quality?.totalVideoFrames)) return "f:" + quality.totalVideoFrames;
-                                    } catch (e) {}
-                                    const mediaTime = Number(videoEl.currentTime);
-                                    return Number.isFinite(mediaTime) ? "t:" + mediaTime.toFixed(5) : null;
-                                })();
-                                tick - lastDrawAt >= 50 && (null == frameKey || frameKey !== lastDecodedFrameKey) && videoEl.readyState >= 2 && (lastDrawAt = tick, 
-                                lastDecodedFrameKey = frameKey, ctx.fillStyle = "#eef3f1", ctx.fillRect(0, 0, canvas.width, canvas.height), 
-                                ctx.drawImage(videoEl, 0, cropTop, sourceWidth, cropHeight, 0, 0, canvas.width, canvas.height)), 
-                                movementRecording.privacyFrameId = requestAnimationFrame(draw);
-                            };
-                            return movementRecording.privacyFrameId = requestAnimationFrame(draw), movementRecording.privacyCanvas = canvas, 
-                            movementRecording.privacyStream = canvas.captureStream(20), movementRecording.privacyStream;
-                        }(document.getElementById("gameVideo"));
-                        if (!privacyStream) return el.panel.hidden = !1, el.download.disabled = !0, el.status.textContent = "此瀏覽器未能安全裁走頭部，因此不會錄影；遊戲仍可繼續。", 
-                        !1;
-                        const mimeType = "undefined" == typeof MediaRecorder || "function" != typeof MediaRecorder.isTypeSupported ? "" : [ "video/mp4;codecs=avc1.42E01E", "video/mp4", "video/webm;codecs=vp8", "video/webm" ].find(type => MediaRecorder.isTypeSupported(type)) || "", options = {
-                            videoBitsPerSecond: 65e4
-                        };
-                        mimeType && (options.mimeType = mimeType);
-                        const recorder = new MediaRecorder(privacyStream, options);
-                        return movementRecording.recorder = recorder, movementRecording.mimeType = recorder.mimeType || mimeType, 
-                        recorder.addEventListener("dataavailable", event => {
-                            event.data && event.data.size > 0 && movementRecording.chunks.push(event.data);
-                        }), recorder.addEventListener("error", () => {
-                            stopPrivacyRecordingStream(), el.indicator.classList.remove("show"), el.panel.hidden = !1, 
-                            el.download.disabled = !0, el.status.textContent = "錄影中斷；遊戲仍可繼續，請由治療師記錄技術問題。";
-                        }), recorder.addEventListener("stop", finalizeMovementRecording, {
-                            once: !0
-                        }), recorder.start(1e3), el.indicator.classList.add("show"), !0;
-                    } catch (err) {
-                        return stopPrivacyRecordingStream(), el.panel.hidden = !1, el.download.disabled = !0, 
-                        el.status.textContent = "未能啟動錄影；遊戲仍可繼續。", !1;
-                    }
-                }()), DWELL_MS = state.dwellMs, score = 0, correctCount = 0, grabCount = 0, totalWrong = 0, 
+                compensationButton && (compensationButton.hidden = !1), movementRecordingApi.start()), 
+                DWELL_MS = state.dwellMs, score = 0, correctCount = 0, grabCount = 0, totalWrong = 0, 
                 wrongStreak = 0, level5TargetSideFlip = Math.random() < .5, shoulderFlexionLastRepetition = 0, 
                 shoulderFlexionCycleAwarded = !1, shoulderRewardCycle.reset(), shoulderHoldSpokenSecond = null, 
                 shoulderHoldInterruptedSpoken = !1, hideTargetHoldCountdown(), lastLevelShown = -1, 
@@ -3864,7 +3737,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         try {
             window.speechSynthesis.cancel();
         } catch (e) {}
-        clearMovementRecording(), stopCamera(), heldItem = null, releaseDwellStart = 0, 
+        movementRecordingApi.clear(), stopCamera(), heldItem = null, releaseDwellStart = 0, 
         releaseDwellPlate = null, releaseDwellPauseAt = 0, releaseDwellLastOpenAt = 0, isGrasping = !1, 
         handOpenPrep = !1, resetToolPinchAdapt(), qaHand = null, promptRulesEnabled = !0, 
         setPromptSlot("rules"), document.querySelector(".game-stage")?.classList.remove("patient-simple-hud"), 
@@ -3872,7 +3745,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         document.querySelector(".game-stage")?.classList.remove("public-clean-hud"), document.querySelector(".game-stage")?.classList.remove("patient-card-instruction"), 
         document.querySelector(".game-stage")?.classList.remove("patient-level5-instruction"), 
         document.getElementById("btnPause").classList.remove("pause-active"), document.getElementById("btnPause").textContent = "Ⅱ 暫停", 
-        document.getElementById("calibChecklist").classList.remove("active"), state.sessionMode = "training", 
+        document.getElementById("calibChecklist").classList.remove("active"), state.sessionMode = movementRecordingApi.available ? "training" : "trial", 
         state.shoulderExerciseMode = "active", shoulderFlexionController && shoulderFlexionController.setExerciseMode("active"), 
         state.qaMode = !1, showScreen("level");
     }
@@ -3894,7 +3767,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     level4SyncReachMirror(), level4UpdateCalibrationBar(), level4Reach) : level4Reach), 
     document.getElementById("btnLevel4MarkHorizontal").addEventListener("click", () => level4ManualCapture("horizontal")), 
     document.getElementById("btnRetry").addEventListener("click", async () => {
-        clearMovementRecording(), await enterCalibrationFlow();
+        movementRecordingApi.clear(), await enterCalibrationFlow();
     }), document.getElementById("btnHome").addEventListener("click", () => exitToLevelSelection()), 
     document.getElementById("btnGameBack").addEventListener("click", function() {
         state.running = !1, state.paused = !1, document.querySelector(".game-stage")?.classList.remove("patient-simple-hud"), 
@@ -3908,7 +3781,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         try {
             window.speechSynthesis.cancel();
         } catch (e) {}
-        clearMovementRecording(), stopCamera(), promptRulesEnabled = !0, setPromptSlot("rules"), 
+        movementRecordingApi.clear(), stopCamera(), promptRulesEnabled = !0, setPromptSlot("rules"), 
         document.querySelector(".game-stage")?.classList.remove("patient-simple-hud"), document.querySelector(".game-stage")?.classList.remove("patient-shoulder-hud"), 
         document.querySelector(".game-stage")?.classList.remove("public-clean-hud"), document.querySelector(".game-stage")?.classList.remove("patient-card-instruction"), 
         document.querySelector(".game-stage")?.classList.remove("patient-level5-instruction"), 
@@ -3922,55 +3795,19 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         pauseBtn.textContent = state.paused ? "▶ 繼續" : "Ⅱ 暫停", pauseBtn.classList.toggle("pause-active", state.paused), 
         pauseBtn.setAttribute("aria-label", state.paused ? "繼續遊戲" : "暫停遊戲");
     });
-    const movementRecording = {
-        recorder: null,
-        chunks: [],
-        blob: null,
-        url: "",
-        mimeType: "",
-        stopCameraAfter: !1,
-        privacyCanvas: null,
-        privacyStream: null,
-        privacyFrameId: 0
-    }, RECORDING_HEAD_EXCLUSION_RATIO = .3;
-    function recordingElements() {
-        return {
-            indicator: document.getElementById("recordingIndicator"),
-            panel: document.getElementById("movementReview"),
-            video: document.getElementById("movementReviewVideo"),
-            status: document.getElementById("movementReviewStatus"),
-            download: document.getElementById("btnDownloadMovementVideo")
-        };
-    }
-    function clearMovementRecording() {
-        const el = recordingElements();
-        if (movementRecording.recorder && "inactive" !== movementRecording.recorder.state) try {
-            movementRecording.recorder.stop();
-        } catch (e) {}
-        movementRecording.recorder = null, movementRecording.chunks = [], movementRecording.blob = null, 
-        movementRecording.mimeType = "", movementRecording.stopCameraAfter = !1, stopPrivacyRecordingStream(), 
-        movementRecording.url && (URL.revokeObjectURL(movementRecording.url), movementRecording.url = ""), 
-        el.video && (el.video.pause(), el.video.removeAttribute("src"), el.video.load()), 
-        el.panel && (el.panel.hidden = !0), el.indicator && el.indicator.classList.remove("show");
-    }
-    function stopPrivacyRecordingStream() {
-        movementRecording.privacyFrameId && (cancelAnimationFrame(movementRecording.privacyFrameId), 
-        movementRecording.privacyFrameId = 0), movementRecording.privacyStream?.getTracks().forEach(track => track.stop()), 
-        movementRecording.privacyStream = null, movementRecording.privacyCanvas = null;
-    }
-    function finalizeMovementRecording() {
-        const el = recordingElements();
-        movementRecording.url && (URL.revokeObjectURL(movementRecording.url), movementRecording.url = "");
-        const type = movementRecording.mimeType || movementRecording.chunks[0]?.type || "video/webm", blob = new Blob(movementRecording.chunks, {
-            type: type
-        });
-        movementRecording.chunks = [], movementRecording.blob = blob.size ? blob : null, 
-        movementRecording.blob ? (movementRecording.url = URL.createObjectURL(movementRecording.blob), 
-        el.video.src = movementRecording.url, el.panel.hidden = !1, el.download.disabled = !1, 
-        el.status.textContent = "只錄頭部以下，可即時回看或下載。影片不會自動上傳。") : (el.panel.hidden = !1, el.download.disabled = !0, 
-        el.status.textContent = "未能建立錄影片段，請由治療師記錄技術問題。"), movementRecording.stopCameraAfter && (movementRecording.stopCameraAfter = !1, 
-        stopCamera()), stopPrivacyRecordingStream();
-    }
+    const movementRecordingApi = "function" == typeof startMovementRecording ? {
+        available: !0,
+        clear() {
+            clearMovementRecording();
+        },
+        start: () => startMovementRecording(),
+        stop: stopCameraAfter => stopMovementRecording(stopCameraAfter)
+    } : {
+        available: !1,
+        clear() {},
+        start: () => !1,
+        stop: stopCameraAfter => (stopCameraAfter && stopCamera(), !1)
+    };
     let cameraRequestPromise = null, cameraRequestAttempted = !1;
     async function startCamera(videoElId) {
         const videoEl = document.getElementById(videoElId);
@@ -4032,33 +3869,8 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         resetPrivacySegmentation(), resetPublicGameWorkAdmission(), release && state.stream && (state.stream.getTracks().forEach(t => t.stop()), 
         state.stream = null);
     }
-    document.getElementById("btnDownloadMovementVideo").addEventListener("click", async function() {
-        const el = recordingElements();
-        if (!movementRecording.blob) return;
-        const filename = function() {
-            const anonymousId = "ANON".replace(/[^A-Za-z0-9_-]/g, "_").slice(0, 32), stamp = (new Date).toISOString().replace(/[:.]/g, "-");
-            return `YCH_${anonymousId}_FTHUE-${state.level}_${stamp}.${(movementRecording.blob?.type || movementRecording.mimeType || "").includes("mp4") ? "mp4" : "webm"}`;
-        }();
-        try {
-            const file = new File([ movementRecording.blob ], filename, {
-                type: movementRecording.blob.type || "video/webm"
-            });
-            if (isAppleTouchDevice() && navigator.share && navigator.canShare?.({
-                files: [ file ]
-            })) return await navigator.share({
-                files: [ file ],
-                title: "復康動作影片"
-            }), void (el.status.textContent = "已開啟儲存選單；可選擇「儲存到檔案」。");
-        } catch (err) {
-            if ("AbortError" === err?.name) return;
-        }
-        const link = document.createElement("a");
-        link.href = movementRecording.url, link.download = filename, link.rel = "noopener", 
-        document.body.appendChild(link), link.click(), link.remove(), el.status.textContent = "已送出下載；請在裝置的「檔案」或 Downloads 查看。";
-    }), document.getElementById("btnDeleteMovementVideo").addEventListener("click", () => {
-        clearMovementRecording();
-    }), window.addEventListener("pagehide", event => {
-        clearMovementRecording(), event.persisted || stopCamera(!0);
+    window.addEventListener("pagehide", event => {
+        movementRecordingApi.clear(), event.persisted || stopCamera(!0);
     });
     let handLandmarker = null, handLandmarkerPromise = null, handFrameCache = {
         video: null,
@@ -8307,7 +8119,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                         el.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:99998;pointer-events:none;background:rgba(10,20,18,.82);color:#e8fff6;font:12px/1.4 -apple-system,"PingFang TC",sans-serif;padding:6px 9px;border-radius:10px;white-space:pre;', 
                         document.body.appendChild(el), framePerf.overlayEl = el);
                         const p = framePerfSnapshot();
-                        el.textContent = `perf v111  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}\n左右手檢查 ${"off" === p.hand.check ? "關" : "開"}  鎖定手形 ${p.hand.lockSize || "-"}  大小拒絕 ${p.hand.sizeRejected}  遠處拒絕 ${p.hand.farRejected}` + (p.tool ? `\n衣夾 近指 ${p.tool.near} 放手≥${p.tool.nearExit} 張開≥${p.tool.nearOpen}  遠指 ${p.tool.far} 放手≥${p.tool.farExit} 張開≥${p.tool.farOpen}  門檻 ${p.tool.source}\n衣夾 合併 ${p.tool.combo} 拎起≤${p.tool.enter} 放手閘≥${p.tool.gate}` : ""), 
+                        el.textContent = `perf v112  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}\n左右手檢查 ${"off" === p.hand.check ? "關" : "開"}  鎖定手形 ${p.hand.lockSize || "-"}  大小拒絕 ${p.hand.sizeRejected}  遠處拒絕 ${p.hand.farRejected}` + (p.tool ? `\n衣夾 近指 ${p.tool.near} 放手≥${p.tool.nearExit} 張開≥${p.tool.nearOpen}  遠指 ${p.tool.far} 放手≥${p.tool.farExit} 張開≥${p.tool.farOpen}  門檻 ${p.tool.source}\n衣夾 合併 ${p.tool.combo} 拎起≤${p.tool.enter} 放手閘≥${p.tool.gate}` : ""), 
                         el.style.display = state.running ? "block" : "none";
                     }(perfT2);
                 } catch (e) {
@@ -9126,15 +8938,8 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         resetSafetyRuntime(), adaptiveHideCard(), adaptiveRenderStreak(), usesAdvancedThemeModule() && advTeardown(), 
         gameTimerId && (clearInterval(gameTimerId), gameTimerId = null), cogTimerId && (clearInterval(cogTimerId), 
         cogTimerId = null), gameRAF && (cancelAnimationFrame(gameRAF), gameRAF = null), 
-        window.removeEventListener("resize", resizeGameCanvas), isTrialMode() ? (clearMovementRecording(), 
-        document.getElementById("trialModeIndicator")?.classList.remove("show"), stopCamera()) : function() {
-            recordingElements().indicator.classList.remove("show"), movementRecording.stopCameraAfter = !0;
-            const recorder = movementRecording.recorder;
-            if (recorder && "inactive" !== recorder.state) try {
-                return recorder.requestData(), recorder.stop(), !0;
-            } catch (e) {}
-            stopCamera();
-        }();
+        window.removeEventListener("resize", resizeGameCanvas), isTrialMode() ? (movementRecordingApi.clear(), 
+        document.getElementById("trialModeIndicator")?.classList.remove("show"), stopCamera()) : movementRecordingApi.stop(!0);
         const resultEnglish = !(!window.YCHLanguage || !window.YCHLanguage.isEnglish());
         document.getElementById("resultTitle").textContent = resultEnglish ? "Training complete" : "訓練完成", 
         document.getElementById("resultScoreLabel").textContent = resultEnglish ? "Total score" : "總得分";
@@ -11208,7 +11013,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
 <script src="level4-three-games-module.js"></script>
 <script>
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
-  const LEVEL_APP_BUILD = "v111-20260907-trial-result-training-complete";
+  const LEVEL_APP_BUILD = "v112-20260912-public-no-recording";
   const levelAppHadController = Boolean(navigator.serviceWorker.controller);
   let levelAppReloading = false;
 
