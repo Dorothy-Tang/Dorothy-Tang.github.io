@@ -3370,9 +3370,9 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             tts: "收衫。拿起衣物，放入相同顏色的衫籃。每件衣物同衫籃都有顏色名稱。"
         },
         flowers: {
-            lines: [ "自由創作：揀花材，插入花瓶", "可以旋轉、放大、縮小，隨意擺放", "完成後可以寫名、簽名，下載作品" ],
-            tail: "此活動不計分，慢慢享受創作。名字只保留在此頁，不會儲存。",
-            tts: "插花。自由創作。揀花材，插入花瓶。可以旋轉、放大、縮小。完成之後可以寫上名字，下載作品。"
+            lines: [ "自由創作：揀花材，插入花瓶", "可以旋轉、放大、縮小，隨意擺放", "完成後按「完成作品」結束" ],
+            tail: "此活動不計分，慢慢享受創作。",
+            tts: "插花。自由創作。揀花材，插入花瓶。可以旋轉、放大、縮小。完成之後按完成作品結束。"
         }
     };
     function updateRulesForActivity() {
@@ -10897,7 +10897,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
 <script src="level4-three-games-module.js"></script>
 <script>
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
-  const LEVEL_APP_BUILD = "v114-20260914-public-no-keepsake";
+  const LEVEL_APP_BUILD = "v114-20260914-public-no-keepsake-b";
   const levelAppHadController = Boolean(navigator.serviceWorker.controller);
   let levelAppReloading = false;
 
