@@ -121,8 +121,6 @@ self.__OFFLINE_ASSETS = [
   "./img/bowling_pin.png",
   "./img/bowling_sign.png",
   "./img/cat.png",
-  "./img/cert/inkwash_bg.jpg",
-  "./img/cert/yan_chai_logo_full.png",
   "./img/charsiu.jpeg",
   "./img/charsiu.png",
   "./img/dog.png",

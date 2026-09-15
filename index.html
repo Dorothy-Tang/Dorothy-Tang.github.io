@@ -3548,7 +3548,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                 isLevel4StandaloneGame() ? advCurrent && advTeardown() : usesAdvancedThemeModule() ? function() {
                     buildAdvDom(), ADV_ASSETS.forEach(advImg), advCurrent = state.theme, advLastW = gameCanvas.width, 
                     advLastH = gameCanvas.height, picker.reset(), carrier.reset(), heldPromptKey = "", 
-                    fxParticles = [], fxRings = [], advDom.reward.classList.remove("show"), advDom.keep.classList.remove("show"), 
+                    fxParticles = [], fxRings = [], advDom.reward.classList.remove("show"), advDom.keep && advDom.keep.classList.remove("show"), 
                     clearTimeout(rewardAutoTimer), rewardOnContinue = null, advSetNote(""), cook.active = cards.active = laundry.active = flowers.active = mj.active = !1, 
                     promptRulesEnabled = !1, setPromptSlot("none");
                     const statusBar = document.getElementById("statusBar");
@@ -7312,7 +7312,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                         correctCount++, isLevel6() || grabCount++, updateHUD(), rewardSmall({
                                             achievement: "已插入 " + p.name,
                                             detail: "花束現有 " + flowers.placed.length + " 枝",
-                                            progressLabel: flowers.placed.length < 3 ? "再插 " + (3 - flowers.placed.length) + " 枝就可以完成作品" : "隨時可以按「完成作品」寫名留念",
+                                            progressLabel: flowers.placed.length < 3 ? "再插 " + (3 - flowers.placed.length) + " 枝就可以完成作品" : "function" == typeof startFlowersKeepsake ? "隨時可以按「完成作品」寫名" : "隨時可以按「完成作品」",
                                             x: item.x,
                                             y: item.y,
                                             tts: !1
@@ -7543,7 +7543,25 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                 ctx.strokeText(p.name, p.x, p.y + .46 * p.size), ctx.fillStyle = "#4a2f14", ctx.fillText(p.name, p.x, p.y + .46 * p.size), 
                                 ctx.restore();
                             }
-                            if (drawVaseScene(ctx, L, {
+                            if (function(ctx, L, opts) {
+                                const o = opts || {}, vase = L.vase;
+                                if (flowers.placed.forEach((p, i) => {
+                                    p.id !== carrier.heldId && (drawSpriteBottom(ctx, advImg(p.kind), p.x, p.y, p.size * p.scale, p.rot, null != o.alpha ? o.alpha : 1), 
+                                    o.noSel || i !== flowers.sel || (ctx.save(), ctx.strokeStyle = "#E07B39", ctx.lineWidth = 3, 
+                                    ctx.setLineDash([ 6, 5 ]), ctx.beginPath(), ctx.arc(p.x, p.y - p.size * p.scale * .2, p.size * p.scale * .3, 0, 2 * Math.PI), 
+                                    ctx.stroke(), ctx.restore()));
+                                }), isPatientVisualCueMode()) {
+                                    const pot = advImg("v77_wide_pot");
+                                    pot && pot.complete && pot.naturalWidth && (ctx.save(), ctx.shadowColor = "rgba(0,0,0,0.28)", 
+                                    ctx.shadowBlur = 14, ctx.shadowOffsetY = 6, drawImageScaled(ctx, pot, vase.x - .5 * vase.w, vase.y - .5 * vase.h, vase.w, vase.h), 
+                                    ctx.restore());
+                                } else drawSprite(ctx, advImg("v75_vase"), vase.x, vase.y, vase.h, {
+                                    shadow: !0
+                                });
+                                o.name && (ctx.save(), ctx.font = "bold " + Math.round(.14 * vase.h) + 'px "PingFang TC","Noto Sans TC",serif', 
+                                ctx.textAlign = "center", ctx.textBaseline = "middle", ctx.fillStyle = "rgba(20,60,50,0.86)", 
+                                ctx.fillText(o.name, vase.x, vase.y + .12 * vase.h), ctx.restore());
+                            }(ctx, L, {
                                 name: flowers.name
                             }), carrier.heldId) {
                                 const p = flowers.palette.find(x => x.id === carrier.heldId) || flowers.placed.find(x => x.id === carrier.heldId);
@@ -8108,7 +8126,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                         el.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:99998;pointer-events:none;background:rgba(10,20,18,.82);color:#e8fff6;font:12px/1.4 -apple-system,"PingFang TC",sans-serif;padding:6px 9px;border-radius:10px;white-space:pre;', 
                         document.body.appendChild(el), framePerf.overlayEl = el);
                         const p = framePerfSnapshot();
-                        el.textContent = `perf v113  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}\n左右手檢查 ${"off" === p.hand.check ? "關" : "開"}  鎖定手形 ${p.hand.lockSize || "-"}  大小拒絕 ${p.hand.sizeRejected}  遠處拒絕 ${p.hand.farRejected}` + (p.tool ? `\n衣夾 近指 ${p.tool.near} 放手≥${p.tool.nearExit} 張開≥${p.tool.nearOpen}  遠指 ${p.tool.far} 放手≥${p.tool.farExit} 張開≥${p.tool.farOpen}  門檻 ${p.tool.source}\n衣夾 合併 ${p.tool.combo} 拎起≤${p.tool.enter} 放手閘≥${p.tool.gate}` : ""), 
+                        el.textContent = `perf v114  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}\n左右手檢查 ${"off" === p.hand.check ? "關" : "開"}  鎖定手形 ${p.hand.lockSize || "-"}  大小拒絕 ${p.hand.sizeRejected}  遠處拒絕 ${p.hand.farRejected}` + (p.tool ? `\n衣夾 近指 ${p.tool.near} 放手≥${p.tool.nearExit} 張開≥${p.tool.nearOpen}  遠指 ${p.tool.far} 放手≥${p.tool.farExit} 張開≥${p.tool.farOpen}  門檻 ${p.tool.source}\n衣夾 合併 ${p.tool.combo} 拎起≤${p.tool.enter} 放手閘≥${p.tool.gate}` : ""), 
                         el.style.display = state.running ? "block" : "none";
                     }(perfT2);
                 } catch (e) {
@@ -9117,15 +9135,13 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         const note = mk("adv-note", "", "advNote");
         note.style.display = "none";
         const toast = mk("adv-toast", "", "advToast"), reward = mk("reward-overlay", '\n    <div class="reward-tier" id="rwTier"></div>\n    <div class="reward-title" id="rwTitle"></div>\n    <div class="reward-sub" id="rwSub"></div>\n    <canvas class="reward-canvas" id="rwCanvas" width="920" height="300"></canvas>\n    <div class="reward-detail" id="rwDetail"></div>\n    <div class="reward-prog">\n      <div class="lbl" id="rwProgLbl"></div>\n      <div class="adv-progress" style="background:rgba(255,255,255,0.22)"><i id="rwProgBar"></i></div>\n    </div>\n    <div class="reward-auto" id="rwAuto">稍後自動繼續</div>', "rewardOverlay");
-        reward.setAttribute("role", "dialog"), reward.setAttribute("aria-label", "成績回饋");
-        const keep = mk("keepsake", '\n    <h2>作品完成 · 加上你的名字</h2>\n    <canvas class="preview" id="ksPreview" width="1000" height="1300"></canvas>\n    <div class="field">\n      <label for="ksName">在花瓶上寫上名字（只保存在此頁，不會儲存）</label>\n      <input type="text" id="ksName" maxlength="12" placeholder="例如：陳女士" autocomplete="off">\n    </div>\n    <div class="field">\n      <label for="ksSig">親筆簽名（可選）</label>\n      <canvas class="sig" id="ksSig" width="1000" height="240"></canvas>\n      <div class="sig-hint">用手指或滑鼠在框內簽名。<button class="adv-btn" id="ksSigClear" style="padding:6px 10px;font-size:13px;min-height:34px;margin-top:6px;">清除簽名</button></div>\n    </div>\n    <div class="adv-btnrow">\n      <button class="adv-btn solid" id="ksDownload">下載作品 PNG</button>\n      <button class="adv-btn" id="ksBack">返回繼續插花</button>\n      <button class="adv-btn warn" id="ksFinish">完成訓練</button>\n    </div>', "keepsake");
-        return keep.setAttribute("role", "dialog"), keep.setAttribute("aria-label", "插花作品留念"), 
+        return reward.setAttribute("role", "dialog"), reward.setAttribute("aria-label", "成績回饋"), 
         advDom = {
             panel: panel,
             note: note,
             toast: toast,
             reward: reward,
-            keep: keep
+            keep: "undefined" != typeof keep ? keep : null
         }, advDom;
     }
     function advSetPanel(o) {
@@ -10653,7 +10669,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             stepNo: "自由創作 · 已插入 " + flowers.placed.length + " 枝",
             text: "把花材放到花瓶口",
             goal: flowers.msg || (isLevel4Tabletop() ? "在花材上停住，沿中線向前滑，再在花瓶口停住。" : "已插花材可以再拿起調整位置。"),
-            metric: "完成後可以寫上名字、簽名，下載作品 PNG 留念。",
+            metric: "function" == typeof startFlowersKeepsake ? "完成後可以寫上名字、簽名，下載作品 PNG。" : "完成後按「完成作品」即可結束。",
             pct: Math.min(1, flowers.placed.length / 8),
             buttons: [ {
                 label: "花 ⇄ 葉",
@@ -10686,56 +10702,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             }, {
                 label: "完成作品 ▶",
                 solid: !0,
-                onClick: () => (buildAdvDom().keep.classList.add("show"), function() {
-                    if (ksBound) return;
-                    ksBound = !0;
-                    const nameEl = document.getElementById("ksName"), sig = document.getElementById("ksSig");
-                    nameEl.addEventListener("input", () => {
-                        flowers.name = nameEl.value.slice(0, 12), ksRedraw();
-                    });
-                    let drawing = !1, cur = null;
-                    const pos = e => {
-                        const r = sig.getBoundingClientRect(), p = e.touches && e.touches[0] ? e.touches[0] : e;
-                        return {
-                            x: (p.clientX - r.left) * sig.width / r.width,
-                            y: (p.clientY - r.top) * sig.height / r.height
-                        };
-                    }, end = () => {
-                        drawing = !1, cur = null;
-                    };
-                    sig.addEventListener("pointerdown", e => {
-                        e.preventDefault(), drawing = !0, cur = [ pos(e) ], flowers.sigStrokes.push(cur), 
-                        ksRedraw();
-                    }), sig.addEventListener("pointermove", e => {
-                        drawing && (e.preventDefault(), cur.push(pos(e)), ksRedraw());
-                    }), sig.addEventListener("pointerup", end), sig.addEventListener("pointerleave", end), 
-                    document.getElementById("ksSigClear").addEventListener("click", e => {
-                        e.stopPropagation(), flowers.sigStrokes = [], ksRedraw();
-                    }), document.getElementById("ksDownload").addEventListener("click", e => {
-                        e.stopPropagation(), function() {
-                            const url = function() {
-                                const cv = document.getElementById("ksPreview");
-                                return cv ? (drawKeepsake(cv.getContext("2d"), cv.width, cv.height), cv.toDataURL("image/png")) : "";
-                            }();
-                            if (!url) return "";
-                            const a = document.createElement("a");
-                            a.href = url, a.download = "花束作品_" + (flowers.name || "訓練") + ".png", document.body.appendChild(a), 
-                            a.click(), setTimeout(() => {
-                                a.remove();
-                            }, 500), rewardSmall({
-                                achievement: "作品已下載",
-                                detail: "PNG 已儲存到裝置",
-                                x: gameCanvas.width / 2,
-                                y: gameCanvas.height / 2,
-                                tts: "作品已經下載。"
-                            });
-                        }();
-                    }), document.getElementById("ksBack").addEventListener("click", e => {
-                        e.stopPropagation(), buildAdvDom().keep.classList.remove("show");
-                    }), document.getElementById("ksFinish").addEventListener("click", e => {
-                        e.stopPropagation(), buildAdvDom().keep.classList.remove("show"), endGame();
-                    });
-                }(), ksRedraw(), playApplause(), void speakCantonese("作品完成。可以寫上你的名字，然後下載留念。" + nextEncourage()))
+                onClick: () => flowersFinishApi.run()
             } ]
         });
     }
@@ -10754,85 +10721,13 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         cw > 2 * bloomHalf && (p.x = Math.max(bloomHalf, Math.min(cw - bloomHalf, p.x))), 
         p.y = vase.y - .34 * vase.h, p.rot = Math.max(-.42, Math.min(.42, null == p.rot ? .3 * dx : p.rot));
     }
-    function drawVaseScene(ctx, L, opts) {
-        const o = opts || {}, vase = L.vase;
-        if (flowers.placed.forEach((p, i) => {
-            p.id !== carrier.heldId && (drawSpriteBottom(ctx, advImg(p.kind), p.x, p.y, p.size * p.scale, p.rot, null != o.alpha ? o.alpha : 1), 
-            o.noSel || i !== flowers.sel || (ctx.save(), ctx.strokeStyle = "#E07B39", ctx.lineWidth = 3, 
-            ctx.setLineDash([ 6, 5 ]), ctx.beginPath(), ctx.arc(p.x, p.y - p.size * p.scale * .2, p.size * p.scale * .3, 0, 2 * Math.PI), 
-            ctx.stroke(), ctx.restore()));
-        }), isPatientVisualCueMode()) {
-            const pot = advImg("v77_wide_pot");
-            pot && pot.complete && pot.naturalWidth && (ctx.save(), ctx.shadowColor = "rgba(0,0,0,0.28)", 
-            ctx.shadowBlur = 14, ctx.shadowOffsetY = 6, drawImageScaled(ctx, pot, vase.x - .5 * vase.w, vase.y - .5 * vase.h, vase.w, vase.h), 
-            ctx.restore());
-        } else drawSprite(ctx, advImg("v75_vase"), vase.x, vase.y, vase.h, {
-            shadow: !0
-        });
-        o.name && (ctx.save(), ctx.font = "bold " + Math.round(.14 * vase.h) + 'px "PingFang TC","Noto Sans TC",serif', 
-        ctx.textAlign = "center", ctx.textBaseline = "middle", ctx.fillStyle = "rgba(20,60,50,0.86)", 
-        ctx.fillText(o.name, vase.x, vase.y + .12 * vase.h), ctx.restore());
-    }
-    let ksBound = !1;
-    function drawKeepsake(ctx, W, H) {
-        ctx.clearRect(0, 0, W, H);
-        const g = ctx.createLinearGradient(0, 0, 0, H);
-        g.addColorStop(0, "#FFFDF8"), g.addColorStop(1, "#EFE9DC"), ctx.fillStyle = g, ctx.fillRect(0, 0, W, H), 
-        ctx.strokeStyle = "#1A6B5A", ctx.lineWidth = 8, ctx.strokeRect(24, 24, W - 48, H - 48), 
-        ctx.fillStyle = "#12564a", ctx.font = 'bold 52px "PingFang TC","Noto Sans TC",serif', 
-        ctx.textAlign = "center", ctx.textBaseline = "top", ctx.fillText("我的花束作品", W / 2, 62), 
-        ctx.font = '26px "PingFang TC","Noto Sans TC",sans-serif', ctx.fillStyle = "#5a5a5a", 
-        ctx.fillText(function() {
-            const d = new Date;
-            return d.getFullYear() + "年" + (d.getMonth() + 1) + "月" + d.getDate() + "日";
-        }(), W / 2, 128);
-        const L = flowers.layout || {
-            vase: {
-                x: 0,
-                y: 0,
-                w: 200,
-                h: 200
-            },
-            size: 80
-        }, vaseH = .32 * H, cx = W / 2, cy = .655 * H, sx = vaseH / Math.max(1, L.vase.h);
-        if (ctx.save(), ctx.translate(cx, cy), ctx.scale(sx, sx), ctx.translate(-L.vase.x, -L.vase.y), 
-        drawVaseScene(ctx, L, {
-            noSel: !0
-        }), ctx.restore(), flowers.name && (ctx.save(), ctx.fillStyle = "rgba(18,86,74,0.92)", 
-        ctx.font = "bold " + Math.round(.16 * vaseH) + 'px "PingFang TC","Noto Sans TC",serif', 
-        ctx.textAlign = "center", ctx.textBaseline = "middle", ctx.fillText(flowers.name, cx, cy + .12 * vaseH), 
-        ctx.restore()), flowers.sigStrokes.length) {
-            ctx.save(), ctx.strokeStyle = "#243b36", ctx.lineWidth = 4, ctx.lineJoin = "round", 
-            ctx.lineCap = "round";
-            const sw = .52 * W, sh = .075 * H, ox = .24 * W, oy = .775 * H;
-            ctx.strokeStyle = "rgba(0,0,0,0.18)", ctx.lineWidth = 2, ctx.beginPath(), ctx.moveTo(ox, oy + sh), 
-            ctx.lineTo(ox + sw, oy + sh), ctx.stroke(), ctx.strokeStyle = "#243b36", ctx.lineWidth = 4, 
-            flowers.sigStrokes.forEach(st => {
-                ctx.beginPath(), st.forEach((p, i) => {
-                    const x = ox + p.x / 1e3 * sw, y = oy + p.y / 240 * sh;
-                    0 === i ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-                }), ctx.stroke();
-            }), ctx.fillStyle = "#7a7a7a", ctx.font = '20px "PingFang TC",sans-serif', ctx.textAlign = "left", 
-            ctx.textBaseline = "top", ctx.fillText("簽名", ox, oy + sh + 6), ctx.restore();
+    const flowersFinishApi = "function" == typeof startFlowersKeepsake ? {
+        run: () => startFlowersKeepsake()
+    } : {
+        run() {
+            playApplause(), speakCantonese("作品完成，非常好！" + nextEncourage()), endGame();
         }
-        ctx.fillStyle = "#12564a", ctx.font = 'bold 28px "PingFang TC","Noto Sans TC",sans-serif', 
-        ctx.textAlign = "center", ctx.textBaseline = "bottom", ctx.fillText("仁濟上肢復康訓練", W / 2, H - 46);
-    }
-    function ksRedraw() {
-        const cv = document.getElementById("ksPreview");
-        if (!cv) return;
-        drawKeepsake(cv.getContext("2d"), cv.width, cv.height);
-        const sig = document.getElementById("ksSig");
-        if (sig) {
-            const c = sig.getContext("2d");
-            c.clearRect(0, 0, sig.width, sig.height), c.strokeStyle = "#243b36", c.lineWidth = 5, 
-            c.lineJoin = "round", c.lineCap = "round", flowers.sigStrokes.forEach(st => {
-                c.beginPath(), st.forEach((p, i) => {
-                    i ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y);
-                }), c.stroke();
-            });
-        }
-    }
+    };
     function advDrawCursor(ctx, pct) {
         if (!(cursorX < 0 || cursorY < 0) && handDetected) {
             if (ctx.save(), isGraspStyleMode()) {
@@ -11002,7 +10897,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
 <script src="level4-three-games-module.js"></script>
 <script>
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
-  const LEVEL_APP_BUILD = "v113-20260912-public-no-certificate";
+  const LEVEL_APP_BUILD = "v114-20260914-public-no-keepsake";
   const levelAppHadController = Boolean(navigator.serviceWorker.controller);
   let levelAppReloading = false;
 
