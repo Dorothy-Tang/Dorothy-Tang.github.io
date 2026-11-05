@@ -4237,13 +4237,15 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                             valid: !0
                         };
                     }(lm, isGrasping), midX = (lm[4].x + lm[8].x + lm[12].x) / 3, midY = (lm[4].y + lm[8].y + lm[12].y) / 3, pinchHeld = stabiliseDetectedGesture(pinch.isPinching, "pinch");
+                    pinchHeld ? pegUnpinchedSinceMs = 0 : pegUnpinchedSinceMs || (pegUnpinchedSinceMs = nowMs());
+                    const pegUnpinchedSustained = !pinchHeld && isLevel6RealToolTask() && null != heldItem && pegUnpinchedSinceMs > 0 && nowMs() - pegUnpinchedSinceMs >= PUBLIC_PEG_UNPINCHED_PREP_MS;
                     return {
                         detected: !0,
                         nx: interactionX(midX),
                         ny: midY,
                         isGrasping: pinchHeld,
                         graspScore: pinch.score,
-                        isOpenPrep: !pinchHeld && (isLevel6() ? isLevel6RealToolTask() ? pinch.valid && pinch.isSeparated : pinch.valid && !pinch.isPinching : pinch.isSeparated),
+                        isOpenPrep: !pinchHeld && (isLevel6() ? isLevel6RealToolTask() ? pinch.valid && (pinch.isSeparated || pegUnpinchedSustained) : pinch.valid && !pinch.isPinching : pinch.isSeparated),
                         pinchRatio: pinch.ratio,
                         pinchIndexRatio: pinch.indexRatio,
                         pinchMiddleRatio: pinch.middleRatio,
@@ -4348,9 +4350,10 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         nearOpen: .61,
         farOpen: .64,
         scoreOpen: .62
-    }, TOOL_ADAPT_MIN_SAMPLES = 24, TOOL_ADAPT_MIN_SPAN = .012, TOOL_ADAPT_MAX_SAMPLES = 300, TOOL_HAND_TOO_CLOSE_SCALE = .55, PUBLIC_PEG_RELEASE_RATIO = .5, PUBLIC_PEG_REARM_RATIO = .62, PUBLIC_PEG_DECISIVE_OTHER_RATIO = .3, PUBLIC_PEG_ADAPT_FLOOR_RATIO = .25, PUBLIC_PEG_ENTER_RATIO = .4, PUBLIC_PEG_HYSTERESIS_RATIO = .1, PUBLIC_PEG_PAIR_MARGIN_RATIO = .12;
+    }, TOOL_ADAPT_MIN_SAMPLES = 24, TOOL_ADAPT_MIN_SPAN = .012, TOOL_ADAPT_MAX_SAMPLES = 300, TOOL_HAND_TOO_CLOSE_SCALE = .55, PUBLIC_PEG_RELEASE_RATIO = .4, PUBLIC_PEG_REARM_RATIO = .5, PUBLIC_PEG_DECISIVE_OTHER_RATIO = .22, PUBLIC_PEG_ADAPT_FLOOR_RATIO = .2, PUBLIC_PEG_ENTER_RATIO = .36, PUBLIC_PEG_HYSTERESIS_RATIO = .06, PUBLIC_PEG_PAIR_MARGIN_RATIO = .12, PUBLIC_PEG_UNPINCHED_PREP_MS = 400;
+    let pegUnpinchedSinceMs = 0;
     function publicPegNearFloor(nearClosed, nearRange, farClosed) {
-        return Number.isFinite(nearClosed) && Number.isFinite(nearRange) && Number.isFinite(farClosed) ? Math.min(nearClosed + .62 * nearRange, farClosed + nearRange * PUBLIC_PEG_PAIR_MARGIN_RATIO) : -1 / 0;
+        return Number.isFinite(nearClosed) && Number.isFinite(nearRange) && Number.isFinite(farClosed) ? Math.min(nearClosed + .5 * nearRange, farClosed + nearRange * PUBLIC_PEG_PAIR_MARGIN_RATIO) : -1 / 0;
     }
     function publicPegReleaseRelaxationEnabled() {
         return isLevel6RealToolTask();
@@ -4370,7 +4373,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     let lastToolPinchLive = null;
     function resetToolPinchAdapt() {
         toolPinchAdapt.near.length = 0, toolPinchAdapt.far.length = 0, toolPinchAdapt.combo.length = 0, 
-        toolPinchAdapt.counter = 0, toolPinchAdapt.thresholds = null, chopstickFlexAdapt.index.length = 0, 
+        toolPinchAdapt.counter = 0, toolPinchAdapt.thresholds = null, pegUnpinchedSinceMs = 0, chopstickFlexAdapt.index.length = 0, 
         chopstickFlexAdapt.middle.length = 0, chopstickFlexAdapt.counter = 0, chopstickFlexAdapt.thresholds = null, 
         lastToolPinchLive = null;
     }
@@ -8126,7 +8129,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                         el.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:99998;pointer-events:none;background:rgba(10,20,18,.82);color:#e8fff6;font:12px/1.4 -apple-system,"PingFang TC",sans-serif;padding:6px 9px;border-radius:10px;white-space:pre;', 
                         document.body.appendChild(el), framePerf.overlayEl = el);
                         const p = framePerfSnapshot();
-                        el.textContent = `perf v114  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}\n左右手檢查 ${"off" === p.hand.check ? "關" : "開"}  鎖定手形 ${p.hand.lockSize || "-"}  大小拒絕 ${p.hand.sizeRejected}  遠處拒絕 ${p.hand.farRejected}` + (p.tool ? `\n衣夾 近指 ${p.tool.near} 放手≥${p.tool.nearExit} 張開≥${p.tool.nearOpen}  遠指 ${p.tool.far} 放手≥${p.tool.farExit} 張開≥${p.tool.farOpen}  門檻 ${p.tool.source}\n衣夾 合併 ${p.tool.combo} 拎起≤${p.tool.enter} 放手閘≥${p.tool.gate}` : ""), 
+                        el.textContent = `perf v115  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}\n左右手檢查 ${"off" === p.hand.check ? "關" : "開"}  鎖定手形 ${p.hand.lockSize || "-"}  大小拒絕 ${p.hand.sizeRejected}  遠處拒絕 ${p.hand.farRejected}` + (p.tool ? `\n衣夾 近指 ${p.tool.near} 放手≥${p.tool.nearExit} 張開≥${p.tool.nearOpen}  遠指 ${p.tool.far} 放手≥${p.tool.farExit} 張開≥${p.tool.farOpen}  門檻 ${p.tool.source}\n衣夾 合併 ${p.tool.combo} 拎起≤${p.tool.enter} 放手閘≥${p.tool.gate}` : ""), 
                         el.style.display = state.running ? "block" : "none";
                     }(perfT2);
                 } catch (e) {
@@ -10897,7 +10900,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
 <script src="level4-three-games-module.js"></script>
 <script>
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
-  const LEVEL_APP_BUILD = "v114-20260914-public-no-keepsake-b";
+  const LEVEL_APP_BUILD = "v115-20261106-peg-release-relax";
   const levelAppHadController = Boolean(navigator.serviceWorker.controller);
   let levelAppReloading = false;
 
