@@ -1,4 +1,4 @@
-const CACHE_VERSION = "fthue-rehab-v115-20261106-peg-release-relax";
+const CACHE_VERSION = "fthue-rehab-v116-20261109-adv-games-fix-tracking-watchdog";
 const OFFLINE_PAGE = "./offline.html";
 
 importScripts("./offline-assets.js");

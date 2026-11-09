@@ -3521,7 +3521,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                     stable: !1,
                     candidate: !1,
                     candidateAt: 0
-                }, interactionTrackingPauseAt = 0, resetHandFrameAdmission(), resetPublicGameWorkAdmission(), 
+                }, interactionTrackingPauseAt = 0, resetHandFrameAdmission(), resetPublicGameWorkAdmission(), resetPublicCameraStall(), 
                 handAdmitDiag.rejected = 0, handAdmitDiag.strict = 0, handAdmitDiag.continuity = 0, 
                 handAdmitDiag.lone = 0, handAdmitDiag.sizeRejected = 0, handAdmitDiag.farRejected = 0, 
                 framePerf.trackMs = 0, framePerf.renderMs = 0, framePerf.frameMs = 0, framePerf.fps = 0, 
@@ -3861,6 +3861,24 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     window.addEventListener("pagehide", event => {
         movementRecordingApi.clear(), event.persisted || stopCamera(!0);
     });
+    const HAND_DETECT_FAIL_RESET_STREAK = 20;
+    let handDetectFailStreak = 0, handDetectRecoveries = 0, handDetectRecovering = !1, handDelegateRuntimeOverride = null;
+    function recoverHandLandmarker(err) {
+        if (handDetectRecovering) return;
+        handDetectRecovering = !0, handDetectRecoveries++;
+        const old = handLandmarker;
+        handLandmarker = null, handLandmarkerPromise = null, handDetectFailStreak = 0, handDetectRecoveries >= 2 && (handDelegateRuntimeOverride = "CPU");
+        try {
+            old && "function" == typeof old.close && old.close();
+        } catch (_e) {}
+        console.warn("hand landmarker recovery #" + handDetectRecoveries + (handDelegateRuntimeOverride ? " (forcing CPU delegate)" : ""), err && err.message || err);
+        try {
+            resetHandFrameAdmission(), state.running && setActionPrompt("手部偵測重新啟動中", "請稍等");
+        } catch (_e) {}
+        ensureHandLandmarker().catch(() => null).finally(() => {
+            handDetectRecovering = !1, handDetectFailStreak = 0;
+        });
+    }
     let handLandmarker = null, handLandmarkerPromise = null, handFrameCache = {
         video: null,
         generation: null,
@@ -3956,7 +3974,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         }
     }
     function preferredHandDelegate() {
-        return handDelegateOverride() || (isAppleTouchDevice() || "CPU" === readHandDelegateRecord().pref ? "CPU" : "GPU");
+        return handDelegateRuntimeOverride || handDelegateOverride() || (isAppleTouchDevice() || "CPU" === readHandDelegateRecord().pref ? "CPU" : "GPU");
     }
     async function ensureHandLandmarker() {
         if (handLandmarker) return handLandmarker;
@@ -4325,9 +4343,10 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         };
         let interpreted, results = null;
         if (handLandmarker) try {
-            results = handLandmarker.detectForVideo(videoEl, nextTs("hand"));
+            results = handLandmarker.detectForVideo(videoEl, nextTs("hand")), handDetectFailStreak = 0;
         } catch (e) {
-            results = null;
+            results = null, handDetectFailStreak++, (1 === handDetectFailStreak || handDetectFailStreak % 30 == 0) && console.error("hand detectForVideo failed", handDetectFailStreak, e), 
+            handDetectFailStreak >= HAND_DETECT_FAIL_RESET_STREAK && recoverHandLandmarker(e);
         }
         try {
             interpreted = interpretHandResults(results, !1, videoEl);
@@ -6577,6 +6596,49 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             source: l.calibrated ? l.lowered ? "校準+自適應降低" : "校準" : l.adaptive ? "自適應" : "預設"
         };
     }
+    const PUBLIC_CAMERA_STALL_PLAY_MS = 4e3, PUBLIC_CAMERA_STALL_REACQUIRE_MS = 9e3, PUBLIC_CAMERA_STALL_RETRY_GAP_MS = 6e3;
+    let publicCameraStall = {
+        lastFreshAt: 0,
+        lastActionAt: 0,
+        playAttempts: 0,
+        reacquireAttempts: 0,
+        busy: !1
+    };
+    function resetPublicCameraStall() {
+        publicCameraStall = {
+            lastFreshAt: performance.now(),
+            lastActionAt: 0,
+            playAttempts: 0,
+            reacquireAttempts: 0,
+            busy: !1
+        };
+    }
+    function publicCameraStallWatchdog(frame, now) {
+        if (!state.running || state.paused || !gameVideo) return;
+        if (frame && frame.fresh) return void (publicCameraStall.lastFreshAt = now);
+        publicCameraStall.lastFreshAt || (publicCameraStall.lastFreshAt = now);
+        const staleFor = now - publicCameraStall.lastFreshAt;
+        if (publicCameraStall.busy || staleFor < PUBLIC_CAMERA_STALL_PLAY_MS || now - publicCameraStall.lastActionAt < PUBLIC_CAMERA_STALL_RETRY_GAP_MS) return;
+        publicCameraStall.lastActionAt = now;
+        const tracks = state.stream && state.stream.getVideoTracks ? state.stream.getVideoTracks() : [], trackLive = tracks.length > 0 && tracks.every(t => "live" === t.readyState), reason = frame && frame.reason || "unknown";
+        if (trackLive && staleFor < PUBLIC_CAMERA_STALL_REACQUIRE_MS && publicCameraStall.playAttempts < 2) {
+            publicCameraStall.playAttempts++, console.warn("camera stall watchdog: replay video", Math.round(staleFor), reason);
+            try {
+                setActionPrompt("鏡頭畫面停頓，重新連接中", "請稍等");
+            } catch (_e) {}
+            return void (gameVideo.srcObject !== state.stream && state.stream && (gameVideo.srcObject = state.stream), gameVideo.play().catch(() => {}));
+        }
+        if (publicCameraStall.reacquireAttempts >= 1) return;
+        publicCameraStall.reacquireAttempts++, publicCameraStall.busy = !0, console.warn("camera stall watchdog: re-acquire camera", Math.round(staleFor), reason, trackLive ? "track live" : "track not live");
+        try {
+            setActionPrompt("鏡頭畫面停頓，重新連接中", "請稍等");
+        } catch (_e) {}
+        cameraRequestAttempted = !1, resetHandFrameAdmission(), startCamera("gameVideo").then(ok => {
+            ok && (publicCameraStall.lastFreshAt = performance.now(), hideCameraError());
+        }).catch(() => null).finally(() => {
+            publicCameraStall.busy = !1;
+        });
+    }
     const PUBLIC_GAME_WORK_INTERVAL_MS = 1e3 / 30;
     let publicGameWork = {
         at: -1 / 0,
@@ -6596,6 +6658,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         if (state.running) {
             if (!state.paused) {
                 const publicFrame = state.qaMode ? null : level4FrameStatus(gameVideo);
+                state.qaMode || publicCameraStallWatchdog(publicFrame, performance.now());
                 if (state.qaMode || function(rafNow, frame) {
                     const now = Number.isFinite(rafNow) ? rafNow : performance.now(), generation = Number(frame?.generation);
                     if (frame?.fresh && Number.isFinite(generation)) return !(Number.isFinite(publicGameWork.generation) && !(generation > publicGameWork.generation) || now - publicGameWork.at < PUBLIC_GAME_WORK_INTERVAL_MS - 1 || (publicGameWork = {
@@ -6862,7 +6925,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                             const advancedHeld = !(!carrier.heldId && !picker.heldId), advancedHover = !(!carrier.hoverId && !picker.hoverId);
                             setActionPrompt(advancedHeld ? isGrasping ? "保持揸住" : "張開手放低" : advancedHover ? isGrasping ? "揸實" : "揸實拿起" : "張開手", "");
                         } else setActionPrompt("患手入鏡", "");
-                        advDom && advDom.reward.classList.contains("show") || advDom && advDom.keep.classList.contains("show") || ("cooking" === advCurrent ? (cook.announceAt && nowMs() >= cook.announceAt && (cook.announceAt = 0, 
+                        advDom && advDom.reward.classList.contains("show") || advDom && advDom.keep && advDom.keep.classList.contains("show") || ("cooking" === advCurrent ? (cook.announceAt && nowMs() >= cook.announceAt && (cook.announceAt = 0, 
                         cookAnnounce()), !state.qaMode && poseLandmarker && advPoseFrame++ % 2 == 0 && detectPose(document.getElementById("gameVideo")), 
                         function() {
                             if (cook.done) return;
@@ -8129,7 +8192,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                         el.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:99998;pointer-events:none;background:rgba(10,20,18,.82);color:#e8fff6;font:12px/1.4 -apple-system,"PingFang TC",sans-serif;padding:6px 9px;border-radius:10px;white-space:pre;', 
                         document.body.appendChild(el), framePerf.overlayEl = el);
                         const p = framePerfSnapshot();
-                        el.textContent = `perf v115  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}\n左右手檢查 ${"off" === p.hand.check ? "關" : "開"}  鎖定手形 ${p.hand.lockSize || "-"}  大小拒絕 ${p.hand.sizeRejected}  遠處拒絕 ${p.hand.farRejected}` + (p.tool ? `\n衣夾 近指 ${p.tool.near} 放手≥${p.tool.nearExit} 張開≥${p.tool.nearOpen}  遠指 ${p.tool.far} 放手≥${p.tool.farExit} 張開≥${p.tool.farOpen}  門檻 ${p.tool.source}\n衣夾 合併 ${p.tool.combo} 拎起≤${p.tool.enter} 放手閘≥${p.tool.gate}` : ""), 
+                        el.textContent = `perf v116  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}\n左右手檢查 ${"off" === p.hand.check ? "關" : "開"}  鎖定手形 ${p.hand.lockSize || "-"}  大小拒絕 ${p.hand.sizeRejected}  遠處拒絕 ${p.hand.farRejected}` + (p.tool ? `\n衣夾 近指 ${p.tool.near} 放手≥${p.tool.nearExit} 張開≥${p.tool.nearOpen}  遠指 ${p.tool.far} 放手≥${p.tool.farExit} 張開≥${p.tool.farOpen}  門檻 ${p.tool.source}\n衣夾 合併 ${p.tool.combo} 拎起≤${p.tool.enter} 放手閘≥${p.tool.gate}` : ""), 
                         el.style.display = state.running ? "block" : "none";
                     }(perfT2);
                 } catch (e) {
@@ -10762,7 +10825,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     function advTeardown() {
         const d = buildAdvDom();
         d.panel.style.display = "none", d.note.style.display = "none", d.reward.classList.remove("show"), 
-        d.keep.classList.remove("show"), cook.active = cards.active = laundry.active = flowers.active = mj.active = !1;
+        d.keep && d.keep.classList.remove("show"), cook.active = cards.active = laundry.active = flowers.active = mj.active = !1;
         const motionGuide = document.getElementById("cookMotionGuide");
         motionGuide && (motionGuide.classList.remove("show"), motionGuide.setAttribute("aria-hidden", "true")), 
         advCurrent = null, promptRulesEnabled = !0, setPromptSlot("rules");
@@ -10900,7 +10963,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
 <script src="level4-three-games-module.js"></script>
 <script>
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
-  const LEVEL_APP_BUILD = "v115-20261106-peg-release-relax";
+  const LEVEL_APP_BUILD = "v116-20261109-adv-games-fix-tracking-watchdog";
   const levelAppHadController = Boolean(navigator.serviceWorker.controller);
   let levelAppReloading = false;
 
