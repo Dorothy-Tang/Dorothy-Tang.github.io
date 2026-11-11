@@ -1547,6 +1547,8 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         </div>
       </div>
       <button class="btn-primary" id="btnStartGame" disabled>開始遊戲 ▶</button>
+      <button class="btn-secondary" id="btnCalibForceStart" type="button" hidden
+        style="padding:9px;margin-top:8px;">校準未完成？直接開始 ▶</button>
       <button class="btn-secondary" id="btnBackFromCalib">← 設定</button>
       <button class="btn-secondary" id="btnCalibToLibrary">← 遊戲</button>
     </div>
@@ -2886,6 +2888,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     async function enterCalibrationFlow() {
         if ("67" === state.level && !assertLevel6ActivityLock()) return renderActivityLibrary(), 
         void showScreen("library");
+        stopCalibLoop(), calibEnteredAt = performance.now(), resetCalibStall(), hideCalibForceStart(), 
         state.calibration = {
             detectedStart: 0,
             openHoldMs: 0,
@@ -2931,16 +2934,18 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                 trackingModelReady = trackingModelReady || Boolean(pose);
             }
         }
-        trackingModelReady ? !1 !== await cameraStart && function() {
+        const cameraOk = trackingModelReady ? await cameraStart : null;
+        trackingModelReady && !1 === cameraOk && (document.getElementById("pixelCount").textContent = "鏡頭未就緒 · 請按「重新嘗試」");
+        trackingModelReady ? !1 !== cameraOk && function() {
             !function() {
                 const hint = document.getElementById("calibHint"), openCheck = document.getElementById("calibOpenCheck"), closeCheck = document.getElementById("calibCloseCheck");
                 if (isShoulderFlexionLevel()) hint.textContent = "已選患側肩、手肘及軀幹入鏡；患臂自然垂低。"; else if (isLevel6RealToolTask()) {
                     const w = level6ToolWords();
                     hint.textContent = "患手揸住" + w.noun + "入鏡。慢慢" + w.open + "、" + w.close + "幾次。", openCheck.textContent = "○ " + w.open + w.noun, 
                     closeCheck.textContent = "○ " + w.close + w.noun;
-                } else isLevel6() || isLevel67BareMode() ? (hint.textContent = "拇指、食指、中指入鏡。先張開，再輕捏。", 
+                } else isChopsticksMode() ? hint.textContent = "患手揸住筷子入鏡（手背向鏡頭）；見綠點即可按「開始遊戲」。" : isLevel6() || isLevel67BareMode() ? (hint.textContent = "拇指、食指、中指入鏡。先張開，再輕捏。", 
                 openCheck.textContent = "○ 張開三指", closeCheck.textContent = "○ 三指輕捏") : isPegMode() ? (hint.textContent = "手掌及指尖入鏡。先放鬆，再輕輕合手指。", 
-                openCheck.textContent = "○ 放鬆打開", closeCheck.textContent = "○ 輕輕合手指") : isChopsticksMode() ? hint.textContent = "食指尖／筷子前端方向入鏡；見綠點即可。" : "grasp" === state.gameType ? (hint.textContent = "掌心向鏡頭。張到可達幅度，再輕合手。", 
+                openCheck.textContent = "○ 放鬆打開", closeCheck.textContent = "○ 輕輕合手指") : "grasp" === state.gameType ? (hint.textContent = "掌心向鏡頭。張到可達幅度，再輕合手。", 
                 openCheck.textContent = "○ 張手", closeCheck.textContent = "○ 輕合手") : hint.textContent = "手掌／滑墊入鏡；見綠點即可。";
             }();
             const video = document.getElementById("calibVideo");
@@ -2968,6 +2973,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                     ctx.restore(), ctx.fillStyle = "rgba(20,32,40,0.22)", ctx.fillRect(0, 0, rectW, rectH);
                 }(ctx, video, rectW, rectH);
                 const frame = level4FrameStatus(video);
+                calibCameraStallWatchdog(frame, performance.now()), updateCalibForceStart(performance.now());
                 let res;
                 try {
                     if (isLevel6()) res = detectWrist(video, frame); else if (isGrossTabletop()) {
@@ -3250,7 +3256,11 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                             });
                         }
                         document.getElementById("btnStartGame").disabled = !c.ready, c.ready && !calibDetectedOnce && (calibDetectedOnce = !0);
-                    } else calibDetectedOnce || (calibDetectedOnce = !0, document.getElementById("btnStartGame").disabled = !1);
+                    } else {
+                        calibDetectedOnce = !0;
+                        const startBtn = document.getElementById("btnStartGame");
+                        startBtn && startBtn.disabled && (startBtn.disabled = !1);
+                    }
                     let px = res.nx * rectW, py = res.ny * rectH;
                     calibDotEmaX < 0 ? (calibDotEmaX = px, calibDotEmaY = py) : (calibDotEmaX += DOT_EMA * (px - calibDotEmaX), 
                     calibDotEmaY += DOT_EMA * (py - calibDotEmaY)), ctx.beginPath(), ctx.arc(calibDotEmaX, calibDotEmaY, 16, 0, 2 * Math.PI), 
@@ -3258,7 +3268,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                     ctx.fillStyle = "#2E7D52", ctx.fill(), ctx.lineWidth = 2, ctx.strokeStyle = "#fff", 
                     ctx.stroke();
                 } else {
-                    if (document.getElementById("pixelCount").textContent = "尚未偵測", isGraspStyleMode()) {
+                    if (document.getElementById("pixelCount").textContent = calibNotDetectedText(res, frame), isGraspStyleMode()) {
                         const c = state.calibration;
                         (Number.isFinite(c.lastSeenAt) && c.lastSeenAt > 0 ? nowMs() - c.lastSeenAt : 1 / 0) > CALIB_DROPOUT_GRACE_MS ? (c.detectedStart = 0, 
                         c.openHoldMs = 0, c.toolVals = [], c.openNear = [], c.openFar = [], c.closedNear = [], 
@@ -3474,9 +3484,14 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                     } catch (err) {
                         return !1;
                     }
-                    return waitForLiveCameraFrame(videoEl);
+                    if (await waitForLiveCameraFrame(videoEl, 3500)) return !0;
+                    console.warn("game camera: no live frames after start, re-acquiring once");
+                    return startCamera("gameVideo", {
+                        forceReacquire: !0,
+                        timeoutMs: 3500
+                    });
                 }(prime);
-                if (!cameraReady) return cameraErrorContext = {
+                if (!cameraReady) return resetCalibrationView("鏡頭畫面未就緒。請按「重新嘗試」再校準一次"), cameraErrorContext = {
                     retry: () => enterCalibrationFlow(),
                     back: () => {
                         stopCalibLoop(), stopCamera(), renderActivityLibrary(), showScreen("library");
@@ -3608,7 +3623,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         u.volume = 1, opts && opts.onend && (u.onend = opts.onend), opts && opts.onerror && (u.onerror = opts.onerror), 
         window.speechSynthesis.speak(u), u;
     }
-    document.getElementById("btnStartGame").addEventListener("click", () => {
+    function beginGameFromCalibration() {
         stopCalibLoop(), gameCameraPrime = primeGameCameraPlayback(), updateRulesForActivity(), 
         showScreen("rules");
         const text = window.__CURRENT_RULES_CANTONESE || RULES_CANTONESE, utterance = speakCantonese(text, {
@@ -3616,6 +3631,11 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             onerror: () => startSelectedGame()
         }), fallbackMs = Math.max(6500, Math.min(18e3, 210 * text.length));
         rulesStartTimer = setTimeout(() => startSelectedGame(), utterance ? fallbackMs : 600);
+    }
+    document.getElementById("btnCalibForceStart").addEventListener("click", () => {
+        console.warn("calibration skipped by therapist (force start)"), beginGameFromCalibration();
+    }), document.getElementById("btnStartGame").addEventListener("click", () => {
+        beginGameFromCalibration();
     });
     let feedbackSpeechTimer = 0;
     function speakAfterFeedback(text, delay, opts) {
@@ -3797,9 +3817,10 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         start: () => !1,
         stop: stopCameraAfter => (stopCameraAfter && stopCamera(), !1)
     };
-    let cameraRequestPromise = null, cameraRequestAttempted = !1;
-    async function startCamera(videoElId) {
-        const videoEl = document.getElementById(videoElId);
+    let cameraRequestPromise = null, cameraRequestAttempted = !1, cameraReacquireCount = 0;
+    const CAMERA_REACQUIRE_MAX = 8;
+    async function startCamera(videoElId, opts) {
+        const options = opts || {}, videoEl = document.getElementById(videoElId), waitMs = Number.isFinite(options.timeoutMs) ? options.timeoutMs : 1800;
         if (!navigator.mediaDevices || "function" != typeof navigator.mediaDevices.getUserMedia) return showCameraError({
             name: "UnsupportedError"
         }), !1;
@@ -3810,13 +3831,22 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                 const tracks = state.stream.getVideoTracks?.() || [];
                 return tracks.length && tracks.some(track => "live" === track.readyState) ? state.stream : null;
             }();
-            if (reusable) return videoEl.srcObject !== reusable && (videoEl.srcObject = reusable), 
-            await videoEl.play().catch(() => {}), !!await waitForLiveCameraFrame(videoEl) && (hideCameraError(), 
-            !0);
+            if (reusable && !options.forceReacquire) {
+                videoEl.srcObject !== reusable && (videoEl.srcObject = reusable), await videoEl.play().catch(() => {});
+                if (await waitForLiveCameraFrame(videoEl, waitMs)) return hideCameraError(), !0;
+                console.warn("camera reuse: no live frames on", videoElId, "- re-acquiring camera");
+            }
+            const hadStream = !!state.stream;
             if (state.stream && (state.stream.getTracks().forEach(track => track.stop()), state.stream = null), 
-            cameraRequestAttempted) return showCameraError({
+            cameraRequestAttempted && !hadStream) return showCameraError({
                 name: "StreamEndedError"
             }), !1;
+            if (cameraRequestAttempted && hadStream) {
+                if (cameraReacquireCount >= CAMERA_REACQUIRE_MAX) return showCameraError({
+                    name: "StreamEndedError"
+                }), !1;
+                cameraReacquireCount++, console.warn("camera re-acquire attempt", cameraReacquireCount);
+            }
             const cameraVideoConstraints = window.innerHeight > window.innerWidth ? {
                 facingMode: "user",
                 width: {
@@ -3847,8 +3877,11 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                 cameraRequestPromise = null;
             }));
             const stream = await cameraRequestPromise;
-            return state.stream = stream, videoEl.srcObject = stream, await videoEl.play().catch(() => {}), 
-            !!await waitForLiveCameraFrame(videoEl) && (hideCameraError(), !0);
+            if (state.stream = stream, videoEl.srcObject = stream, await videoEl.play().catch(() => {}), 
+            await waitForLiveCameraFrame(videoEl, Math.max(waitMs, 3e3))) return hideCameraError(), !0;
+            return showCameraError({
+                name: "PlaybackError"
+            }), !1;
         } catch (err) {
             return showCameraError(err), !1;
         }
@@ -4546,7 +4579,65 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     }
     function stopCalibLoop() {
         calibRAF && cancelAnimationFrame(calibRAF), calibRAF = null, calibDotEmaX = -1, 
-        calibDotEmaY = -1, calibDetectedOnce = !1;
+        calibDotEmaY = -1, calibDetectedOnce = !1, resetCalibStall(), hideCalibForceStart();
+    }
+    let calibEnteredAt = 0, calibStall = {
+        lastFreshAt: 0,
+        attempts: 0,
+        busy: !1
+    };
+    function resetCalibStall() {
+        calibStall = {
+            lastFreshAt: 0,
+            attempts: 0,
+            busy: !1
+        };
+    }
+    const CALIB_STALL_REACQUIRE_MS = 2500, CALIB_STALL_MAX_ATTEMPTS = 2, CALIB_FORCE_START_AFTER_MS = 1e4;
+    function calibCameraStallWatchdog(frame, now) {
+        if (!screens.calib.classList.contains("active")) return;
+        if (frame && frame.fresh) return void (calibStall.lastFreshAt = now);
+        if (calibStall.lastFreshAt || (calibStall.lastFreshAt = now), calibStall.busy || calibStall.attempts >= CALIB_STALL_MAX_ATTEMPTS || now - calibStall.lastFreshAt < CALIB_STALL_REACQUIRE_MS) return;
+        calibStall.attempts++, calibStall.busy = !0, console.warn("calibration camera stall: re-acquire camera", frame && frame.reason, "attempt", calibStall.attempts);
+        const status = document.getElementById("pixelCount");
+        status && (status.textContent = "鏡頭畫面停頓，重新連接中…"), startCamera("calibVideo", {
+            forceReacquire: !0,
+            timeoutMs: 3e3
+        }).then(ok => {
+            ok && (calibStall.lastFreshAt = performance.now());
+        }).catch(() => null).finally(() => {
+            calibStall.busy = !1;
+        });
+    }
+    function calibNotDetectedText(res, frame) {
+        if (frame && !frame.fresh) return calibStall.busy ? "鏡頭畫面停頓，重新連接中…" : "尚未偵測 · 鏡頭畫面停頓";
+        if (!isLevel6() && "5" !== state.level) return "尚未偵測";
+        const reason = res && res.reason || "", d = handAdmitDiag;
+        if ("affected-hand-not-detected" === reason && d.hands > 0) {
+            if ("size" === d.path) return "尚未偵測 · 見到手，但距離同先前唔同，請保持距離";
+            if ("far" === d.path) return "尚未偵測 · 見到手，請回到原位";
+            return "on" === d.check ? "尚未偵測 · 見到手，但未確認係患側（可將「左右手檢查」設為「關」）" : "尚未偵測 · 見到手，請只讓患手入鏡";
+        }
+        return "no-hand-detected" === reason ? "尚未偵測 · 未見到手，請將患手放入畫面" : "尚未偵測";
+    }
+    function resetCalibrationView(statusText) {
+        calibDetectedOnce = !1, calibDotEmaX = -1, calibDotEmaY = -1;
+        try {
+            const ctx = calibCanvas.getContext("2d");
+            ctx && ctx.clearRect(0, 0, calibCanvas.width, calibCanvas.height);
+        } catch (e) {}
+        const status = document.getElementById("pixelCount");
+        status && statusText && (status.textContent = statusText);
+    }
+    function hideCalibForceStart() {
+        const btn = document.getElementById("btnCalibForceStart");
+        btn && (btn.hidden = !0);
+    }
+    function updateCalibForceStart(now) {
+        const btn = document.getElementById("btnCalibForceStart"), startBtn = document.getElementById("btnStartGame");
+        if (!btn || !startBtn) return;
+        const show = startBtn.disabled && calibEnteredAt > 0 && now - calibEnteredAt >= CALIB_FORCE_START_AFTER_MS;
+        btn.hidden !== !show && (btn.hidden = !show);
     }
     const gameVideo = document.getElementById("gameVideo"), gameCanvas = document.getElementById("gameCanvas");
     let gameCtx = null, gameRAF = null;
@@ -8192,7 +8283,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                         el.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:99998;pointer-events:none;background:rgba(10,20,18,.82);color:#e8fff6;font:12px/1.4 -apple-system,"PingFang TC",sans-serif;padding:6px 9px;border-radius:10px;white-space:pre;', 
                         document.body.appendChild(el), framePerf.overlayEl = el);
                         const p = framePerfSnapshot();
-                        el.textContent = `perf v116  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}\n左右手檢查 ${"off" === p.hand.check ? "關" : "開"}  鎖定手形 ${p.hand.lockSize || "-"}  大小拒絕 ${p.hand.sizeRejected}  遠處拒絕 ${p.hand.farRejected}` + (p.tool ? `\n衣夾 近指 ${p.tool.near} 放手≥${p.tool.nearExit} 張開≥${p.tool.nearOpen}  遠指 ${p.tool.far} 放手≥${p.tool.farExit} 張開≥${p.tool.farOpen}  門檻 ${p.tool.source}\n衣夾 合併 ${p.tool.combo} 拎起≤${p.tool.enter} 放手閘≥${p.tool.gate}` : ""), 
+                        el.textContent = `perf v117  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}\n左右手檢查 ${"off" === p.hand.check ? "關" : "開"}  鎖定手形 ${p.hand.lockSize || "-"}  大小拒絕 ${p.hand.sizeRejected}  遠處拒絕 ${p.hand.farRejected}` + (p.tool ? `\n衣夾 近指 ${p.tool.near} 放手≥${p.tool.nearExit} 張開≥${p.tool.nearOpen}  遠指 ${p.tool.far} 放手≥${p.tool.farExit} 張開≥${p.tool.farOpen}  門檻 ${p.tool.source}\n衣夾 合併 ${p.tool.combo} 拎起≤${p.tool.enter} 放手閘≥${p.tool.gate}` : ""), 
                         el.style.display = state.running ? "block" : "none";
                     }(perfT2);
                 } catch (e) {
@@ -10963,7 +11054,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
 <script src="level4-three-games-module.js"></script>
 <script>
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
-  const LEVEL_APP_BUILD = "v116-20261109-adv-games-fix-tracking-watchdog";
+  const LEVEL_APP_BUILD = "v117-20261111-calib-camera-recovery";
   const levelAppHadController = Boolean(navigator.serviceWorker.controller);
   let levelAppReloading = false;
 

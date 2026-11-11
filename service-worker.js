@@ -1,4 +1,4 @@
-const CACHE_VERSION = "fthue-rehab-v116-20261109-adv-games-fix-tracking-watchdog";
+const CACHE_VERSION = "fthue-rehab-v117-20261111-calib-camera-recovery";
 const OFFLINE_PAGE = "./offline.html";
 
 importScripts("./offline-assets.js");
