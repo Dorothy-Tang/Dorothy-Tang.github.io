@@ -1,4 +1,4 @@
-const CACHE_VERSION = "fthue-rehab-v117-20261111-calib-camera-recovery";
+const CACHE_VERSION = "fthue-rehab-v118-20261113-calib-face-hide";
 const OFFLINE_PAGE = "./offline.html";
 
 importScripts("./offline-assets.js");

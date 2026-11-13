@@ -216,6 +216,10 @@ html[data-screen="game"] .language-switcher{ top:max(68px,calc(env(safe-area-ins
 .game-stage.white-game-background{ background:#fff; }
 .game-stage.white-game-background video#gameVideo{ opacity:0; }
 .game-stage.selfie-game-background video#gameVideo{ opacity:1; }
+/* v118 face-hide (遮面): when the therapist picks 遮面 the live camera is never shown
+   sharply. Game screens that keep the camera as background blur the video element. */
+.game-stage.face-hide video#gameVideo{ filter:blur(18px) saturate(.85); }
+#btnPrivacyBlur.face-hide-on{ background:var(--teal); color:#fff; }
 /* Phones need the game and controls to remain visible while the camera is active.
    Keep the source video running at full capture resolution for MediaPipe, but show
    only a compact, non-interactive preview instead of filling the whole viewport. */
@@ -1794,6 +1798,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         personalChopstickFlex: null,
         mirrorX: !0,
         privacyBlur: !0,
+        privacyFaceHide: !1,
         selfieMode: !1,
         sessionMode: "training",
         level4SessionThemes: [ "bilateral" ],
@@ -2949,7 +2954,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                 openCheck.textContent = "○ 張手", closeCheck.textContent = "○ 輕合手") : hint.textContent = "手掌／滑墊入鏡；見綠點即可。";
             }();
             const video = document.getElementById("calibVideo");
-            resetPrivacySegmentation(), privacyBlurEnabled() && ensurePrivacySegmenter();
+            resetPrivacySegmentation(), privacyBlurEnabled() && !faceHideEnabled() && ensurePrivacySegmenter();
             const hint = document.getElementById("calibHint");
             calibRAF = requestAnimationFrame(function loop() {
                 if (!screens.calib.classList.contains("active")) return;
@@ -3000,13 +3005,13 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                 if (privacyOn) {
                     if (res.detected) if (isGrossTabletop() && Array.isArray(res.lm) && res.lm.length > 16) {
                         const left = "left" === activeAffectedSide();
-                        privacyWindowPts = [ res.lm[left ? 11 : 12], res.lm[left ? 13 : 14], res.lm[left ? 15 : 16] ];
+                        privacyWindowPts = faceHideEnabled() ? [ res.lm[left ? 13 : 14], res.lm[left ? 15 : 16] ] : [ res.lm[left ? 11 : 12], res.lm[left ? 13 : 14], res.lm[left ? 15 : 16] ];
                     } else privacyWindowPts = Array.isArray(res.lm) && res.lm.length >= 21 ? res.lm : [ {
                         x: state.mirrorX ? 1 - res.nx : res.nx,
                         y: res.ny
                     } ];
                     const seedPt = privacyWindowPts ? privacyWindowPts.length >= 21 ? privacyWindowPts[0] : privacyWindowPts[privacyWindowPts.length - 1] : null;
-                    !function(video, seedPt) {
+                    faceHideEnabled() || (!function(video, seedPt) {
                         var pt;
                         if (seedPt && (pt = seedPt) && Number.isFinite(pt.x) && Number.isFinite(pt.y) && (privacySeed = {
                             x: pt.x,
@@ -3126,7 +3131,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                         lctx.globalCompositeOperation = "destination-in", "filter" in lctx && (lctx.filter = "blur(" + PRIVACY_SEG_EDGE_BLUR_PX + "px)"), 
                         lctx.drawImage(privacySegMaskCanvas, cover.dx, cover.dy, cover.dw, cover.dh), lctx.restore(), 
                         ctx.drawImage(privacySegLayer, 0, 0);
-                    }(ctx, video, rectW, rectH);
+                    }(ctx, video, rectW, rectH));
                 }
                 if (res.detected) {
                     if (document.getElementById("pixelCount").textContent = isShoulderFlexionLevel() ? "✅ 偵測到已選患側肩及手肘" : "✅ 偵測到手部", 
@@ -4510,14 +4515,36 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     }), applyMirrorMode();
     const PRIVACY_BLUR_SMALL_W = 40, PRIVACY_BLUR_MID_W = 160, PRIVACY_WINDOW_PAD = .28, PRIVACY_WINDOW_MIN = .18;
     let privacyBlurSmall = null, privacyBlurMid = null;
+    const PRIVACY_MODE_STORAGE_KEY = "nivr.privacyMode.v118";
     function privacyBlurEnabled() {
         return !1 !== state.privacyBlur;
+    }
+    function faceHideEnabled() {
+        return privacyBlurEnabled() && !0 === state.privacyFaceHide;
+    }
+    function privacyModeLabel() {
+        return faceHideEnabled() ? "遮面：開（只見手）" : privacyBlurEnabled() ? "背景模糊：開" : "背景模糊：關";
+    }
+    function loadPrivacyMode() {
+        try {
+            const saved = localStorage.getItem(PRIVACY_MODE_STORAGE_KEY);
+            "face" === saved ? (state.privacyBlur = !0, state.privacyFaceHide = !0) : "off" === saved ? (state.privacyBlur = !1, 
+            state.privacyFaceHide = !1) : "blur" === saved && (state.privacyBlur = !0, state.privacyFaceHide = !1);
+        } catch (e) {}
+    }
+    function savePrivacyMode() {
+        try {
+            localStorage.setItem(PRIVACY_MODE_STORAGE_KEY, faceHideEnabled() ? "face" : privacyBlurEnabled() ? "blur" : "off");
+        } catch (e) {}
     }
     function applyPrivacyBlurMode() {
         const wrap = calibCanvas.parentElement;
         wrap && wrap.classList.toggle("privacy-blur", privacyBlurEnabled());
+        const stage = document.querySelector(".game-stage");
+        stage && stage.classList.toggle("face-hide", faceHideEnabled());
         const btn = document.getElementById("btnPrivacyBlur");
-        btn && (btn.textContent = "背景模糊：" + (privacyBlurEnabled() ? "開" : "關"), btn.setAttribute("aria-pressed", privacyBlurEnabled() ? "true" : "false"));
+        btn && (btn.textContent = privacyModeLabel(), btn.setAttribute("aria-pressed", privacyBlurEnabled() ? "true" : "false"), 
+        btn.classList.toggle("face-hide-on", faceHideEnabled()));
     }
     function privacyCoverRect(video, rectW, rectH) {
         const vw = video.videoWidth || 4, vh = video.videoHeight || 3, scale = Math.max(rectW / vw, rectH / vh), dw = vw * scale, dh = vh * scale;
@@ -4529,9 +4556,9 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         };
     }
     document.getElementById("btnPrivacyBlur").addEventListener("click", () => {
-        var on;
-        on = !privacyBlurEnabled(), state.privacyBlur = !!on, applyPrivacyBlurMode();
-    }), applyPrivacyBlurMode();
+        privacyBlurEnabled() ? state.privacyFaceHide ? (state.privacyBlur = !1, state.privacyFaceHide = !1) : state.privacyFaceHide = !0 : (state.privacyBlur = !0, 
+        state.privacyFaceHide = !1), savePrivacyMode(), applyPrivacyBlurMode(), privacyBlurEnabled() && !faceHideEnabled() && ensurePrivacySegmenter();
+    }), loadPrivacyMode(), applyPrivacyBlurMode();
     const PRIVACY_SEG_W = 192, PRIVACY_SEG_THRESHOLD = .5, PRIVACY_SEG_SEED_RADIUS = .08, PRIVACY_SEG_SEED_HOLD_MS = 2500, PRIVACY_SEG_EDGE_BLUR_PX = 3, PRIVACY_SEG_INTERVAL_MS = 100, PRIVACY_SEG_SLOW_INTERVAL_MS = 250, PRIVACY_SEG_SLOW_MS = 50;
     let privacySegLastRunAt = 0, privacySegCostEma = 0, privacySegmenter = null, privacySegmenterPromise = null, privacySegmenterFailed = !1, privacySegInput = null, privacySegMaskCanvas = null, privacySegLayer = null, privacySegLastTs = 0, privacySegMask = null, privacySeed = null;
     async function ensurePrivacySegmenter() {
@@ -7916,7 +7943,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                 let sx = 0, sy = 0, sw = gameVideo.videoWidth, sh = gameVideo.videoHeight;
                                 sourceRatio > targetRatio ? (sw = sh * targetRatio, sx = (gameVideo.videoWidth - sw) / 2) : (sh = sw / targetRatio, 
                                 sy = (gameVideo.videoHeight - sh) / 2), ctx.translate(x + w, y), ctx.scale(-1, 1), 
-                                ctx.drawImage(gameVideo, sx, sy, sw, sh, 0, 0, w, h), ctx.restore();
+                                faceHideEnabled() && "filter" in ctx && (ctx.filter = "blur(14px)"), ctx.drawImage(gameVideo, sx, sy, sw, sh, 0, 0, w, h), ctx.restore();
                             } else ctx.fillStyle = "#dfe8e6", rrPath(ctx, x, y, w, h, 24), ctx.fill();
                             ctx.strokeStyle = "rgba(255,255,255,0.98)", ctx.lineWidth = 8, rrPath(ctx, x, y, w, h, 24), 
                             ctx.stroke();
@@ -8283,7 +8310,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                         el.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:99998;pointer-events:none;background:rgba(10,20,18,.82);color:#e8fff6;font:12px/1.4 -apple-system,"PingFang TC",sans-serif;padding:6px 9px;border-radius:10px;white-space:pre;', 
                         document.body.appendChild(el), framePerf.overlayEl = el);
                         const p = framePerfSnapshot();
-                        el.textContent = `perf v117  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}\n左右手檢查 ${"off" === p.hand.check ? "關" : "開"}  鎖定手形 ${p.hand.lockSize || "-"}  大小拒絕 ${p.hand.sizeRejected}  遠處拒絕 ${p.hand.farRejected}` + (p.tool ? `\n衣夾 近指 ${p.tool.near} 放手≥${p.tool.nearExit} 張開≥${p.tool.nearOpen}  遠指 ${p.tool.far} 放手≥${p.tool.farExit} 張開≥${p.tool.farOpen}  門檻 ${p.tool.source}\n衣夾 合併 ${p.tool.combo} 拎起≤${p.tool.enter} 放手閘≥${p.tool.gate}` : ""), 
+                        el.textContent = `perf v118  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}\n左右手檢查 ${"off" === p.hand.check ? "關" : "開"}  鎖定手形 ${p.hand.lockSize || "-"}  大小拒絕 ${p.hand.sizeRejected}  遠處拒絕 ${p.hand.farRejected}` + (p.tool ? `\n衣夾 近指 ${p.tool.near} 放手≥${p.tool.nearExit} 張開≥${p.tool.nearOpen}  遠指 ${p.tool.far} 放手≥${p.tool.farExit} 張開≥${p.tool.farOpen}  門檻 ${p.tool.source}\n衣夾 合併 ${p.tool.combo} 拎起≤${p.tool.enter} 放手閘≥${p.tool.gate}` : ""), 
                         el.style.display = state.running ? "block" : "none";
                     }(perfT2);
                 } catch (e) {
@@ -10984,7 +11011,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                 let sx = 0, sy = 0, sw = gameVideo.videoWidth, sh = gameVideo.videoHeight;
                 sourceRatio > targetRatio ? (sw = sh * targetRatio, sx = (gameVideo.videoWidth - sw) / 2) : (sh = sw / targetRatio, 
                 sy = (gameVideo.videoHeight - sh) / 2), ctx.save(), ctx.translate(cw, 0), ctx.scale(-1, 1), 
-                ctx.drawImage(gameVideo, sx, sy, sw, sh, 0, 0, cw, ch), ctx.restore();
+                faceHideEnabled() && "filter" in ctx && (ctx.filter = "blur(14px)"), ctx.drawImage(gameVideo, sx, sy, sw, sh, 0, 0, cw, ch), ctx.restore();
                 const shade = Math.max(0, Math.min(.75, Number(dim) || 0));
                 return shade > 0 && (ctx.save(), ctx.fillStyle = "rgba(8,12,16," + shade.toFixed(3) + ")", 
                 ctx.fillRect(0, 0, cw, ch), ctx.restore()), !0;
@@ -11054,7 +11081,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
 <script src="level4-three-games-module.js"></script>
 <script>
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
-  const LEVEL_APP_BUILD = "v117-20261111-calib-camera-recovery";
+  const LEVEL_APP_BUILD = "v118-20261113-calib-face-hide";
   const levelAppHadController = Boolean(navigator.serviceWorker.controller);
   let levelAppReloading = false;
 
