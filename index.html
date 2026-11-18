@@ -1776,6 +1776,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         fridgeDifficulty: "basic",
         dimsumDifficulty: "basic",
         theme: "dimsum",
+        shopListSize: "short",
         dimsumSceneMode: "teahouse",
         mode: "single",
         duration: 300,
@@ -2160,6 +2161,284 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         } else ctx.fillStyle = "#D2691E", ctx.beginPath(), ctx.arc(x, y, r, 0, 2 * Math.PI), 
         ctx.fill();
         ctx.restore();
+    }
+    const SHOP_ITEMS = {
+        apple: {
+            label: "蘋果",
+            img: () => imgFridgeApple,
+            cold: !0,
+            unit: "個"
+        },
+        orange: {
+            label: "橙",
+            img: () => imgShopOrange,
+            cold: !0,
+            unit: "個"
+        },
+        soysauce: {
+            label: "豉油",
+            img: () => imgShopSoysauce,
+            cold: !1,
+            unit: "樽"
+        },
+        milk: {
+            label: "牛奶",
+            img: () => imgFridgeMilk,
+            cold: !0,
+            unit: "盒"
+        },
+        choysum: {
+            label: "菜心",
+            img: () => imgFridgeChoysum,
+            cold: !0,
+            unit: "紮"
+        },
+        eggs: {
+            label: "雞蛋",
+            img: () => imgShopEggs,
+            cold: !0,
+            unit: "盒"
+        },
+        rice: {
+            label: "米",
+            img: () => imgShopRice,
+            cold: !1,
+            unit: "包"
+        },
+        fish: {
+            label: "魚",
+            img: () => imgFridgeFish,
+            cold: !0,
+            unit: "條"
+        },
+        toiletpaper: {
+            label: "廁紙",
+            img: () => imgShopToiletpaper,
+            cold: !1,
+            unit: "條"
+        }
+    }, SHOP_LIST_SIZES = {
+        short: 2,
+        medium: 4,
+        long: 6
+    }, SHOP_LIST_LABELS = {
+        short: "短單（2 樣）",
+        medium: "中單（4 樣）",
+        long: "長單（6 樣）"
+    }, SHOP_LIST_POOL = [ "apple", "soysauce", "orange", "milk", "choysum", "eggs" ], shopStory = {
+        active: !1,
+        steps: [],
+        idx: 0,
+        stepStartedMs: 0,
+        listSize: "short",
+        list: [],
+        cart: [],
+        counter: [],
+        bagged: [],
+        shelved: [],
+        anim: {
+            phase: "idle",
+            startedMs: 0,
+            step: null
+        },
+        rewardMs: 2600,
+        spokenIdx: -1,
+        ended: !1
+    };
+    function isSupermarketTheme() {
+        return isShoulderFlexionLevel() && "supermarket" === state.theme;
+    }
+    function shopListSizeKey() {
+        return SHOP_LIST_SIZES[state.shopListSize] ? state.shopListSize : "short";
+    }
+    function buildShopList(sizeKey) {
+        const n = SHOP_LIST_SIZES[sizeKey] || 2;
+        return SHOP_LIST_POOL.slice(0, n).map(id => ({
+            id: id,
+            need: "apple" === id || "orange" === id ? 2 : 1,
+            got: 0
+        }));
+    }
+    function buildShopSteps(list) {
+        const steps = [];
+        return steps.push({
+            kind: "scene",
+            scene: "entrance",
+            text: "行入超市",
+            ms: 2200
+        }), steps.push({
+            kind: "scene",
+            scene: "list",
+            text: "睇吓購物單",
+            ms: 2600
+        }), steps.push({
+            kind: "rep",
+            scene: "cart",
+            action: "cart",
+            text: "抬高手，攞架購物車",
+            prompt: "攞購物車"
+        }), list.forEach((line, li) => {
+            const it = SHOP_ITEMS[line.id];
+            li > 0 && steps.push({
+                kind: "scene",
+                scene: "list",
+                text: "再睇吓購物單",
+                ms: 1900
+            }), steps.push({
+                kind: "scene",
+                scene: "aisle",
+                item: line.id,
+                text: "行去" + it.label + "嗰邊",
+                ms: 1700,
+                walk: !0
+            });
+            for (let k = 0; k < line.need; k++) steps.push({
+                kind: "rep",
+                scene: "aisle",
+                item: line.id,
+                action: "take",
+                k: k,
+                text: "抬高手，攞一" + it.unit + it.label + (line.need > 1 ? "（第 " + (k + 1) + " " + it.unit + "）" : ""),
+                prompt: "攞" + it.label
+            });
+        }), steps.push({
+            kind: "scene",
+            scene: "walk_cashier",
+            text: "買齊喇，推車去收銀處",
+            ms: 2300
+        }), list.forEach(line => {
+            const it = SHOP_ITEMS[line.id];
+            for (let k = 0; k < line.need; k++) steps.push({
+                kind: "rep",
+                scene: "cashier",
+                item: line.id,
+                action: "unload",
+                text: "抬高手，將" + it.label + "由車攞出放上收銀枱",
+                prompt: "攞出" + it.label
+            });
+        }), steps.push({
+            kind: "rep",
+            scene: "cashier",
+            action: "octopus",
+            text: "抬高手，用八達通拍卡",
+            prompt: "拍卡"
+        }), steps.push({
+            kind: "rep",
+            scene: "cashier",
+            action: "givebag",
+            text: "抬高手，遞環保袋畀收銀員",
+            prompt: "遞環保袋"
+        }), steps.push({
+            kind: "scene",
+            scene: "cashier",
+            text: "收銀員幫你入袋⋯",
+            ms: 2300,
+            packing: !0
+        }), steps.push({
+            kind: "rep",
+            scene: "cashier",
+            action: "takebag",
+            text: "抬高手，接返環保袋",
+            prompt: "接返環保袋"
+        }), steps.push({
+            kind: "scene",
+            scene: "leave",
+            text: "買完喇，返屋企",
+            ms: 2400
+        }), list.forEach(line => {
+            const it = SHOP_ITEMS[line.id];
+            for (let k = 0; k < line.need; k++) steps.push({
+                kind: "rep",
+                scene: "home",
+                item: line.id,
+                action: "shelve",
+                text: "抬高手，將" + it.label + "放" + (it.cold ? "入雪櫃" : "上櫃"),
+                prompt: "放好" + it.label
+            });
+        }), steps.push({
+            kind: "scene",
+            scene: "done",
+            text: "全部收好晒！好叻呀！",
+            ms: 3200,
+            end: !0
+        }), steps;
+    }
+    function resetSupermarketStory() {
+        shopStory.active = !1, shopStory.steps = [], shopStory.idx = 0, shopStory.stepStartedMs = 0, 
+        shopStory.list = [], shopStory.cart = [], shopStory.counter = [], shopStory.bagged = [], 
+        shopStory.shelved = [], shopStory.anim = {
+            phase: "idle",
+            startedMs: 0,
+            step: null
+        }, shopStory.rewardMs = 2600, shopStory.spokenIdx = -1, shopStory.ended = !1, shopStory.hasCart = !1, 
+        shopStory.bagGiven = !1, shopStory.bagTaken = !1;
+    }
+    function shopCurrentStep() {
+        return shopStory.steps[shopStory.idx] || null;
+    }
+    function shopGoToStep(i) {
+        shopStory.idx = Math.min(i, shopStory.steps.length - 1), shopStory.stepStartedMs = nowMs();
+    }
+    function shopItemImg(id) {
+        const it = SHOP_ITEMS[id], im = it && it.img();
+        return im && im.complete && im.naturalWidth > 0 ? im : null;
+    }
+    function drawShopImgFit(ctx, img, cx, cy, maxW, maxH, alpha) {
+        if (!img || !img.complete || !img.naturalWidth) return;
+        const s = Math.min(maxW / img.naturalWidth, maxH / img.naturalHeight), w = img.naturalWidth * s, h = img.naturalHeight * s;
+        ctx.save(), null != alpha && (ctx.globalAlpha = alpha), ctx.drawImage(img, cx - w / 2, cy - h / 2, w, h), 
+        ctx.restore();
+    }
+    function drawShopBanner(ctx, cw, g, text, sub) {
+        const font = g.bannerFont;
+        ctx.save(), ctx.font = "800 " + font + 'px "PingFang TC","Noto Sans TC",sans-serif';
+        const maxW = g.portrait ? cw - 24 : cw - 2 * g.panelRight - 24;
+        let tw = ctx.measureText(text).width;
+        if (tw + 1.2 * font > maxW) {
+            const f2 = Math.max(18, Math.floor(font * (maxW - 1.2 * font) / tw));
+            ctx.font = "800 " + f2 + 'px "PingFang TC","Noto Sans TC",sans-serif', tw = ctx.measureText(text).width;
+        }
+        const bw = Math.min(maxW, tw + 1.6 * font), bh = font * (sub ? 2.55 : 1.75), bx = cw / 2 - bw / 2, by = g.bannerY;
+        return rrPath(ctx, bx, by, bw, bh, 18), ctx.fillStyle = "rgba(255,255,255,0.94)", 
+        ctx.fill(), ctx.lineWidth = 4, ctx.strokeStyle = "#1A6B5A", ctx.stroke(), ctx.fillStyle = "#17463d", 
+        ctx.textAlign = "center", ctx.textBaseline = "middle", ctx.fillText(text, cw / 2, by + .95 * font), 
+        sub && (ctx.font = "700 " + Math.round(.62 * font) + 'px "PingFang TC","Noto Sans TC",sans-serif', 
+        ctx.fillStyle = "#8a5a12", ctx.fillText(sub, cw / 2, by + 1.95 * font)), ctx.restore(), 
+        by + bh;
+    }
+    function drawShopArmMarker(ctx, g, targetX, targetY, progress) {
+        const p = clamp01(progress), x0 = g.laneX, y0 = g.laneBottom, x = x0 + (targetX - x0) * p, y = y0 + (targetY - y0) * p;
+        ctx.save(), ctx.setLineDash([ 12, 10 ]), ctx.lineWidth = 5, ctx.strokeStyle = "rgba(26,107,90,0.45)", 
+        ctx.beginPath(), ctx.moveTo(x0, y0), ctx.lineTo(targetX, targetY), ctx.stroke(), 
+        ctx.setLineDash([]), ctx.lineWidth = Math.max(14, .18 * g.itemSize), ctx.lineCap = "round", 
+        ctx.strokeStyle = "rgba(240,140,0,0.78)", ctx.beginPath(), ctx.moveTo(x0, y0), ctx.lineTo(x, y), 
+        ctx.stroke();
+        const r = Math.max(22, .24 * g.itemSize);
+        ctx.beginPath(), ctx.arc(x, y, r, 0, 2 * Math.PI), ctx.fillStyle = "#F6B04E", ctx.fill(), 
+        ctx.lineWidth = 4, ctx.strokeStyle = "#8a4b00", ctx.stroke(), ctx.fillStyle = "#4a2a00", 
+        ctx.font = "800 " + Math.round(1.05 * r) + 'px "PingFang TC","Noto Sans TC",sans-serif', 
+        ctx.textAlign = "center", ctx.textBaseline = "middle", ctx.fillText("手", x, y + 1), 
+        ctx.restore();
+    }
+    function drawShopGlow(ctx, x, y, r) {
+        const pulse = .55 + .45 * Math.sin(nowMs() / 175);
+        ctx.save(), ctx.globalAlpha = .35 + .35 * pulse, ctx.fillStyle = "#FFE27A", ctx.beginPath(), 
+        ctx.arc(x, y, r, 0, 2 * Math.PI), ctx.fill(), ctx.restore();
+    }
+    function shopFlyPos(from, to, p) {
+        const e = 1 - Math.pow(1 - p, 2.2), arc = Math.max(30, .25 * Math.abs(to.y - from.y) + .12 * Math.abs(to.x - from.x));
+        return {
+            x: from.x + (to.x - from.x) * e,
+            y: from.y + (to.y - from.y) * e - Math.sin(p * Math.PI) * arc
+        };
+    }
+    function drawShopCartWithItems(ctx, g, items, alphaItems) {
+        drawShopImgFit(ctx, imgShopCart, g.cartX, g.cartY, g.cartW, g.cartW);
+        const n = items.length, s = .17 * g.cartW;
+        return items.forEach((id, i) => {
+            const col = i % 4, row = Math.floor(i / 4);
+            drawShopImgFit(ctx, shopItemImg(id), g.cartX - .2 * g.cartW + col * s * .95, g.cartY - .22 * g.cartW - row * s * .55, s, s, alphaItems);
+        }), n;
     }
     function drawAffectedSelectionZone(ctx, label) {
         const z = affectedSelectionZone();
@@ -2820,7 +3099,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             picker && (picker.hidden = !0);
         }(), function(level = state.level) {
             return function(level = state.level) {
-                return "2" === level ? [ "bilateral" ] : "67" === level ? [ "flowers", "chopstick_dimsum", "peg_laundry", "cards", "mahjong", "cooking" ] : "3" === level || "4" === level ? [ "bowlinglane", "basketball", "tsuenwan", "dimsum", "laundry", "cards", "mahjong" ] : "4" === level ? [ "dimsum", "wipewindow", "bowling", "mahjongwash", "buspay" ] : THEME_ORDER.filter(id => themeAvailableForLevel(id, level));
+                return "2" === level ? [ "bilateral" ] : "67" === level ? [ "flowers", "chopstick_dimsum", "peg_laundry", "cards", "mahjong", "cooking" ] : "3" === level || "4" === level ? [ "bowlinglane", "basketball", "supermarket", "tsuenwan", "dimsum", "laundry", "cards", "mahjong" ] : "4" === level ? [ "dimsum", "wipewindow", "bowling", "mahjongwash", "buspay" ] : THEME_ORDER.filter(id => themeAvailableForLevel(id, level));
             }(level);
         }().forEach(id => {
             const th = THEMES[id], btn = document.createElement("button");
@@ -2854,6 +3133,16 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                 bar.addEventListener("click", e => {
                     const b = e.target.closest("[data-dimsum-mode]");
                     b && (e.stopPropagation(), state.dimsumSceneMode = b.dataset.dimsumMode, syncBar());
+                }), syncBar(), grid.appendChild(bar);
+            }
+            if ("supermarket" === id && ("3" === state.level || "4" === state.level)) {
+                const bar = document.createElement("div");
+                bar.className = "dimsum-mode-bar", bar.dataset.shopListBar = "1", bar.innerHTML = '<span class="dm-label">購物單長度</span>' + Object.keys(SHOP_LIST_SIZES).map(k => '<button type="button" class="dm-btn" data-shop-list="' + k + '">' + SHOP_LIST_LABELS[k] + '<small style="display:block;font-weight:600;font-size:12px">約 ' + buildShopSteps(buildShopList(k)).filter(s => "rep" === s.kind).length + " 次抬手</small></button>").join("");
+                const syncBar = () => bar.querySelectorAll(".dm-btn").forEach(b => b.classList.toggle("selected", b.dataset.shopList === shopListSizeKey()));
+                bar.addEventListener("click", e => {
+                    const b = e.target.closest("[data-shop-list]");
+                    b && (e.stopPropagation(), SHOP_LIST_SIZES[b.dataset.shopList] && (state.shopListSize = b.dataset.shopList), 
+                    syncBar());
                 }), syncBar(), grid.appendChild(bar);
             }
         });
@@ -3542,12 +3831,12 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                 shoulderFlexionCycleAwarded = !1, shoulderRewardCycle.reset(), shoulderHoldSpokenSecond = null, 
                 shoulderHoldInterruptedSpoken = !1, hideTargetHoldCountdown(), lastLevelShown = -1, 
                 heldItem = null, foods = [], targets = [], resetBowlingStrike(), resetBasketballShot(), 
-                resetTeahouseServe(), dimsumOrderBannerRect = null, dimsumOrder = null, dimsumPlateContents = [], 
-                dimsumOrdersCompleted = 0, dimsumOrderCelebrateUntil = 0, dimsumOrderTimerId && (clearTimeout(dimsumOrderTimerId), 
-                dimsumOrderTimerId = null), laundryOrderBannerRect = null, laundryOrder = null, 
-                laundryRackContents = [], laundryOrdersCompleted = 0, laundryBatchesCompleted = 0, 
-                laundryOrderCelebrateUntil = 0, laundryLitRack = -1, laundryWrongRack = -1, laundryWrongUntil = 0, 
-                laundryWrongSpokenAt = -1 / 0, laundryOrderTimerId && (clearTimeout(laundryOrderTimerId), 
+                resetTeahouseServe(), resetSupermarketStory(), dimsumOrderBannerRect = null, dimsumOrder = null, 
+                dimsumPlateContents = [], dimsumOrdersCompleted = 0, dimsumOrderCelebrateUntil = 0, 
+                dimsumOrderTimerId && (clearTimeout(dimsumOrderTimerId), dimsumOrderTimerId = null), 
+                laundryOrderBannerRect = null, laundryOrder = null, laundryRackContents = [], laundryOrdersCompleted = 0, 
+                laundryBatchesCompleted = 0, laundryOrderCelebrateUntil = 0, laundryLitRack = -1, 
+                laundryWrongRack = -1, laundryWrongUntil = 0, laundryWrongSpokenAt = -1 / 0, laundryOrderTimerId && (clearTimeout(laundryOrderTimerId), 
                 laundryOrderTimerId = null), laundryRackClearTimerId && (clearTimeout(laundryRackClearTimerId), 
                 laundryRackClearTimerId = null), fridgeBannerRect = null, fridgeQueue = [], fridgeZoneOrder = [], 
                 fridgeQueueIndex = 0, fridgePlacedFoods = [], fridgeRoundsCompleted = 0, fridgeCelebrateUntil = 0, 
@@ -4715,6 +5004,28 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     imgBballCourt.src = "img/bball_court.png";
     const imgBballBall = new Image;
     imgBballBall.src = "img/bball_ball.png";
+    const imgShopAisleBg = new Image;
+    imgShopAisleBg.src = "img/shop_aisle_bg.jpg";
+    const imgShopCashierBg = new Image;
+    imgShopCashierBg.src = "img/shop_cashier_bg.jpg";
+    const imgShopHomeBg = new Image;
+    imgShopHomeBg.src = "img/shop_home_bg.jpg";
+    const imgShopCart = new Image;
+    imgShopCart.src = "img/shop_cart.png";
+    const imgShopOrange = new Image;
+    imgShopOrange.src = "img/shop_orange.png";
+    const imgShopSoysauce = new Image;
+    imgShopSoysauce.src = "img/shop_soysauce.png";
+    const imgShopOctopus = new Image;
+    imgShopOctopus.src = "img/shop_octopus.png";
+    const imgShopEcobag = new Image;
+    imgShopEcobag.src = "img/shop_ecobag.png";
+    const imgShopRice = new Image;
+    imgShopRice.src = "img/shop_rice.png";
+    const imgShopToiletpaper = new Image;
+    imgShopToiletpaper.src = "img/shop_toiletpaper.png";
+    const imgShopEggs = new Image;
+    imgShopEggs.src = "img/advanced/eggs.png";
     const imgSteamerEmpty = new Image;
     imgSteamerEmpty.src = "img/steamer_empty.png";
     const imgThPlate = new Image;
@@ -5051,6 +5362,17 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             thumbnail: "img/bball_court.png",
             thumbnailAlt: "荃灣屋邨籃球場，兩邊住宅大廈，遠處山景",
             categoriesFor: () => LEVEL3_THEME_VARIANTS.basketball
+        }),
+        supermarket: mkTheme({
+            id: "supermarket",
+            title: "去超市買餸",
+            goal: "抬高患側上肢到目標角度就攞到一件貨：跟購物單買齊、拍卡俾錢、返屋企放入雪櫃同廚櫃",
+            itemWord: "貨品",
+            difficulty: "肩前屈抬臂",
+            targetStyle: "panel",
+            thumbnail: "img/shop_aisle_bg.jpg",
+            thumbnailAlt: "超市貨架通道，高架上有貨品",
+            categoriesFor: () => LEVEL3_THEME_VARIANTS.supermarket
         }),
         bilateral: mkTheme({
             id: "bilateral",
@@ -5403,7 +5725,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                 img: d.img()
             }))
         })
-    }, THEME_ORDER = [ "wipewindow", "bowling", "mahjongwash", "buspay", "bowlinglane", "basketball", "flowers", "dimsum", "laundry", "fridge", "cards", "mahjong", "cooking" ], LEVEL3_THEME_VARIANTS = {
+    }, THEME_ORDER = [ "wipewindow", "bowling", "mahjongwash", "buspay", "bowlinglane", "basketball", "supermarket", "flowers", "dimsum", "laundry", "fridge", "cards", "mahjong", "cooking" ], LEVEL3_THEME_VARIANTS = {
         bowlinglane: [ {
             type: "bowlingball",
             itemLabel: "保齡球",
@@ -5427,6 +5749,16 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                 isBasketballTheme() && "idle" !== basketballShot.phase || drawBasketballSprite(ctx, x, y, r * (1 - .4 * (isBasketballTheme() ? clamp01(Number(shoulderFlexionState.progress) || 0) : 0)));
             }(ctx, x, y, r),
             drawIcon: (ctx, x, y, s) => drawBasketballSprite(ctx, x, y, .9 * s)
+        } ],
+        supermarket: [ {
+            type: "shop_goods",
+            itemLabel: "貨品",
+            targetLabel: "貨架",
+            color: "#1A6B5A",
+            drawScale: .85,
+            labelGap: 1.05,
+            drawItem: () => {},
+            drawIcon: (ctx, x, y, s) => drawShopImgFit(ctx, imgShopCart, x, y, 1.6 * s, 1.6 * s)
         } ],
         dimsum: [ {
             type: "siumai",
@@ -6165,7 +6497,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         setupTargets());
     }
     function themeAvailableForLevel(themeId, level = state.level) {
-        return "2" === level ? "bilateral" === themeId : "67" === level ? [ "flowers", "chopstick_dimsum", "peg_laundry", "cards", "mahjong", "cooking" ].includes(themeId) : ![ "wipewindow", "bowling", "mahjongwash", "buspay", "bilateral" ].includes(themeId) && ("fridge" === themeId ? "5" === level : "bowlinglane" === themeId || "basketball" === themeId ? "3" === level || "4" === level : "cooking" !== themeId);
+        return "2" === level ? "bilateral" === themeId : "67" === level ? [ "flowers", "chopstick_dimsum", "peg_laundry", "cards", "mahjong", "cooking" ].includes(themeId) : ![ "wipewindow", "bowling", "mahjongwash", "buspay", "bilateral" ].includes(themeId) && ("fridge" === themeId ? "5" === level : "bowlinglane" === themeId || "basketball" === themeId || "supermarket" === themeId ? "3" === level || "4" === level : "cooking" !== themeId);
     }
     function getTheme() {
         return "2" === state.level && "bilateral" !== state.theme && (state.theme = "bilateral"), 
@@ -6203,7 +6535,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     function startShoulderRewardCycle() {
         if (shoulderRewardCycle.active) return;
         const started = nowMs();
-        shoulderRewardCycle.active = !0, shoulderRewardCycle.startedMs = started, shoulderRewardCycle.finishAtMs = started + ("bowlinglane" === state.theme ? Math.max(SHOULDER_REWARD_MIN_MS, 2700) : "basketball" === state.theme ? Math.max(SHOULDER_REWARD_MIN_MS, 2220) : isTeahouseDimsumMode() ? Math.max(SHOULDER_REWARD_MIN_MS, 2520) : "tsuenwan" === state.theme ? SHOULDER_PHOTO_REWARD_MS : SHOULDER_REWARD_MIN_MS), 
+        shoulderRewardCycle.active = !0, shoulderRewardCycle.startedMs = started, shoulderRewardCycle.finishAtMs = started + ("bowlinglane" === state.theme ? Math.max(SHOULDER_REWARD_MIN_MS, 2700) : "basketball" === state.theme ? Math.max(SHOULDER_REWARD_MIN_MS, 2220) : "supermarket" === state.theme ? Math.max(SHOULDER_REWARD_MIN_MS, shopStory.rewardMs) : isTeahouseDimsumMode() ? Math.max(SHOULDER_REWARD_MIN_MS, 2520) : "tsuenwan" === state.theme ? SHOULDER_PHOTO_REWARD_MS : SHOULDER_REWARD_MIN_MS), 
         shoulderRewardCycle.repetitionReady = !1;
     }
     function shoulderRewardVisualFinished() {
@@ -6495,7 +6827,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             } ]);
         }
         if (isShoulderFlexionLevel()) {
-            if ("bowlinglane" === state.theme || "basketball" === state.theme || isTeahouseDimsumMode()) return void (targets = []);
+            if ("bowlinglane" === state.theme || "basketball" === state.theme || "supermarket" === state.theme || isTeahouseDimsumMode()) return void (targets = []);
             const photoLarge = "tsuenwan" === state.theme && !0, tw = photoLarge ? Math.min(.9 * cw, 1080) : Math.min(.38 * cw, 320), th = photoLarge ? Math.min(.43 * ch, .62 * tw) : tw * ("steamer" === style ? .74 : .62), category = cats[0], laneX = photoLarge ? .5 * cw : cw * (portrait ? .68 : .58);
             return void (targets = [ {
                 type: category.type,
@@ -7973,7 +8305,40 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                     }
                                     item && (item.x = laneX, item.y = bottom - (bottom - top) * visualProgress, item.baseX = item.x, 
                                     item.baseY = item.y, item.held = !1), shoulderFlexionState.targetReady && !shoulderFlexionCycleAwarded && (shoulderFlexionCycleAwarded = !0, 
-                                    startShoulderRewardCycle(), triggerFeedback(!0), "bowlinglane" === state.theme && "idle" === bowlingStrike.phase && (bowlingStrike.phase = "roll", 
+                                    isSupermarketTheme() && function() {
+                                        if (!shopStory.active || "idle" !== shopStory.anim.phase) return;
+                                        let s = shopCurrentStep();
+                                        if (!s || "rep" !== s.kind) {
+                                            const next = function() {
+                                                for (let i = shopStory.idx; i < shopStory.steps.length; i++) if ("rep" === shopStory.steps[i].kind) return shopStory.steps[i];
+                                                return null;
+                                            }();
+                                            if (!next) return;
+                                            shopGoToStep(shopStory.steps.indexOf(next)), s = next;
+                                        }
+                                        shopStory.anim = {
+                                            phase: "fly",
+                                            startedMs: nowMs(),
+                                            step: s
+                                        }, shopStory.rewardMs = Math.max(SHOULDER_REWARD_MIN_MS, 1300 + function(fromIdx) {
+                                            let ms = 0;
+                                            for (let i = fromIdx; i < shopStory.steps.length; i++) {
+                                                const s = shopStory.steps[i];
+                                                if ("rep" === s.kind) break;
+                                                ms += s.ms || 0;
+                                            }
+                                            return ms;
+                                        }(shopStory.idx + 1)), function() {
+                                            try {
+                                                const actx = getAudioCtx(), t0 = actx.currentTime, o = actx.createOscillator();
+                                                o.type = "sine", o.frequency.setValueAtTime(880, t0), o.frequency.setValueAtTime(1320, t0 + .09);
+                                                const g = actx.createGain();
+                                                g.gain.setValueAtTime(1e-4, t0), g.gain.exponentialRampToValueAtTime(.35, t0 + .02), 
+                                                g.gain.exponentialRampToValueAtTime(1e-4, t0 + .45), o.connect(g), g.connect(actx.destination), 
+                                                o.start(t0), o.stop(t0 + .5);
+                                            } catch (e) {}
+                                        }();
+                                    }(), startShoulderRewardCycle(), triggerFeedback(!0), "bowlinglane" === state.theme && "idle" === bowlingStrike.phase && (bowlingStrike.phase = "roll", 
                                     bowlingStrike.startedMs = nowMs(), bowlingStrike.impactPlayed = !1, bowlingStrike.pinSeeds = Array.from({
                                         length: 10
                                     }, () => ({
@@ -8231,6 +8596,257 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                 }
                                 ctx.restore();
                             }(ctx, cw, ch);
+                            if ("supermarket" === state.theme) return void function(ctx, cw, ch) {
+                                !shopStory.active && state.running && (resetSupermarketStory(), shopStory.listSize = shopListSizeKey(), 
+                                shopStory.list = buildShopList(shopStory.listSize), shopStory.steps = buildShopSteps(shopStory.list), 
+                                shopStory.active = !0, shopStory.stepStartedMs = nowMs()), function() {
+                                    if ("fly" === shopStory.anim.phase && nowMs() - shopStory.anim.startedMs >= 850) {
+                                        const s = shopStory.anim.step;
+                                        !function(s) {
+                                            if (s) if ("take" === s.action) {
+                                                const line = shopStory.list.find(l => l.id === s.item);
+                                                line && line.got++, shopStory.cart.push(s.item);
+                                            } else if ("unload" === s.action) {
+                                                const i = shopStory.cart.indexOf(s.item);
+                                                i >= 0 && shopStory.cart.splice(i, 1), shopStory.counter.push(s.item);
+                                            } else if ("givebag" === s.action) shopStory.bagGiven = !0; else if ("takebag" === s.action) shopStory.bagged = shopStory.counter.slice(), 
+                                            shopStory.counter = [], shopStory.bagTaken = !0; else if ("shelve" === s.action) {
+                                                const i = shopStory.bagged.indexOf(s.item);
+                                                i >= 0 && shopStory.bagged.splice(i, 1), shopStory.shelved.push(s.item);
+                                            } else "cart" === s.action && (shopStory.hasCart = !0);
+                                        }(s), shopStory.anim = {
+                                            phase: "idle",
+                                            startedMs: 0,
+                                            step: null
+                                        }, shopStory.idx === shopStory.steps.indexOf(s) && shopGoToStep(shopStory.idx + 1);
+                                        const nxt = shopCurrentStep();
+                                        nxt && "scene" === nxt.kind && nxt.end && (playApplauseSound(), playHaoboCheer());
+                                    }
+                                }(), function() {
+                                    if (!shopStory.active || shopStory.ended) return;
+                                    let guard = 0;
+                                    for (;guard++ < 12; ) {
+                                        const s = shopCurrentStep();
+                                        if (!s || "scene" !== s.kind) break;
+                                        if (nowMs() - shopStory.stepStartedMs < s.ms) break;
+                                        if (s.end) return shopStory.ended = !0, void (state.running && endGame());
+                                        shopGoToStep(shopStory.idx + 1);
+                                    }
+                                    const cur = shopCurrentStep();
+                                    if (cur && "rep" === cur.kind && shopStory.spokenIdx !== shopStory.idx && "idle" === shopStory.anim.phase) {
+                                        shopStory.spokenIdx = shopStory.idx;
+                                        try {
+                                            speakCantonese(cur.text);
+                                        } catch (e) {}
+                                    }
+                                }(), preloadHaoboCheer();
+                                const g = function(cw, ch) {
+                                    const portrait = ch > cw, cssScale = cw / Math.max(1, gameCanvas.clientWidth || cw), hudTop = 94 * cssScale, panelRight = 262 * cssScale, bannerY = (portrait ? 262 : 104) * cssScale, bannerFont = Math.round(Math.min(cw, ch) * (portrait ? .052 : .058)), bannerH = 2.55 * bannerFont, contentTop = bannerY + bannerH + 10 * cssScale, itemSize = Math.min(cw, ch) * (portrait ? .19 : .21), shelfItemY = contentTop + .55 * itemSize;
+                                    return {
+                                        portrait: portrait,
+                                        cssScale: cssScale,
+                                        hudTop: hudTop,
+                                        panelRight: panelRight,
+                                        bannerY: bannerY,
+                                        bannerFont: bannerFont,
+                                        bannerH: bannerH,
+                                        contentTop: contentTop,
+                                        laneX: .5 * cw,
+                                        laneBottom: .86 * ch,
+                                        shelfItemY: shelfItemY,
+                                        shelfY: shelfItemY + .5 * itemSize + 4,
+                                        shelfW: cw * (portrait ? .82 : .56),
+                                        shelfH: Math.max(14, .022 * ch),
+                                        itemSize: itemSize,
+                                        cartX: cw * (portrait ? .76 : .82),
+                                        cartY: ch * (portrait ? .8 : .76),
+                                        cartW: Math.min(cw, ch) * (portrait ? .34 : .38),
+                                        counterX: cw * (portrait ? .44 : .46),
+                                        counterY: ch * (portrait ? .66 : .74),
+                                        counterW: cw * (portrait ? .56 : .36),
+                                        bagCounterX: cw * (portrait ? .8 : .74),
+                                        readerX: cw * (portrait ? .84 : .9),
+                                        readerY: ch * (portrait ? .56 : .66),
+                                        bagX: .3 * cw,
+                                        bagY: .84 * ch,
+                                        bagW: Math.min(cw, ch) * (portrait ? .24 : .26),
+                                        cabinetX: cw * (portrait ? .27 : .3),
+                                        cabinetY: Math.max(ch * (portrait ? .3 : .34), contentTop + .8 * itemSize),
+                                        cabinetW: cw * (portrait ? .42 : .3),
+                                        fridgeX: cw * (portrait ? .74 : .78),
+                                        fridgeY: Math.max(ch * (portrait ? .42 : .44), contentTop + .8 * itemSize),
+                                        fridgeW: cw * (portrait ? .36 : .24)
+                                    };
+                                }(cw, ch), step = shopStory.anim.step || shopCurrentStep(), scene = step ? step.scene : "entrance", anim = shopStory.anim, animP = "fly" === anim.phase ? clamp01((nowMs() - anim.startedMs) / 850) : 0, progress = "fly" === anim.phase ? 1 : clamp01(Number(shoulderFlexionState.progress) || 0);
+                                if (ctx.save(), ctx.rect(0, 0, cw, ch), ctx.clip(), function(ctx, img, cw, ch) {
+                                    if (img && img.complete && img.naturalWidth > 0) {
+                                        const s = Math.max(cw / img.naturalWidth, ch / img.naturalHeight), w = img.naturalWidth * s, h = img.naturalHeight * s;
+                                        ctx.drawImage(img, (cw - w) / 2, (ch - h) / 2, w, h);
+                                    } else ctx.fillStyle = "#e8e3d6", ctx.fillRect(0, 0, cw, ch);
+                                }(ctx, "cashier" === scene ? imgShopCashierBg : "home" === scene || "done" === scene ? imgShopHomeBg : imgShopAisleBg, cw, ch), 
+                                step && step.kind, "entrance" !== scene && "list" !== scene && "walk_cashier" !== scene && "leave" !== scene && "done" !== scene || (ctx.fillStyle = "rgba(0,0,0,0.28)", 
+                                ctx.fillRect(0, 0, cw, ch)), "entrance" === scene) drawShopBanner(ctx, cw, g, "行入超市", "今日要買餸"); else if ("list" === scene) drawShopBanner(ctx, cw, g, step.text), 
+                                function(ctx, cw, ch, g) {
+                                    const font = Math.round(Math.min(cw, ch) * (g.portrait ? .05 : .056)), lines = shopStory.list, bw = Math.min(.78 * cw, 13 * font), bh = font * (2.2 + 1.45 * lines.length), bx = cw / 2 - bw / 2, by = Math.max(g.bannerY + 2.4 * font, ch / 2 - bh / 2);
+                                    ctx.save(), rrPath(ctx, bx, by, bw, bh, 22), ctx.fillStyle = "rgba(255,252,240,0.97)", 
+                                    ctx.fill(), ctx.lineWidth = 5, ctx.strokeStyle = "#b8862b", ctx.stroke(), ctx.fillStyle = "#5a3d0a", 
+                                    ctx.font = "800 " + font + 'px "PingFang TC","Noto Sans TC",sans-serif', ctx.textAlign = "center", 
+                                    ctx.textBaseline = "middle", ctx.fillText("購物單", cw / 2, by + 1.1 * font), ctx.textAlign = "left", 
+                                    lines.forEach((l, i) => {
+                                        const it = SHOP_ITEMS[l.id], y = by + font * (2.4 + 1.45 * i), done = l.got >= l.need;
+                                        drawShopImgFit(ctx, shopItemImg(l.id), bx + 1.3 * font, y, 1.2 * font, 1.2 * font), 
+                                        ctx.fillStyle = done ? "#7a7a7a" : "#222", ctx.font = (done ? "600 " : "800 ") + Math.round(.9 * font) + 'px "PingFang TC","Noto Sans TC",sans-serif', 
+                                        ctx.fillText(it.label + " × " + l.need + " " + it.unit, bx + 2.4 * font, y), done && (ctx.fillStyle = "#1A6B5A", 
+                                        ctx.font = "900 " + Math.round(1 * font) + "px sans-serif", ctx.textAlign = "right", 
+                                        ctx.fillText("✓", bx + bw - .9 * font, y), ctx.textAlign = "left", ctx.strokeStyle = "#7a7a7a", 
+                                        ctx.lineWidth = 3, ctx.beginPath(), ctx.moveTo(bx + 2.4 * font, y), ctx.lineTo(bx + 2.4 * font + .9 * ctx.measureText(it.label + " × " + l.need + " " + it.unit).width, y), 
+                                        ctx.stroke());
+                                    }), ctx.restore();
+                                }(ctx, cw, ch, g); else if ("cart" === scene) {
+                                    drawShopBanner(ctx, cw, g, step.text, "抬到目標角度就攞到");
+                                    const target = {
+                                        x: g.cartX,
+                                        y: g.cartY - .1 * g.cartW
+                                    };
+                                    drawShopGlow(ctx, target.x, target.y, .42 * g.cartW), drawShopImgFit(ctx, imgShopCart, g.cartX, g.cartY, g.cartW * ("fly" === anim.phase ? 1 + .12 * Math.sin(animP * Math.PI) : 1), 1.2 * g.cartW), 
+                                    "fly" !== anim.phase && drawShopArmMarker(ctx, g, target.x, target.y, progress);
+                                } else if ("aisle" === scene) {
+                                    const itemId = step.item, line = shopStory.list.find(l => l.id === itemId), remaining = line ? Math.max(0, line.need - line.got - ("fly" === anim.phase && anim.step && anim.step.item === itemId ? 1 : 0)) : 0, sx = cw / 2 - g.shelfW / 2, sy = g.shelfY;
+                                    ctx.save(), ctx.fillStyle = "rgba(0,0,0,0.18)", ctx.fillRect(sx + 6, sy + g.shelfH + 4, g.shelfW, 10), 
+                                    ctx.fillStyle = "#c9a46a", ctx.fillRect(sx, sy, g.shelfW, g.shelfH), ctx.fillStyle = "#8d6a3a", 
+                                    ctx.fillRect(sx, sy + g.shelfH - 4, g.shelfW, 4), ctx.restore();
+                                    const slots = Math.max(1, (line ? line.need : 1) + 1), slotW = g.shelfW / (slots + 1), shelfItems = [];
+                                    for (let i = 0; i < slots; i++) shelfItems.push({
+                                        x: sx + slotW * (i + 1),
+                                        y: g.shelfItemY
+                                    });
+                                    const showN = Math.min(slots, remaining + 1);
+                                    for (let i = 0; i < showN; i++) drawShopImgFit(ctx, shopItemImg(itemId), shelfItems[i].x, shelfItems[i].y, g.itemSize, g.itemSize);
+                                    const targetSlot = shelfItems[Math.max(0, showN - 1)];
+                                    if (step.walk ? drawShopBanner(ctx, cw, g, step.text) : (drawShopBanner(ctx, cw, g, step.text, line ? "已攞 " + line.got + "／" + line.need : ""), 
+                                    "fly" !== anim.phase && remaining > 0 && (drawShopGlow(ctx, targetSlot.x, targetSlot.y, .62 * g.itemSize), 
+                                    drawShopImgFit(ctx, shopItemImg(itemId), targetSlot.x, targetSlot.y, g.itemSize, g.itemSize), 
+                                    drawShopArmMarker(ctx, g, targetSlot.x, targetSlot.y + .55 * g.itemSize, progress))), 
+                                    drawShopCartWithItems(ctx, g, shopStory.cart), "fly" === anim.phase && "take" === anim.step.action) {
+                                        const p = shopFlyPos({
+                                            x: targetSlot.x,
+                                            y: targetSlot.y
+                                        }, {
+                                            x: g.cartX - .05 * g.cartW,
+                                            y: g.cartY - .25 * g.cartW
+                                        }, animP);
+                                        drawShopImgFit(ctx, shopItemImg(itemId), p.x, p.y, g.itemSize * (1 - .35 * animP), g.itemSize * (1 - .35 * animP));
+                                    }
+                                } else if ("walk_cashier" === scene) drawShopBanner(ctx, cw, g, step.text), drawShopCartWithItems(ctx, g, shopStory.cart); else if ("cashier" === scene) {
+                                    const g2 = Object.assign({}, g, {
+                                        cartX: cw * (g.portrait ? .16 : .12),
+                                        cartY: ch * (g.portrait, .8),
+                                        cartW: .8 * g.cartW
+                                    }), counterSlots = Math.max(1, shopStory.counter.length + 1), cs = Math.min(.6 * g.itemSize, g.counterW / Math.max(3, counterSlots)), counterPos = i => ({
+                                        x: g.counterX - g.counterW / 2 + .6 * cs + i * cs * .95,
+                                        y: g.counterY
+                                    });
+                                    ctx.save(), ctx.fillStyle = "rgba(255,255,255,0.22)", rrPath(ctx, g.counterX - g.counterW / 2 - 10, g.counterY - .6 * cs, g.counterW + 20, 1.2 * cs, 14), 
+                                    ctx.fill(), ctx.restore(), shopStory.counter.forEach((id, i) => {
+                                        const p = counterPos(i);
+                                        drawShopImgFit(ctx, shopItemImg(id), p.x, p.y, cs, cs, step.packing ? 1 - clamp01((nowMs() - shopStory.stepStartedMs) / (.8 * step.ms)) : 1);
+                                    }), ctx.save(), rrPath(ctx, g.readerX - .33 * g.itemSize, g.readerY - .22 * g.itemSize, .66 * g.itemSize, .44 * g.itemSize, 10), 
+                                    ctx.fillStyle = "#2b2f36", ctx.fill(), ctx.fillStyle = "#7ad0ff", rrPath(ctx, g.readerX - .26 * g.itemSize, g.readerY - .15 * g.itemSize, .52 * g.itemSize, .2 * g.itemSize, 6), 
+                                    ctx.fill(), ctx.restore();
+                                    const bagAtCounter = shopStory.bagGiven && !shopStory.bagTaken, bagOnCounter = {
+                                        x: g.bagCounterX,
+                                        y: g.counterY - .15 * g.bagW
+                                    }, bagPos = bagAtCounter ? bagOnCounter : {
+                                        x: g.bagX,
+                                        y: g.bagY
+                                    };
+                                    "rep" === step.kind ? drawShopBanner(ctx, cw, g, step.text, "剩餘 " + shopStory.cart.length + " 件喺車") : drawShopBanner(ctx, cw, g, step.text), 
+                                    (shopStory.cart.length || "fly" === anim.phase && "unload" === anim.step.action) && drawShopCartWithItems(ctx, g2, shopStory.cart);
+                                    const bagFlying = "fly" === anim.phase && ("givebag" === anim.step.action || "takebag" === anim.step.action);
+                                    if (step.packing || bagFlying || shopStory.bagGiven && !bagAtCounter || drawShopImgFit(ctx, imgShopEcobag, bagPos.x, bagPos.y, g.bagW, 1.1 * g.bagW), 
+                                    step.packing) {
+                                        const pp = clamp01((nowMs() - shopStory.stepStartedMs) / step.ms);
+                                        drawShopImgFit(ctx, imgShopEcobag, bagOnCounter.x, bagOnCounter.y - 8 * Math.abs(Math.sin(pp * Math.PI * 3)), g.bagW, 1.1 * g.bagW);
+                                    }
+                                    if ("rep" === step.kind && "fly" !== anim.phase) {
+                                        let target;
+                                        "unload" === step.action ? (target = {
+                                            x: counterPos(shopStory.counter.length).x,
+                                            y: g.counterY
+                                        }, drawShopGlow(ctx, target.x, target.y, .7 * cs)) : "octopus" === step.action ? (target = {
+                                            x: g.readerX,
+                                            y: g.readerY
+                                        }, drawShopGlow(ctx, target.x, target.y, .5 * g.itemSize), drawShopImgFit(ctx, imgShopOctopus, g.laneX, g.laneBottom - .6 * g.itemSize, .9 * g.itemSize, .9 * g.itemSize)) : "givebag" === step.action ? (target = bagOnCounter, 
+                                        drawShopGlow(ctx, target.x, target.y, .5 * g.bagW)) : "takebag" === step.action && (target = bagOnCounter, 
+                                        drawShopGlow(ctx, target.x, target.y, .55 * g.bagW)), target && drawShopArmMarker(ctx, g, target.x, target.y + ("unload" === step.action ? .5 * cs : .4 * g.itemSize), progress);
+                                    }
+                                    if ("fly" === anim.phase) {
+                                        const a = anim.step;
+                                        if ("unload" === a.action) {
+                                            const p = shopFlyPos({
+                                                x: g2.cartX,
+                                                y: g2.cartY - .25 * g.cartW
+                                            }, counterPos(shopStory.counter.length), animP);
+                                            drawShopImgFit(ctx, shopItemImg(a.item), p.x, p.y, cs, cs);
+                                        } else if ("octopus" === a.action) {
+                                            const p = shopFlyPos({
+                                                x: g.laneX,
+                                                y: g.laneBottom - .6 * g.itemSize
+                                            }, {
+                                                x: g.readerX,
+                                                y: g.readerY - .1 * g.itemSize
+                                            }, animP);
+                                            drawShopImgFit(ctx, imgShopOctopus, p.x, p.y, .9 * g.itemSize, .9 * g.itemSize), 
+                                            animP > .85 && (ctx.save(), ctx.fillStyle = "#1A6B5A", ctx.font = "800 " + Math.round(.3 * g.itemSize) + 'px "PingFang TC","Noto Sans TC",sans-serif', 
+                                            ctx.textAlign = "center", ctx.fillText("嘟！", g.readerX, g.readerY - .45 * g.itemSize), 
+                                            ctx.restore());
+                                        } else if ("givebag" === a.action) {
+                                            const p = shopFlyPos({
+                                                x: g.bagX,
+                                                y: g.bagY
+                                            }, bagOnCounter, animP);
+                                            drawShopImgFit(ctx, imgShopEcobag, p.x, p.y, g.bagW, 1.1 * g.bagW);
+                                        } else if ("takebag" === a.action) {
+                                            const p = shopFlyPos(bagOnCounter, {
+                                                x: g.laneX,
+                                                y: g.laneBottom - .4 * g.bagW
+                                            }, animP);
+                                            drawShopImgFit(ctx, imgShopEcobag, p.x, p.y, g.bagW * (1 + .3 * animP), 1.1 * g.bagW * (1 + .3 * animP));
+                                        }
+                                    }
+                                } else if ("leave" === scene) drawShopBanner(ctx, cw, g, step.text), drawShopImgFit(ctx, imgShopEcobag, g.laneX, .7 * ch, 1.2 * g.bagW, 1.3 * g.bagW); else if ("home" === scene || "done" === scene) {
+                                    const slotS = .62 * g.itemSize, cabPos = i => ({
+                                        x: g.cabinetX - g.cabinetW / 2 + .6 * slotS + i % 4 * slotS * .95,
+                                        y: g.cabinetY + Math.floor(i / 4) * slotS * 1.05
+                                    }), frPos = i => ({
+                                        x: g.fridgeX - g.fridgeW / 2 + .6 * slotS + i % 3 * slotS * .95,
+                                        y: g.fridgeY + Math.floor(i / 3) * slotS * 1.05
+                                    });
+                                    ctx.save(), ctx.fillStyle = "rgba(255,255,255,0.20)", rrPath(ctx, g.cabinetX - g.cabinetW / 2 - 8, g.cabinetY - .6 * slotS, g.cabinetW + 16, 2.3 * slotS, 14), 
+                                    ctx.fill(), rrPath(ctx, g.fridgeX - g.fridgeW / 2 - 8, g.fridgeY - .6 * slotS, g.fridgeW + 16, 2.3 * slotS, 14), 
+                                    ctx.fill(), ctx.fillStyle = "#3a2a10", ctx.font = "800 " + Math.round(.42 * slotS) + 'px "PingFang TC","Noto Sans TC",sans-serif', 
+                                    ctx.textAlign = "center", ctx.textBaseline = "bottom", ctx.fillText("廚櫃", g.cabinetX, g.cabinetY - .7 * slotS), 
+                                    ctx.fillText("雪櫃", g.fridgeX, g.fridgeY - .7 * slotS), ctx.restore();
+                                    let ci = 0, fi = 0;
+                                    if (shopStory.shelved.forEach(id => {
+                                        const p = SHOP_ITEMS[id].cold ? frPos(fi++) : cabPos(ci++);
+                                        drawShopImgFit(ctx, shopItemImg(id), p.x, p.y, slotS, slotS);
+                                    }), "home" === scene) {
+                                        const a = "fly" === anim.phase ? anim.step : null, cur = step, target = SHOP_ITEMS[cur.item].cold ? frPos(fi) : cabPos(ci);
+                                        if (drawShopBanner(ctx, cw, g, cur.text, "袋入面仲有 " + shopStory.bagged.length + " 件"), 
+                                        drawShopImgFit(ctx, imgShopEcobag, g.laneX, ch * (g.portrait ? .82 : .8), 1.1 * g.bagW, 1.2 * g.bagW), 
+                                        a) {
+                                            const p = shopFlyPos({
+                                                x: g.laneX,
+                                                y: ch * (g.portrait ? .72 : .68)
+                                            }, target, animP);
+                                            drawShopImgFit(ctx, shopItemImg(a.item), p.x, p.y, .8 * g.itemSize - (.8 * g.itemSize - slotS) * animP, .8 * g.itemSize - (.8 * g.itemSize - slotS) * animP);
+                                        } else drawShopGlow(ctx, target.x, target.y, .75 * slotS), drawShopImgFit(ctx, shopItemImg(cur.item), g.laneX, ch * (g.portrait ? .72 : .68), .8 * g.itemSize, .8 * g.itemSize), 
+                                        drawShopArmMarker(ctx, g, target.x, target.y + .6 * slotS, progress);
+                                    } else drawShopBanner(ctx, cw, g, step.text, "買咗 " + shopStory.shelved.length + " 件，全部收好");
+                                }
+                                ctx.restore();
+                            }(ctx, cw, ch);
                             if (isTeahouseDimsumMode()) return void function(ctx, cw, ch) {
                                 !function() {
                                     if ("idle" === teahouseServe.phase) return;
@@ -8348,6 +8964,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                             if (isPublicLevel5DimsumLayout() && heldItem && f !== heldItem && Math.hypot(f.x - heldItem.x, f.y - heldItem.y) < (f.visualR || f.r) + (heldItem.visualR || heldItem.r) + 18) continue;
                             if (isBowlingLaneTheme() && "idle" !== bowlingStrike.phase) continue;
                             if (isBasketballTheme() && "idle" !== basketballShot.phase) continue;
+                            if (isSupermarketTheme()) continue;
                             if (isTeahouseDimsumMode() && "idle" !== teahouseServe.phase) continue;
                             ctx.save();
                             const visualR = f.visualR || f.r, visualPoint = publicLevel6HeldDisplayPoint(f.x, f.y, visualR, f.held), drawX = visualPoint.x, drawY = visualPoint.y;
@@ -8453,7 +9070,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                         el.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:99998;pointer-events:none;background:rgba(10,20,18,.82);color:#e8fff6;font:12px/1.4 -apple-system,"PingFang TC",sans-serif;padding:6px 9px;border-radius:10px;white-space:pre;', 
                         document.body.appendChild(el), framePerf.overlayEl = el);
                         const p = framePerfSnapshot();
-                        el.textContent = `perf v124  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}\n左右手檢查 ${"off" === p.hand.check ? "關" : "開"}  鎖定手形 ${p.hand.lockSize || "-"}  大小拒絕 ${p.hand.sizeRejected}  遠處拒絕 ${p.hand.farRejected}` + (p.tool ? `\n衣夾 近指 ${p.tool.near} 放手≥${p.tool.nearExit} 張開≥${p.tool.nearOpen}  遠指 ${p.tool.far} 放手≥${p.tool.farExit} 張開≥${p.tool.farOpen}  門檻 ${p.tool.source}\n衣夾 合併 ${p.tool.combo} 拎起≤${p.tool.enter} 放手閘≥${p.tool.gate}` : ""), 
+                        el.textContent = `perf v125  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}\n左右手檢查 ${"off" === p.hand.check ? "關" : "開"}  鎖定手形 ${p.hand.lockSize || "-"}  大小拒絕 ${p.hand.sizeRejected}  遠處拒絕 ${p.hand.farRejected}` + (p.tool ? `\n衣夾 近指 ${p.tool.near} 放手≥${p.tool.nearExit} 張開≥${p.tool.nearOpen}  遠指 ${p.tool.far} 放手≥${p.tool.farExit} 張開≥${p.tool.farOpen}  門檻 ${p.tool.source}\n衣夾 合併 ${p.tool.combo} 拎起≤${p.tool.enter} 放手閘≥${p.tool.gate}` : ""), 
                         el.style.display = state.running ? "block" : "none";
                     }(perfT2);
                 } catch (e) {
@@ -11302,7 +11919,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
 <script src="level4-three-games-module.js"></script>
 <script>
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
-  const LEVEL_APP_BUILD = "v124-20261118-laundry-rack-ladder";
+  const LEVEL_APP_BUILD = "v125-20261118-supermarket-story";
   const levelAppHadController = Boolean(navigator.serviceWorker.controller);
   let levelAppReloading = false;
 
