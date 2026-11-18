@@ -1369,16 +1369,24 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
       <div class="card-body">
         <div class="option-row" id="laundryDifficultyOptions">
           <button class="option-btn selected" type="button" data-laundry-difficulty="basic">
-            基本
+            基本：一架
             <small>任何衣物可放到晾衫架任何位置</small>
           </button>
+          <button class="option-btn" type="button" data-laundry-difficulty="zones2">
+            着燈兩架
+            <small>進階一：左右兩個架，夾到閃燈嗰個架先算啱</small>
+          </button>
           <button class="option-btn" type="button" data-laundry-difficulty="zones">
-            進階：着燈四架
-            <small>四個晾衫架，夾到閃燈嗰個架先算啱</small>
+            着燈四架
+            <small>進階二：四個架（2×2），夾到閃燈嗰個架先算啱</small>
+          </button>
+          <button class="option-btn" type="button" data-laundry-difficulty="sort2">
+            分類兩架
+            <small>進階三：上身（恤衫、底衫）／下身（褲、裙、孖煙通、襪）</small>
           </button>
           <button class="option-btn" type="button" data-laundry-difficulty="sort">
-            進階：分類四架
-            <small>上衣、褲、裙、內衣襪各一個架</small>
+            分類四架
+            <small>進階四：上衣、褲、裙、內衣襪各一個架</small>
           </button>
         </div>
       </div>
@@ -2682,10 +2690,10 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         if (!card) return;
         const enabled = isLaundryRackGame();
         if (card.hidden = !enabled, !enabled) return;
-        const mode = laundryDifficultyMode();
-        document.getElementById("preview-laundry-difficulty").textContent = "zones" === mode ? "進階：着燈四架" : "sort" === mode ? "進階：分類四架" : "基本", 
+        const key = laundryDifficultyKey();
+        document.getElementById("preview-laundry-difficulty").textContent = LAUNDRY_DIFFICULTY_LABELS[key] || "基本：一架", 
         document.querySelectorAll("#laundryDifficultyOptions [data-laundry-difficulty]").forEach(button => {
-            const selected = button.dataset.laundryDifficulty === mode;
+            const selected = button.dataset.laundryDifficulty === key;
             button.classList.toggle("selected", selected), button.setAttribute("aria-pressed", selected ? "true" : "false");
         });
     }
@@ -3316,7 +3324,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         const button = e.target.closest("[data-laundry-difficulty]");
         if (!button || !isLaundryRackGame()) return;
         const pick = button.dataset.laundryDifficulty;
-        state.laundryDifficulty = "zones" === pick || "sort" === pick ? pick : "basic", 
+        state.laundryDifficulty = LAUNDRY_DIFFICULTY_KEYS.includes(pick) ? pick : "basic", 
         renderLaundryDifficultySettings();
     }), document.getElementById("fridgeDifficultyOptions").addEventListener("click", e => {
         const button = e.target.closest("[data-fridge-difficulty]");
@@ -5702,8 +5710,15 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         img: () => imgLaundrySocks
     } ], LAUNDRY_RACK_SLOTS = [ -.375, -.225, -.075, .075, .225, .375 ], LAUNDRY_RACK_CAPACITY = 6, LAUNDRY_RACK_CLEAR_DELAY_MS = 1800, LAUNDRY_NEW_BATCH_TEXT = "又有新衫要晾喇！";
     let laundryOrder = null, laundryRackContents = [], laundryOrdersCompleted = 0, laundryOrderCelebrateUntil = 0, laundryOrderTimerId = null, laundryRackClearTimerId = null, laundryBatchesCompleted = 0, laundryOrderBannerRect = null;
-    const LAUNDRY_FOUR_RACK_CAPACITY = 6, LAUNDRY_FOUR_RACK_SLOTS = [ -.06, .16, .38 ], LAUNDRY_RACK_RAIL_FRAC = {
+    const LAUNDRY_DIFFICULTY_KEYS = [ "basic", "zones2", "zones", "sort2", "sort" ], LAUNDRY_DIFFICULTY_LABELS = {
+        basic: "基本：一架",
+        zones2: "進階一：着燈兩架",
+        zones: "進階二：着燈四架",
+        sort2: "進階三：分類兩架",
+        sort: "進階四：分類四架"
+    }, LAUNDRY_FOUR_RACK_CAPACITY = 6, LAUNDRY_FOUR_RACK_SLOTS = [ -.06, .16, .38 ], LAUNDRY_TWO_RACK_SLOTS = [ -.17, -.02, .13, .28, .43 ], LAUNDRY_RACK_RAIL_FRAC = {
         landscape: .44,
+        landscape2: .62,
         portrait: .62
     }, LAUNDRY_SORT_RACKS = [ {
         key: "tops",
@@ -5721,11 +5736,27 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         key: "underwear",
         label: "內衣襪",
         types: [ "laundry_vest", "laundry_boxers", "laundry_socks" ]
+    } ], LAUNDRY_SORT_RACKS_2 = [ {
+        key: "upper",
+        label: "上身",
+        types: [ "laundry_shirt", "laundry_vest" ]
+    }, {
+        key: "lower",
+        label: "下身",
+        types: [ "laundry_jeans", "laundry_skirt", "laundry_boxers", "laundry_socks" ]
     } ];
     let laundryLitRack = -1, laundryWrongRack = -1, laundryWrongUntil = 0, laundryWrongSpokenAt = -1 / 0;
-    function laundryDifficultyMode() {
+    function laundryDifficultyKey() {
         const d = state.laundryDifficulty;
-        return "complex" === d || "zones" === d ? "zones" : "sort" === d ? "sort" : "basic";
+        return "complex" === d ? "zones" : LAUNDRY_DIFFICULTY_KEYS.includes(d) ? d : "basic";
+    }
+    function laundryRackCount() {
+        const k = laundryDifficultyKey();
+        return "zones2" === k || "sort2" === k ? 2 : "zones" === k || "sort" === k ? 4 : 1;
+    }
+    function laundryDifficultyMode() {
+        const d = laundryDifficultyKey();
+        return "complex" === d || "zones" === d || "zones2" === d ? "zones" : "sort" === d || "sort2" === d ? "sort" : "basic";
     }
     function isLaundryRackGame() {
         return "67" === state.level && "peg_laundry" === state.theme && !0;
@@ -5745,8 +5776,17 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     function isLaundryOrderGame() {
         return isLaundryZoneGame();
     }
+    function laundrySortRacks() {
+        return 2 === laundryRackCount() ? LAUNDRY_SORT_RACKS_2 : LAUNDRY_SORT_RACKS;
+    }
     function laundrySortRackFor(type) {
-        return LAUNDRY_SORT_RACKS.findIndex(r => r.types.includes(type));
+        return laundrySortRacks().findIndex(r => r.types.includes(type));
+    }
+    function laundryRackSlots() {
+        return 2 === laundryRackCount() ? LAUNDRY_TWO_RACK_SLOTS : LAUNDRY_FOUR_RACK_SLOTS;
+    }
+    function laundryRackRailFracFor(portrait, count) {
+        return portrait ? LAUNDRY_RACK_RAIL_FRAC.portrait : 2 === count ? LAUNDRY_RACK_RAIL_FRAC.landscape2 : LAUNDRY_RACK_RAIL_FRAC.landscape;
     }
     function newLaundryOrder() {
         const pool = LAUNDRY_ORDER_MENU.slice();
@@ -5765,7 +5805,9 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             lines: lines,
             done: !1
         }, laundryLitRack = function() {
-            const choices = [ 0, 1, 2, 3 ].filter(i => i !== laundryLitRack);
+            const count = laundryRackCount(), slots = laundryRackSlots().length, all = Array.from({
+                length: count
+            }, (_, i) => i), free = all.filter(i => laundryRackContents.filter(c => c.rack === i).length < slots), pool = free.length ? free : all, choices = pool.length > 1 ? pool.filter(i => i !== laundryLitRack) : pool;
             return choices[Math.floor(Math.random() * choices.length)];
         }(), laundryOrderCelebrateUntil = 0;
         try {
@@ -5806,7 +5848,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     function laundryFourRackHang(item, rackIndex) {
         laundryRackClearTimerId && (clearTimeout(laundryRackClearTimerId), laundryRackClearTimerId = null, 
         laundryRackContents = [], laundryOrderCelebrateUntil = 0);
-        const onThisRack = laundryRackContents.filter(c => c.rack === rackIndex).length, fx = LAUNDRY_FOUR_RACK_SLOTS[onThisRack % LAUNDRY_FOUR_RACK_SLOTS.length];
+        const slots = laundryRackSlots(), fx = slots[laundryRackContents.filter(c => c.rack === rackIndex).length % slots.length];
         if (laundryRackContents.push({
             img: item && item.img || null,
             fx: fx,
@@ -5842,8 +5884,13 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         1));
         if (isLaundrySortGame()) {
             const want = laundrySortRackFor(item.targetType);
-            return !(want < 0 || idx !== want && (laundryNoteWrongRack(idx, (item.label || "呢件") + "係" + LAUNDRY_SORT_RACKS[want].label + "，要夾喺「" + LAUNDRY_SORT_RACKS[want].label + "」嗰個架呀。"), 
-            1));
+            if (want < 0) return !1;
+            if (idx !== want) {
+                const racks = laundrySortRacks();
+                return laundryNoteWrongRack(idx, (item.label || "呢件") + "係" + racks[want].label + "，要夾喺「" + racks[want].label + "」嗰個架呀。"), 
+                !1;
+            }
+            return !0;
         }
         return laundryOrderAccepts(item);
     }
@@ -6374,14 +6421,14 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                 color: "#2E6DA4"
             } ]);
         }
-        if (isLaundryFourRackGame()) return void (targets = function(cw, ch, portrait) {
-            const frac = portrait ? LAUNDRY_RACK_RAIL_FRAC.portrait : LAUNDRY_RACK_RAIL_FRAC.landscape, railRatio = (imgLaundryRack.naturalWidth > 0 ? imgLaundryRack.naturalWidth : 779) / ((imgLaundryRack.naturalHeight > 0 ? imgLaundryRack.naturalHeight : 453) * frac), hudTop = portrait ? Math.max(.13 * ch, 150) : Math.max(.1 * ch, 72), bottomLimit = ch * (portrait ? .8 : .78) - (portrait ? Math.min(.17 * cw, .13 * ch) : Math.min(.12 * cw, .18 * ch)) - 16, colGap = Math.max(16, .03 * cw), available = Math.max(120, bottomLimit - hudTop);
-            let th = (available - 14) / 2, tw = th * railRatio;
+        if (isLaundryFourRackGame()) return void (targets = function(cw, ch, portrait, count) {
+            const racks = 2 === count ? 2 : 4, rows = 2 === racks ? 1 : 2, frac = laundryRackRailFracFor(portrait, racks), railRatio = (imgLaundryRack.naturalWidth > 0 ? imgLaundryRack.naturalWidth : 779) / ((imgLaundryRack.naturalHeight > 0 ? imgLaundryRack.naturalHeight : 453) * frac), hudTop = portrait ? Math.max(.13 * ch, 150) : Math.max(.1 * ch, 72), bottomLimit = ch * (portrait ? .8 : .78) - (portrait ? Math.min(.17 * cw, .13 * ch) : Math.min(.12 * cw, .18 * ch)) - 16, colGap = Math.max(16, .03 * cw), available = Math.max(120, bottomLimit - hudTop);
+            let th = (available - 14 * (rows - 1)) / rows, tw = th * railRatio;
             const maxW = Math.min(.46 * cw, (cw - colGap) / 2 - 8);
             tw > maxW && (tw = maxW, th = tw / railRatio);
-            const y0 = hudTop + (available - (2 * th + 14)) / 2 + th / 2, xs = [ cw / 2 - colGap / 2 - tw / 2, cw / 2 + colGap / 2 + tw / 2 ], ys = [ y0, y0 + th + 14 ], sortMode = isLaundrySortGame(), out = [];
-            for (let i = 0; i < 4; i++) {
-                const sortRack = sortMode ? LAUNDRY_SORT_RACKS[i] : null;
+            const y0 = hudTop + (available - (rows * th + 14 * (rows - 1))) / 2 + th / 2, xs = [ cw / 2 - colGap / 2 - tw / 2, cw / 2 + colGap / 2 + tw / 2 ], ys = [ y0, y0 + th + 14 ], sortMode = isLaundrySortGame(), sortRacks = 2 === racks ? LAUNDRY_SORT_RACKS_2 : LAUNDRY_SORT_RACKS, out = [];
+            for (let i = 0; i < racks; i++) {
+                const sortRack = sortMode ? sortRacks[i] : null;
                 out.push({
                     type: "laundry_rack",
                     label: sortRack ? sortRack.label + "架" : "晾衫架" + (i + 1),
@@ -6399,7 +6446,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                 });
             }
             return out;
-        }(cw, ch, portrait));
+        }(cw, ch, portrait, laundryRackCount()));
         if (isLaundryRackGame()) {
             const rackRatio = imgLaundryRack.naturalWidth > 0 && imgLaundryRack.naturalHeight > 0 ? imgLaundryRack.naturalWidth / imgLaundryRack.naturalHeight : 779 / 453;
             let tw = isLaundryBasicGame() ? Math.min(.96 * cw, 1320) : portrait ? Math.min(.88 * cw, 980) : Math.min(.92 * cw, 1220), th = tw / rackRatio;
@@ -8406,7 +8453,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                         el.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:99998;pointer-events:none;background:rgba(10,20,18,.82);color:#e8fff6;font:12px/1.4 -apple-system,"PingFang TC",sans-serif;padding:6px 9px;border-radius:10px;white-space:pre;', 
                         document.body.appendChild(el), framePerf.overlayEl = el);
                         const p = framePerfSnapshot();
-                        el.textContent = `perf v123  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}\n左右手檢查 ${"off" === p.hand.check ? "關" : "開"}  鎖定手形 ${p.hand.lockSize || "-"}  大小拒絕 ${p.hand.sizeRejected}  遠處拒絕 ${p.hand.farRejected}` + (p.tool ? `\n衣夾 近指 ${p.tool.near} 放手≥${p.tool.nearExit} 張開≥${p.tool.nearOpen}  遠指 ${p.tool.far} 放手≥${p.tool.farExit} 張開≥${p.tool.farOpen}  門檻 ${p.tool.source}\n衣夾 合併 ${p.tool.combo} 拎起≤${p.tool.enter} 放手閘≥${p.tool.gate}` : ""), 
+                        el.textContent = `perf v124  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}\n左右手檢查 ${"off" === p.hand.check ? "關" : "開"}  鎖定手形 ${p.hand.lockSize || "-"}  大小拒絕 ${p.hand.sizeRejected}  遠處拒絕 ${p.hand.farRejected}` + (p.tool ? `\n衣夾 近指 ${p.tool.near} 放手≥${p.tool.nearExit} 張開≥${p.tool.nearOpen}  遠指 ${p.tool.far} 放手≥${p.tool.farExit} 張開≥${p.tool.farOpen}  門檻 ${p.tool.source}\n衣夾 合併 ${p.tool.combo} 拎起≤${p.tool.enter} 放手閘≥${p.tool.gate}` : ""), 
                         el.style.display = state.running ? "block" : "none";
                     }(perfT2);
                 } catch (e) {
@@ -9103,7 +9150,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     function drawLaundryRackTarget(ctx, t) {
         if ("number" == typeof t.rackIndex) return void function(ctx, t) {
             gameCanvas.width;
-            const ch = gameCanvas.height, img = t.img, hasImg = img && img.complete && img.naturalWidth > 0, frac = isPortrait() ? LAUNDRY_RACK_RAIL_FRAC.portrait : LAUNDRY_RACK_RAIL_FRAC.landscape, rw = t.w, rh = t.h, x0 = t.x - rw / 2, y0 = t.y - rh / 2, now = nowMs(), lit = isLaundryZoneGame() && t.rackIndex === laundryLitRack, wrong = t.rackIndex === laundryWrongRack && now < laundryWrongUntil;
+            const ch = gameCanvas.height, img = t.img, hasImg = img && img.complete && img.naturalWidth > 0, frac = laundryRackRailFracFor(isPortrait(), laundryRackCount()), rw = t.w, rh = t.h, x0 = t.x - rw / 2, y0 = t.y - rh / 2, now = nowMs(), lit = isLaundryZoneGame() && t.rackIndex === laundryLitRack, wrong = t.rackIndex === laundryWrongRack && now < laundryWrongUntil;
             ctx.save();
             const pulse = .5 + .5 * Math.sin(now / 175);
             if (ctx.fillStyle = lit ? `rgba(255, 214, 0, ${(.3 + .3 * pulse).toFixed(3)})` : "rgba(218,232,238,0.88)", 
@@ -9141,7 +9188,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             for (const c of laundryRackContents) if (c.rack === t.rackIndex && c.img && c.img.complete && c.img.naturalWidth > 0) {
                 const iw = c.img.naturalWidth, ih = c.img.naturalHeight;
                 let dh = Math.min(.95 * rh, .16 * ch), dw = dh * iw / ih;
-                const maxW = .21 * rw;
+                const maxW = rw * (2 === laundryRackCount() ? .14 : .21);
                 dw > maxW && (dw = maxW, dh = dw * ih / iw), drawImageScaled(ctx, c.img, t.x + c.fx * rw - dw / 2, railY, dw, dh);
             }
             t._hover && (ctx.strokeStyle = t.color || "#2E6DA4", ctx.lineWidth = 8, rrPath(ctx, x0 - 10, y0 - 10, rw + 20, rh + 20, 22), 
@@ -11255,7 +11302,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
 <script src="level4-three-games-module.js"></script>
 <script>
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
-  const LEVEL_APP_BUILD = "v123-20261118-laundry-four-racks";
+  const LEVEL_APP_BUILD = "v124-20261118-laundry-rack-ladder";
   const levelAppHadController = Boolean(navigator.serviceWorker.controller);
   let levelAppReloading = false;
 
