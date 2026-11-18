@@ -1,4 +1,4 @@
-const CACHE_VERSION = "fthue-rehab-v120-20261118-face-hide-always";
+const CACHE_VERSION = "fthue-rehab-v121-20261118-recalibrate";
 const OFFLINE_PAGE = "./offline.html";
 
 importScripts("./offline-assets.js");
