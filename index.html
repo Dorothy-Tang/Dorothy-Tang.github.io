@@ -1372,9 +1372,13 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             基本
             <small>任何衣物可放到晾衫架任何位置</small>
           </button>
-          <button class="option-btn" type="button" data-laundry-difficulty="complex">
-            較複雜
-            <small>依照晾衫單的衣物及數量</small>
+          <button class="option-btn" type="button" data-laundry-difficulty="zones">
+            進階：着燈四架
+            <small>四個晾衫架，夾到閃燈嗰個架先算啱</small>
+          </button>
+          <button class="option-btn" type="button" data-laundry-difficulty="sort">
+            進階：分類四架
+            <small>上衣、褲、裙、內衣襪各一個架</small>
           </button>
         </div>
       </div>
@@ -1920,7 +1924,6 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             if ("dimsum" === state.theme) return "拿起點心，放到上方同款蒸籠。";
             if ("flowers" === state.theme) return "拿起花朵，放到上方花盆。";
             if ("cards" === state.theme) {
-                if ("67" === state.level) return "拿起啤牌，放到相同花色牌堆。";
                 const suit = void 0 !== cards && cards.suit ? CARD_SUIT_NAME[cards.suit] : "";
                 return isSideCardGame ? "拿起" + suit + "牌，放到" + ("right" === activeAffectedSide() ? "右邊" : "左邊") + "收牌區。" : "拿起" + suit + "牌，放到上方收牌區。";
             }
@@ -2596,7 +2599,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             gameType: "pinch",
             label: "啤牌",
             labelEn: "Playing Cards",
-            hint: "患手三指張開，輕捏拿起啤牌，移到相同花色，再張開放下",
+            hint: "患手三指張開，輕捏拿起指定花色嘅啤牌，移到患側收牌區，再張開放下",
             actionCue: "三指張開 → 輕捏拿起 → 移動 → 張開放下"
         },
         mahjong: {
@@ -2605,7 +2608,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             gameType: "pinch",
             label: "麻雀",
             labelEn: "Mahjong",
-            hint: "患手三指張開，輕捏拿起麻雀，移到相同圖案，再張開放下",
+            hint: "患手三指張開，輕捏拿起一組麻雀，移到患側放牌區，再張開放下",
             actionCue: "三指張開 → 輕捏拿起 → 移動 → 張開放下"
         },
         cooking: {
@@ -2635,26 +2638,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         return !!task && (state.theme = task.theme, state.level6Task = task.id, applyInteractionModeForLevel(), 
         !0);
     }
-    const LEVEL67_TOOL_MODES = {
-        bare: {
-            gameType: "pinch",
-            label: "空手（三指）",
-            hint: "偵測三指輕捏",
-            actionCue: "張開三指 → 輕捏 → 放開"
-        },
-        peg: {
-            gameType: "grasp",
-            label: "夾仔",
-            hint: "偵測手部開合",
-            actionCue: "打開夾仔 → 輕按 → 放開"
-        },
-        chopsticks: {
-            gameType: "dwell",
-            label: "筷子",
-            hint: "食指尖停留",
-            actionCue: "筷子尖對準 → 停住"
-        }
-    }, SHOULDER_EXERCISE_MODES = {
+    const SHOULDER_EXERCISE_MODES = {
         active: {
             label: "主動",
             setup: "患臂自行抬高｜Lift with affected arm",
@@ -2670,9 +2654,6 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     };
     function currentLevel() {
         return LEVELS[state.level] || LEVELS[4];
-    }
-    function level67ToolProfile() {
-        return LEVEL67_TOOL_MODES[state.toolMode] || LEVEL67_TOOL_MODES.bare;
     }
     function activeLevel67ToolProfile() {
         return state.level, level6TaskProfile();
@@ -2701,10 +2682,10 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         if (!card) return;
         const enabled = isLaundryRackGame();
         if (card.hidden = !enabled, !enabled) return;
-        const basic = "complex" !== state.laundryDifficulty;
-        document.getElementById("preview-laundry-difficulty").textContent = basic ? "基本" : "較複雜", 
+        const mode = laundryDifficultyMode();
+        document.getElementById("preview-laundry-difficulty").textContent = "zones" === mode ? "進階：着燈四架" : "sort" === mode ? "進階：分類四架" : "基本", 
         document.querySelectorAll("#laundryDifficultyOptions [data-laundry-difficulty]").forEach(button => {
-            const selected = button.dataset.laundryDifficulty === state.laundryDifficulty;
+            const selected = button.dataset.laundryDifficulty === mode;
             button.classList.toggle("selected", selected), button.setAttribute("aria-pressed", selected ? "true" : "false");
         });
     }
@@ -3333,8 +3314,10 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         }(button.dataset.shoulderExerciseMode);
     }), document.getElementById("laundryDifficultyOptions").addEventListener("click", e => {
         const button = e.target.closest("[data-laundry-difficulty]");
-        button && isLaundryRackGame() && (state.laundryDifficulty = "complex" === button.dataset.laundryDifficulty ? "complex" : "basic", 
-        renderLaundryDifficultySettings());
+        if (!button || !isLaundryRackGame()) return;
+        const pick = button.dataset.laundryDifficulty;
+        state.laundryDifficulty = "zones" === pick || "sort" === pick ? pick : "basic", 
+        renderLaundryDifficultySettings();
     }), document.getElementById("fridgeDifficultyOptions").addEventListener("click", e => {
         const button = e.target.closest("[data-fridge-difficulty]");
         button && isFridgeGame() && (state.fridgeDifficulty = "zones" === button.dataset.fridgeDifficulty ? "zones" : "basic", 
@@ -3555,7 +3538,8 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                 dimsumOrdersCompleted = 0, dimsumOrderCelebrateUntil = 0, dimsumOrderTimerId && (clearTimeout(dimsumOrderTimerId), 
                 dimsumOrderTimerId = null), laundryOrderBannerRect = null, laundryOrder = null, 
                 laundryRackContents = [], laundryOrdersCompleted = 0, laundryBatchesCompleted = 0, 
-                laundryOrderCelebrateUntil = 0, laundryOrderTimerId && (clearTimeout(laundryOrderTimerId), 
+                laundryOrderCelebrateUntil = 0, laundryLitRack = -1, laundryWrongRack = -1, laundryWrongUntil = 0, 
+                laundryWrongSpokenAt = -1 / 0, laundryOrderTimerId && (clearTimeout(laundryOrderTimerId), 
                 laundryOrderTimerId = null), laundryRackClearTimerId && (clearTimeout(laundryRackClearTimerId), 
                 laundryRackClearTimerId = null), fridgeBannerRect = null, fridgeQueue = [], fridgeZoneOrder = [], 
                 fridgeQueueIndex = 0, fridgePlacedFoods = [], fridgeRoundsCompleted = 0, fridgeCelebrateUntil = 0, 
@@ -5560,36 +5544,36 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         type: "chop_siumai",
         label: "燒賣",
         img: () => imgSiumai
-    } ], DIMSUM_PLATE_SLOTS = [ {
-        fx: -.16,
-        fy: -.05
+    } ], DIMSUM_PLATE_ITEM_R_FRAC = .21, DIMSUM_PLATE_SLOTS = [ {
+        fx: -.22,
+        fy: -.12
     }, {
-        fx: .11,
-        fy: -.09
+        fx: .2,
+        fy: -.14
     }, {
-        fx: .24,
-        fy: .05
-    }, {
-        fx: -.28,
-        fy: .07
-    }, {
-        fx: -.03,
-        fy: .09
-    }, {
-        fx: .14,
-        fy: .19
-    }, {
-        fx: -.18,
-        fy: .2
-    }, {
-        fx: .02,
-        fy: -.2
-    }, {
-        fx: .28,
-        fy: .19
+        fx: .3,
+        fy: .14
     }, {
         fx: -.3,
-        fy: -.14
+        fy: .16
+    }, {
+        fx: 0,
+        fy: .24
+    }, {
+        fx: 0,
+        fy: -.26
+    }, {
+        fx: -.12,
+        fy: .04
+    }, {
+        fx: .14,
+        fy: .02
+    }, {
+        fx: .3,
+        fy: -.02
+    }, {
+        fx: -.3,
+        fy: -.02
     } ];
     let dimsumOrder = null, dimsumPlateContents = [], dimsumOrdersCompleted = 0, dimsumOrderCelebrateUntil = 0, dimsumOrderTimerId = null, dimsumOrderBannerRect = null;
     function isDimsumBowlGame() {
@@ -5718,14 +5702,51 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         img: () => imgLaundrySocks
     } ], LAUNDRY_RACK_SLOTS = [ -.375, -.225, -.075, .075, .225, .375 ], LAUNDRY_RACK_CAPACITY = 6, LAUNDRY_RACK_CLEAR_DELAY_MS = 1800, LAUNDRY_NEW_BATCH_TEXT = "又有新衫要晾喇！";
     let laundryOrder = null, laundryRackContents = [], laundryOrdersCompleted = 0, laundryOrderCelebrateUntil = 0, laundryOrderTimerId = null, laundryRackClearTimerId = null, laundryBatchesCompleted = 0, laundryOrderBannerRect = null;
-    function isLaundryOrderGame() {
-        return isLaundryRackGame() && "complex" === state.laundryDifficulty;
+    const LAUNDRY_FOUR_RACK_CAPACITY = 6, LAUNDRY_FOUR_RACK_SLOTS = [ -.06, .16, .38 ], LAUNDRY_RACK_RAIL_FRAC = {
+        landscape: .44,
+        portrait: .62
+    }, LAUNDRY_SORT_RACKS = [ {
+        key: "tops",
+        label: "上衣",
+        types: [ "laundry_shirt" ]
+    }, {
+        key: "trousers",
+        label: "褲",
+        types: [ "laundry_jeans" ]
+    }, {
+        key: "skirt",
+        label: "裙",
+        types: [ "laundry_skirt" ]
+    }, {
+        key: "underwear",
+        label: "內衣襪",
+        types: [ "laundry_vest", "laundry_boxers", "laundry_socks" ]
+    } ];
+    let laundryLitRack = -1, laundryWrongRack = -1, laundryWrongUntil = 0, laundryWrongSpokenAt = -1 / 0;
+    function laundryDifficultyMode() {
+        const d = state.laundryDifficulty;
+        return "complex" === d || "zones" === d ? "zones" : "sort" === d ? "sort" : "basic";
     }
     function isLaundryRackGame() {
         return "67" === state.level && "peg_laundry" === state.theme && !0;
     }
     function isLaundryBasicGame() {
-        return isLaundryRackGame() && "complex" !== state.laundryDifficulty;
+        return isLaundryRackGame() && "basic" === laundryDifficultyMode();
+    }
+    function isLaundryZoneGame() {
+        return isLaundryRackGame() && "zones" === laundryDifficultyMode();
+    }
+    function isLaundrySortGame() {
+        return isLaundryRackGame() && "sort" === laundryDifficultyMode();
+    }
+    function isLaundryFourRackGame() {
+        return isLaundryZoneGame() || isLaundrySortGame();
+    }
+    function isLaundryOrderGame() {
+        return isLaundryZoneGame();
+    }
+    function laundrySortRackFor(type) {
+        return LAUNDRY_SORT_RACKS.findIndex(r => r.types.includes(type));
     }
     function newLaundryOrder() {
         const pool = LAUNDRY_ORDER_MENU.slice();
@@ -5733,25 +5754,29 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             const j = Math.floor(Math.random() * (i + 1));
             [pool[i], pool[j]] = [ pool[j], pool[i] ];
         }
-        const lineCount = 0 === laundryOrdersCompleted ? 1 : 2 + Math.floor(2 * Math.random()), lines = pool.slice(0, lineCount).map(m => ({
+        const m = pool[0], lines = [ {
             type: m.type,
             label: m.label,
             unit: m.unit,
-            need: 1 === lineCount ? 3 : 1 + Math.floor(3 * Math.random()),
+            need: 1,
             placed: 0
-        }));
-        let guard = 0;
-        for (;lines.reduce((sum, l) => sum + l.need, 0) > LAUNDRY_RACK_CAPACITY && guard++ < 20; ) {
-            const biggest = lines.reduce((a, b) => b.need > a.need ? b : a, lines[0]);
-            biggest.need = Math.max(1, biggest.need - 1);
-        }
+        } ];
         laundryOrder = {
             lines: lines,
             done: !1
-        }, laundryRackContents = [], laundryOrderCelebrateUntil = 0;
-        const intro = laundryOrdersCompleted > 0 ? LAUNDRY_NEW_BATCH_TEXT : "";
+        }, laundryLitRack = function() {
+            const choices = [ 0, 1, 2, 3 ].filter(i => i !== laundryLitRack);
+            return choices[Math.floor(Math.random() * choices.length)];
+        }(), laundryOrderCelebrateUntil = 0;
         try {
-            speakCantonese(intro + (laundryOrder ? "請將" + laundryOrder.lines.map(l => l.need + l.unit + l.label).join("、") + "放上晾衫架。" : ""), {
+            speakCantonese(function() {
+                if (!laundryOrder) return "";
+                if (isLaundryZoneGame()) {
+                    const line = laundryOrder.lines[0];
+                    return "請將" + (line ? line.label : "衣物") + "夾到閃燈嗰個晾衫架。";
+                }
+                return "請將" + laundryOrder.lines.map(l => l.need + l.unit + l.label).join("、") + "放上晾衫架。";
+            }(), {
                 rate: .82
             });
         } catch (e) {}
@@ -5760,13 +5785,69 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     function laundryOrderLineFor(type) {
         return !laundryOrder || laundryOrder.done ? null : laundryOrder.lines.find(l => l.type === type) || null;
     }
-    function laundryRackAccepts(item) {
-        return isLaundryBasicGame() ? !!item : function(item) {
-            const line = laundryOrderLineFor(item && item.targetType);
-            return !!line && line.placed < line.need;
-        }(item);
+    function laundryOrderAccepts(item) {
+        const line = laundryOrderLineFor(item && item.targetType);
+        return !!line && line.placed < line.need;
     }
-    function laundryRackPlace(item) {
+    function laundryRackIndexOf(rack) {
+        return rack && "number" == typeof rack.rackIndex ? rack.rackIndex : -1;
+    }
+    function laundryNoteWrongRack(rackIndex, msg) {
+        const now = nowMs();
+        if (laundryWrongRack = rackIndex, laundryWrongUntil = now + 1600, now - laundryWrongSpokenAt >= 1500) {
+            laundryWrongSpokenAt = now;
+            try {
+                speakCantonese(msg, {
+                    rate: .9
+                });
+            } catch (e) {}
+        }
+    }
+    function laundryFourRackHang(item, rackIndex) {
+        laundryRackClearTimerId && (clearTimeout(laundryRackClearTimerId), laundryRackClearTimerId = null, 
+        laundryRackContents = [], laundryOrderCelebrateUntil = 0);
+        const onThisRack = laundryRackContents.filter(c => c.rack === rackIndex).length, fx = LAUNDRY_FOUR_RACK_SLOTS[onThisRack % LAUNDRY_FOUR_RACK_SLOTS.length];
+        if (laundryRackContents.push({
+            img: item && item.img || null,
+            fx: fx,
+            rack: rackIndex
+        }), laundryWrongRack = -1, laundryWrongUntil = 0, laundryRackContents.length >= LAUNDRY_FOUR_RACK_CAPACITY) {
+            laundryBatchesCompleted++, laundryOrderCelebrateUntil = nowMs() + LAUNDRY_RACK_CLEAR_DELAY_MS;
+            try {
+                playApplauseSound();
+            } catch (e) {}
+            try {
+                speakCantonese("好叻呀！晾好晒喇！", {
+                    rate: .85
+                });
+            } catch (e) {}
+            return laundryRackClearTimerId = setTimeout(() => {
+                if (laundryRackClearTimerId = null, isLaundryFourRackGame() && state.running) {
+                    laundryRackContents = [], laundryOrderCelebrateUntil = 0;
+                    try {
+                        speakCantonese(LAUNDRY_NEW_BATCH_TEXT, {
+                            rate: .85
+                        });
+                    } catch (e) {}
+                }
+            }, LAUNDRY_RACK_CLEAR_DELAY_MS), !0;
+        }
+        return !1;
+    }
+    function laundryRackAccepts(item, rack) {
+        if (!item) return !1;
+        if (isLaundryBasicGame()) return !0;
+        const idx = laundryRackIndexOf(rack);
+        if (isLaundryZoneGame()) return !(!laundryOrderAccepts(item) || idx !== laundryLitRack && (laundryNoteWrongRack(idx, "要夾喺閃燈嗰個架呀。"), 
+        1));
+        if (isLaundrySortGame()) {
+            const want = laundrySortRackFor(item.targetType);
+            return !(want < 0 || idx !== want && (laundryNoteWrongRack(idx, (item.label || "呢件") + "係" + LAUNDRY_SORT_RACKS[want].label + "，要夾喺「" + LAUNDRY_SORT_RACKS[want].label + "」嗰個架呀。"), 
+            1));
+        }
+        return laundryOrderAccepts(item);
+    }
+    function laundryRackPlace(item, rack) {
         isLaundryBasicGame() ? function(item) {
             laundryRackClearTimerId && (clearTimeout(laundryRackClearTimerId), laundryRackClearTimerId = null, 
             laundryRackContents = [], laundryOrderCelebrateUntil = 0);
@@ -5790,29 +5871,19 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                     }
                 }, LAUNDRY_RACK_CLEAR_DELAY_MS);
             }
-        }(item) : function(item) {
+        }(item) : isLaundrySortGame() ? laundryFourRackHang(item, laundryRackIndexOf(rack)) : function(item, rack) {
             const line = laundryOrderLineFor(item && item.targetType);
             if (!line) return;
             line.placed++;
-            const fx = LAUNDRY_RACK_SLOTS[laundryRackContents.length % LAUNDRY_RACK_SLOTS.length];
-            if (laundryRackContents.push({
-                img: item && item.img || null,
-                fx: fx
-            }), laundryOrder.lines.every(l => l.placed >= l.need)) {
-                laundryOrder.done = !0, laundryOrdersCompleted++, laundryOrderCelebrateUntil = nowMs() + 2600;
-                try {
-                    playApplauseSound();
-                } catch (e) {}
-                try {
-                    speakCantonese("好叻呀！晾好晒喇！", {
-                        rate: .85
-                    });
-                } catch (e) {}
-                laundryOrderTimerId && clearTimeout(laundryOrderTimerId), laundryOrderTimerId = setTimeout(() => {
-                    laundryOrderTimerId = null, isLaundryOrderGame() && state.running && newLaundryOrder();
-                }, 2600);
-            }
-        }(item);
+            const batchFull = laundryFourRackHang(item, laundryRackIndexOf(rack));
+            laundryOrder.lines.every(l => l.placed >= l.need) && (laundryOrder.done = !0, laundryOrdersCompleted++, 
+            laundryOrderTimerId && clearTimeout(laundryOrderTimerId), laundryOrderTimerId = setTimeout(() => {
+                laundryOrderTimerId = null, isLaundryOrderGame() && state.running && newLaundryOrder();
+            }, batchFull ? LAUNDRY_RACK_CLEAR_DELAY_MS + 200 : 450));
+        }(item, rack);
+    }
+    function laundryRackRejectedWithoutPenalty() {
+        return isLaundryFourRackGame();
     }
     const FRIDGE_ORDER_DEFS = [ {
         type: "fridge_charsiu_rice",
@@ -6303,6 +6374,32 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                 color: "#2E6DA4"
             } ]);
         }
+        if (isLaundryFourRackGame()) return void (targets = function(cw, ch, portrait) {
+            const frac = portrait ? LAUNDRY_RACK_RAIL_FRAC.portrait : LAUNDRY_RACK_RAIL_FRAC.landscape, railRatio = (imgLaundryRack.naturalWidth > 0 ? imgLaundryRack.naturalWidth : 779) / ((imgLaundryRack.naturalHeight > 0 ? imgLaundryRack.naturalHeight : 453) * frac), hudTop = portrait ? Math.max(.13 * ch, 150) : Math.max(.1 * ch, 72), bottomLimit = ch * (portrait ? .8 : .78) - (portrait ? Math.min(.17 * cw, .13 * ch) : Math.min(.12 * cw, .18 * ch)) - 16, colGap = Math.max(16, .03 * cw), available = Math.max(120, bottomLimit - hudTop);
+            let th = (available - 14) / 2, tw = th * railRatio;
+            const maxW = Math.min(.46 * cw, (cw - colGap) / 2 - 8);
+            tw > maxW && (tw = maxW, th = tw / railRatio);
+            const y0 = hudTop + (available - (2 * th + 14)) / 2 + th / 2, xs = [ cw / 2 - colGap / 2 - tw / 2, cw / 2 + colGap / 2 + tw / 2 ], ys = [ y0, y0 + th + 14 ], sortMode = isLaundrySortGame(), out = [];
+            for (let i = 0; i < 4; i++) {
+                const sortRack = sortMode ? LAUNDRY_SORT_RACKS[i] : null;
+                out.push({
+                    type: "laundry_rack",
+                    label: sortRack ? sortRack.label + "架" : "晾衫架" + (i + 1),
+                    img: imgLaundryRack,
+                    drawIcon: null,
+                    style: "rack",
+                    rackIndex: i,
+                    sortKey: sortRack ? sortRack.key : null,
+                    sortLabel: sortRack ? sortRack.label : "",
+                    x: xs[i % 2],
+                    y: ys[Math.floor(i / 2)],
+                    w: tw,
+                    h: th,
+                    color: "#2E6DA4"
+                });
+            }
+            return out;
+        }(cw, ch, portrait));
         if (isLaundryRackGame()) {
             const rackRatio = imgLaundryRack.naturalWidth > 0 && imgLaundryRack.naturalHeight > 0 ? imgLaundryRack.naturalWidth / imgLaundryRack.naturalHeight : 779 / 453;
             let tw = isLaundryBasicGame() ? Math.min(.96 * cw, 1320) : portrait ? Math.min(.88 * cw, 980) : Math.min(.92 * cw, 1220), th = tw / rackRatio;
@@ -7264,7 +7361,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                     var fan;
                                     mj.wins++, mj.streak++, mj.streak > mj.bestStreak && (mj.bestStreak = mj.streak), 
                                     mj.fanTotal += res.fan, mj.bestTier = tier.label, score += 10 * res.fan, correctCount++, 
-                                    grabCount++, updateHUD();
+                                    isLevel6() || grabCount++, updateHUD();
                                     const routes = function(res) {
                                         const base = mj.def.base, groups = mj.def.groups, need = 14 - base.length, out = [], walk = (i, chosen, size, exclUsed) => {
                                             if (size === need) {
@@ -7346,7 +7443,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                             if (c.suit === cards.suit) {
                                 c.gone = !0, cards.got++, cards.combo++, cards.combo > cards.bestCombo && (cards.bestCombo = cards.combo);
                                 const pts = cfg2.bonus ? 20 : 10;
-                                if (score += pts, correctCount++, grabCount++, updateHUD(), adaptiveNoteTrial("cards_place", "success"), 
+                                if (score += pts, correctCount++, isLevel6() || grabCount++, updateHUD(), adaptiveNoteTrial("cards_place", "success"), 
                                 cards.got >= cards.need) {
                                     cards.rounds++;
                                     const oldTier = cards.tierIdx;
@@ -7912,12 +8009,12 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                         const elapsed = now - dwellStartTime;
                                         if (elapsed >= DWELL_MS) {
                                             const dwellDimsumOrderDrop = isDimsumBowlGame() && "dimsum_plate" === onPlate.type, dwellLaundryOrderDrop = isLaundryRackGame() && "laundry_rack" === onPlate.type, dwellFridgeDrop = isFridgeGame() && "fridge" === onPlate.type;
-                                            (dwellDimsumOrderDrop ? dimsumBowlAccepts(heldItem) : dwellLaundryOrderDrop ? laundryRackAccepts(heldItem) : dwellFridgeDrop ? fridgeTryPlace(heldItem, heldPoint.x, heldPoint.y, onPlate) : onPlate.type === heldItem.targetType) ? (dwellDimsumOrderDrop ? dimsumBowlPlace(heldItem) : dwellLaundryOrderDrop && laundryRackPlace(heldItem), 
+                                            (dwellDimsumOrderDrop ? dimsumBowlAccepts(heldItem) : dwellLaundryOrderDrop ? laundryRackAccepts(heldItem, onPlate) : dwellFridgeDrop ? fridgeTryPlace(heldItem, heldPoint.x, heldPoint.y, onPlate) : onPlate.type === heldItem.targetType) ? (dwellDimsumOrderDrop ? dimsumBowlPlace(heldItem) : dwellLaundryOrderDrop && laundryRackPlace(heldItem, onPlate), 
                                             score += 10, correctCount++, wrongStreak = 0, triggerFeedback(!0), heldItem.label, 
                                             onPlate.label, adaptiveNoteTrial("transport_place", "success"), showLevelUpBanner(), 
-                                            dimsumReward()) : dwellFridgeDrop ? (triggerFeedback(!1), heldItem.label) : (score = Math.max(0, score - 3), 
-                                            wrongStreak++, totalWrong++, triggerFeedback(!1), heldItem.label, onPlate.label, 
-                                            adaptiveNoteTrial("transport_place", "failure", {
+                                            dimsumReward()) : dwellFridgeDrop || dwellLaundryOrderDrop && laundryRackRejectedWithoutPenalty() ? (triggerFeedback(!1), 
+                                            heldItem.label) : (score = Math.max(0, score - 3), wrongStreak++, totalWrong++, 
+                                            triggerFeedback(!1), heldItem.label, onPlate.label, adaptiveNoteTrial("transport_place", "failure", {
                                                 reason: "wrong_target"
                                             }), wrongStreak >= 5 && triggerRecoveryPause()), updateHUD(), heldItem.removed = !0, 
                                             heldItem = null, gripActive = !1, dwellTarget = null, advanceLevel3RoundVariant(), 
@@ -8221,7 +8318,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                         }
                         isDimsumOrderGame() && dimsumOrder && (dimsumOrderBannerRect = null), isLaundryOrderGame() && laundryOrder && (laundryOrderBannerRect = null), 
                         isFridgeGame() && fridgeQueue.length && (fridgeBannerRect = null), function(ctx, cw, ch) {
-                            "67" === state.level && "cards" === state.theme && isPatientVisualCueMode() && drawCardsBigChip(ctx, "♥ 放紅心牌堆　♠ 放黑桃牌堆", "#2C3E50", cardsBigChipY(cw, ch));
+                            usesAdvancedThemeModule() || "67" === state.level && "cards" === state.theme && isPatientVisualCueMode() && drawCardsBigChip(ctx, "♥ 放紅心牌堆　♠ 放黑桃牌堆", "#2C3E50", cardsBigChipY(cw, ch));
                         }(ctx, cw, ch);
                         const cursorPoint = level4StandardCarryPoint() || {
                             x: cursorX,
@@ -8309,7 +8406,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                         el.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:99998;pointer-events:none;background:rgba(10,20,18,.82);color:#e8fff6;font:12px/1.4 -apple-system,"PingFang TC",sans-serif;padding:6px 9px;border-radius:10px;white-space:pre;', 
                         document.body.appendChild(el), framePerf.overlayEl = el);
                         const p = framePerfSnapshot();
-                        el.textContent = `perf v122  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}\n左右手檢查 ${"off" === p.hand.check ? "關" : "開"}  鎖定手形 ${p.hand.lockSize || "-"}  大小拒絕 ${p.hand.sizeRejected}  遠處拒絕 ${p.hand.farRejected}` + (p.tool ? `\n衣夾 近指 ${p.tool.near} 放手≥${p.tool.nearExit} 張開≥${p.tool.nearOpen}  遠指 ${p.tool.far} 放手≥${p.tool.farExit} 張開≥${p.tool.farOpen}  門檻 ${p.tool.source}\n衣夾 合併 ${p.tool.combo} 拎起≤${p.tool.enter} 放手閘≥${p.tool.gate}` : ""), 
+                        el.textContent = `perf v123  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}\n左右手檢查 ${"off" === p.hand.check ? "關" : "開"}  鎖定手形 ${p.hand.lockSize || "-"}  大小拒絕 ${p.hand.sizeRejected}  遠處拒絕 ${p.hand.farRejected}` + (p.tool ? `\n衣夾 近指 ${p.tool.near} 放手≥${p.tool.nearExit} 張開≥${p.tool.nearOpen}  遠指 ${p.tool.far} 放手≥${p.tool.farExit} 張開≥${p.tool.farOpen}  門檻 ${p.tool.source}\n衣夾 合併 ${p.tool.combo} 拎起≤${p.tool.enter} 放手閘≥${p.tool.gate}` : ""), 
                         el.style.display = state.running ? "block" : "none";
                     }(perfT2);
                 } catch (e) {
@@ -8735,7 +8832,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                 if (!list.length) return null;
                 if (1 === list.length) return list[0];
                 const itemType = item?.targetType || item?.type || "";
-                return list.find(z => z.type === itemType) || (isDimsumOrderGame() ? list.find(z => "dimsum_plate" === z.type) : null) || (isLaundryRackGame() ? list.find(z => "laundry_rack" === z.type) : null) || null;
+                return list.find(z => z.type === itemType) || (isDimsumOrderGame() ? list.find(z => "dimsum_plate" === z.type) : null) || (isLaundryZoneGame() ? list.find(z => "laundry_rack" === z.type && z.rackIndex === laundryLitRack) : null) || (isLaundrySortGame() ? list.find(z => "laundry_rack" === z.type && z.rackIndex === laundrySortRackFor(itemType)) : null) || (isLaundryRackGame() ? list.find(z => "laundry_rack" === z.type) : null) || null;
             }(item, s.zones), sourceY = Number.isFinite(Number(item?.y)) ? Number(item.y) : cursorY, targetY = Number(target?.y), verticalGap = Math.max(36, .1 * gameCanvas.height);
             return publicPatientVoiceGuide.holdId = String(itemId), publicPatientVoiceGuide.holdStartedAt = nowMs(), 
             publicPatientVoiceGuide.holdStartY = sourceY, publicPatientVoiceGuide.bestY = sourceY, 
@@ -8837,12 +8934,12 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                 if (elapsed >= 220) {
                     if (onPlate) {
                         const dimsumOrderDrop = isDimsumBowlGame() && "dimsum_plate" === onPlate.type, laundryOrderDrop = isLaundryRackGame() && "laundry_rack" === onPlate.type, fridgeDrop = isFridgeGame() && "fridge" === onPlate.type;
-                        (dimsumOrderDrop ? dimsumBowlAccepts(heldItem) : laundryOrderDrop ? laundryRackAccepts(heldItem) : fridgeDrop ? fridgeTryPlace(heldItem, cursorX, cursorY, onPlate) : heldItem.targetType === onPlate.type) ? (dimsumOrderDrop ? dimsumBowlPlace(heldItem) : laundryOrderDrop && laundryRackPlace(heldItem), 
+                        (dimsumOrderDrop ? dimsumBowlAccepts(heldItem) : laundryOrderDrop ? laundryRackAccepts(heldItem, onPlate) : fridgeDrop ? fridgeTryPlace(heldItem, cursorX, cursorY, onPlate) : heldItem.targetType === onPlate.type) ? (dimsumOrderDrop ? dimsumBowlPlace(heldItem) : laundryOrderDrop && laundryRackPlace(heldItem, onPlate), 
                         score += 10, correctCount++, wrongStreak = 0, triggerFeedback(!0), heldItem.label, 
                         onPlate.label, adaptiveNoteTrial("grasp_release", "success"), showLevelUpBanner(), 
-                        dimsumReward()) : fridgeDrop ? (triggerFeedback(!1), heldItem.label) : (score = Math.max(0, score - 3), 
-                        wrongStreak++, totalWrong++, triggerFeedback(!1), heldItem.label, onPlate.label, 
-                        adaptiveNoteTrial("grasp_release", "failure", {
+                        dimsumReward()) : fridgeDrop || laundryOrderDrop && laundryRackRejectedWithoutPenalty() ? (triggerFeedback(!1), 
+                        heldItem.label) : (score = Math.max(0, score - 3), wrongStreak++, totalWrong++, 
+                        triggerFeedback(!1), heldItem.label, onPlate.label, adaptiveNoteTrial("grasp_release", "failure", {
                             reason: "wrong_target"
                         }), wrongStreak >= 5 && triggerRecoveryPause()), updateHUD(), heldItem.removed = !0, 
                         heldItem.held = !1, heldItem = null, basicPostReleaseOpenStart = level5PostReleaseOpenMs() ? now : 0, 
@@ -8990,7 +9087,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             plateW = t.w, plateH = plateW / ratio, plateH > t.h && (plateH = t.h, plateW = plateH * ratio), 
             drawImageScaled(ctx, t.img, t.x - plateW / 2, t.y - plateH / 2, plateW, plateH);
         } else drawRiceBowl(ctx, t.x, t.y, .45 * Math.min(t.w, t.h));
-        const itemR = .135 * Math.min(plateW, plateH);
+        const itemR = Math.min(plateW, plateH) * DIMSUM_PLATE_ITEM_R_FRAC;
         for (const p of dimsumPlateContents) {
             const px = t.x + p.fx * plateW, py = t.y + p.fy * plateH;
             if (p.img && p.img.complete && p.img.naturalWidth > 0) {
@@ -9004,6 +9101,52 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         ctx.restore();
     }
     function drawLaundryRackTarget(ctx, t) {
+        if ("number" == typeof t.rackIndex) return void function(ctx, t) {
+            gameCanvas.width;
+            const ch = gameCanvas.height, img = t.img, hasImg = img && img.complete && img.naturalWidth > 0, frac = isPortrait() ? LAUNDRY_RACK_RAIL_FRAC.portrait : LAUNDRY_RACK_RAIL_FRAC.landscape, rw = t.w, rh = t.h, x0 = t.x - rw / 2, y0 = t.y - rh / 2, now = nowMs(), lit = isLaundryZoneGame() && t.rackIndex === laundryLitRack, wrong = t.rackIndex === laundryWrongRack && now < laundryWrongUntil;
+            ctx.save();
+            const pulse = .5 + .5 * Math.sin(now / 175);
+            if (ctx.fillStyle = lit ? `rgba(255, 214, 0, ${(.3 + .3 * pulse).toFixed(3)})` : "rgba(218,232,238,0.88)", 
+            ctx.strokeStyle = wrong ? "rgba(214,40,40,0.95)" : lit ? `rgba(255, 160, 0, ${(.6 + .4 * pulse).toFixed(3)})` : "rgba(46,109,164,0.48)", 
+            ctx.lineWidth = lit || wrong ? 10 : Math.max(3, .02 * Math.min(rw, rh)), rrPath(ctx, x0 - 12, y0 - 12, rw + 24, rh + 24, 22), 
+            ctx.fill(), ctx.stroke(), hasImg) {
+                const sh = img.naturalHeight * frac;
+                ctx.drawImage(img, 0, 0, img.naturalWidth, sh, x0, y0, rw, rh);
+            } else drawDryingPole(ctx, t.x, t.y, .45 * Math.min(rw, rh));
+            if (lit) {
+                const bulbR = Math.max(16, .14 * Math.min(rw, rh)), bx = x0 + 1.4 * bulbR, by = y0 + 1.3 * bulbR;
+                ctx.fillStyle = `rgba(255, 244, 150, ${(.75 + .25 * pulse).toFixed(3)})`, ctx.beginPath(), 
+                ctx.arc(bx, by, bulbR, 0, 2 * Math.PI), ctx.fill(), ctx.strokeStyle = "#B8860B", 
+                ctx.lineWidth = 3, ctx.beginPath(), ctx.arc(bx, by, bulbR, 0, 2 * Math.PI), ctx.stroke(), 
+                ctx.fillStyle = "#8B6508", ctx.fillRect(bx - .4 * bulbR, by + bulbR, .8 * bulbR, .55 * bulbR);
+            }
+            if (isLaundrySortGame() && t.sortLabel) {
+                const fs = Math.max(22, Math.round(Math.min(.075 * rw, .34 * rh)));
+                ctx.font = "bold " + fs + 'px "PingFang TC","Noto Sans TC",sans-serif';
+                const tw = ctx.measureText(t.sortLabel).width + 1 * fs, tagH = 1.5 * fs, tagX = x0 + .02 * rw, tagY = t.y - tagH / 2;
+                ctx.fillStyle = "rgba(255,255,255,0.97)", ctx.strokeStyle = wrong ? "rgba(214,40,40,0.95)" : "#2E6DA4", 
+                ctx.lineWidth = 4, rrPath(ctx, tagX, tagY, tw, tagH, tagH / 2), ctx.fill(), ctx.stroke(), 
+                ctx.fillStyle = "#1a3a5c", ctx.textAlign = "center", ctx.textBaseline = "middle", 
+                ctx.fillText(t.sortLabel, tagX + tw / 2, tagY + tagH / 2 + 1);
+            }
+            if (lit && laundryOrder && !laundryOrder.done && laundryOrder.lines[0]) {
+                const def = LAUNDRY_ORDER_DEFS.find(d => d.type === laundryOrder.lines[0].type), gi = def ? def.img() : null;
+                if (gi && gi.complete && gi.naturalWidth > 0) {
+                    let dh = Math.min(.95 * rh, .16 * ch), dw = dh * gi.naturalWidth / gi.naturalHeight;
+                    dw > .3 * rw && (dw = .3 * rw, dh = dw * gi.naturalHeight / gi.naturalWidth), ctx.globalAlpha = .38, 
+                    drawImageScaled(ctx, gi, t.x - dw / 2, y0 + .08 * rh, dw, dh), ctx.globalAlpha = 1;
+                }
+            }
+            const railY = y0 + .08 * rh;
+            for (const c of laundryRackContents) if (c.rack === t.rackIndex && c.img && c.img.complete && c.img.naturalWidth > 0) {
+                const iw = c.img.naturalWidth, ih = c.img.naturalHeight;
+                let dh = Math.min(.95 * rh, .16 * ch), dw = dh * iw / ih;
+                const maxW = .21 * rw;
+                dw > maxW && (dw = maxW, dh = dw * ih / iw), drawImageScaled(ctx, c.img, t.x + c.fx * rw - dw / 2, railY, dw, dh);
+            }
+            t._hover && (ctx.strokeStyle = t.color || "#2E6DA4", ctx.lineWidth = 8, rrPath(ctx, x0 - 10, y0 - 10, rw + 20, rh + 20, 22), 
+            ctx.stroke()), ctx.restore();
+        }(ctx, t);
         ctx.save();
         let rw = t.w, rh = t.h;
         if (t.img && t.img.complete && t.img.naturalWidth > 0) {
@@ -9152,10 +9295,10 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         }
         showScreen("result");
     }
-    const ADV_THEMES = [ "mahjong", "cards", "cooking", "flowers", "laundry" ];
+    const ADV_THEMES = [ "mahjong", "cards", "cooking", "flowers", "laundry" ], LEVEL6_SHARED_LEVEL5_THEMES = [ "flowers", "cards", "mahjong" ];
     function usesAdvancedThemeModule(id) {
         const theme = id || state.theme;
-        return !(!isLevel6() || "flowers" !== theme) || !isGrossTabletop() && function(id) {
+        return !(!isLevel6() || !LEVEL6_SHARED_LEVEL5_THEMES.includes(theme)) || !isGrossTabletop() && function(id) {
             return ADV_THEMES.indexOf(id || state.theme) >= 0;
         }(theme);
     }
@@ -9579,7 +9722,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                 const holdMs = advancedGraspHoldMs();
                 return this.pct = Math.min(1, (now - this.graspStart) / holdMs), now - this.graspStart >= holdMs && (this.heldId = best.id, 
                 this.armed = !1, this.relStart = 0, this.relPauseAt = 0, this.relLastOpenAt = 0, 
-                this.pct = 0, updatePublicPatientVoiceGuide({
+                this.pct = 0, isLevel6() && grabCount++, updatePublicPatientVoiceGuide({
                     phase: "pickup",
                     item: best,
                     zones: releaseZone ? [ releaseZone ] : []
@@ -10374,7 +10517,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         advSetPanel({
             stepNo: "第 " + mj.roundNo + " 局 · 累積 " + mj.fanTotal + " 番",
             text: isPatientVisualCueMode() ? "揀一組牌，放到" + (affectedSideSign() > 0 ? "右邊" : "左邊") + "放牌區。" : "揀一組牌，仲需要 " + mjNeed() + " 隻",
-            goal: mj.msg || (isLevel4Tabletop() ? "在牌上停住，沿中線向前滑，再在放牌區停住。" : "67" === state.level ? level67ToolProfile().actionCue + " · 移到患側外方放牌區" : "從中間握住牌，移到患側外方放牌區，再張開手。"),
+            goal: mj.msg || (isLevel4Tabletop() ? "在牌上停住，沿中線向前滑，再在放牌區停住。" : "67" === state.level ? activeLevel67ToolProfile().actionCue + " · 移到患側外方放牌區" : "從中間握住牌，移到患側外方放牌區，再張開手。"),
             metric: nextTierFan ? "下一個目標：累積 " + nextTierFan + " 番" : "已達上限級別",
             pct: 1 - mjNeed() / Math.max(1, 14 - mj.def.base.length),
             buttons: [ {
@@ -10523,7 +10666,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         advSetPanel({
             stepNo: "Tier " + cfg.tier + (cfg.bonus ? " · 剩 " + bonusLeft + " 秒" : "") + " · 連續正確 " + cards.combo + " 次",
             text: isPatientVisualCueMode() ? "拿起" + CARD_SUIT_NAME[cards.suit] + "牌，放到" + (isPublicLevel5VerticalFlow() ? "上方收牌區。" : (affectedSideSign() > 0 ? "右邊" : "左邊") + "收牌區。") : "收集 " + CARD_SUIT_NAME[cards.suit] + " " + CARD_SUIT_SYM[cards.suit] + "：" + cards.got + " / " + cards.need,
-            goal: cards.msg || (isLevel4Tabletop() ? "在牌上停住，沿中線向前滑，再在放牌區停住。" : "67" === state.level ? level67ToolProfile().actionCue + " · 移到患側外方放牌區" : "從中間拿牌，移到患側外方放牌區，再張開手。"),
+            goal: cards.msg || (isLevel4Tabletop() ? "在牌上停住，沿中線向前滑，再在放牌區停住。" : "67" === state.level ? activeLevel67ToolProfile().actionCue + " · 移到患側外方放牌區" : "從中間拿牌，移到患側外方放牌區，再張開手。"),
             metric: "下一階段：完成 " + Math.max(0, 3 === cardsTierFor(cards.rounds) ? 0 : [ 2, 4, 6 ][cardsTierFor(cards.rounds)] - cards.rounds) + " 輪後升級",
             pct: cards.got / cards.need,
             buttons: []
@@ -10823,18 +10966,49 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             this.name = "", this.sigStrokes = [], this.palettePage = 0, this.movingId = "", 
             this.moveOrigin = null;
         }
-    };
+    }, FLOWERS_PATIENT_MAX_SIZE = 180, FLOWERS_PATIENT_MIN_SIZE_FOR_8 = 150, FLOWERS_PATIENT_LEFT_CLEAR_PX = 165;
     function flowersSetup() {
-        const cw = gameCanvas.width, ch = gameCanvas.height, portrait = ch > cw, batch = FLOWER_KINDS.slice(flowers.palettePage * FLOWERS_PER_PAGE, flowers.palettePage * FLOWERS_PER_PAGE + FLOWERS_PER_PAGE), gap = Math.min(.118 * cw, portrait ? 96 : 140), patientLarge = isPatientVisualCueMode(), size = patientLarge ? Math.min(1.04 * gap, portrait ? 102 : 132) : Math.min(.94 * gap, portrait ? 92 : 120), rowY = ch - .62 * size - 8, trayTop = rowY - .62 * size;
-        flowers.palette = batch.map((k, i) => ({
-            id: "pal" + (flowers.palettePage * FLOWERS_PER_PAGE + i),
-            kind: k.key,
-            name: k.name,
-            x: cw / 2 + (i - (FLOWERS_PER_PAGE - 1) / 2) * gap,
-            y: rowY,
-            r: .5 * size,
-            size: size
-        }));
+        const cw = gameCanvas.width, ch = gameCanvas.height, portrait = ch > cw, batch = FLOWER_KINDS.slice(flowers.palettePage * FLOWERS_PER_PAGE, flowers.palettePage * FLOWERS_PER_PAGE + FLOWERS_PER_PAGE), patientLarge = isPatientVisualCueMode(), layout = function(cw, ch, portrait, patientLarge) {
+            if (!patientLarge) {
+                const gap = Math.min(.118 * cw, portrait ? 96 : 140), size = Math.min(.94 * gap, portrait ? 92 : 120);
+                return {
+                    gap: gap,
+                    size: size,
+                    perRow: FLOWERS_PER_PAGE,
+                    rowStep: 1.22 * size
+                };
+            }
+            const gapForRow = (perRow, gapCap) => Math.min(gapCap, (cw / 2 - FLOWERS_PATIENT_LEFT_CLEAR_PX) / ((perRow - 1) / 2));
+            if (portrait) {
+                const gap = gapForRow(4, Math.min(.23 * cw, 240)), size = Math.min(.9 * gap, FLOWERS_PATIENT_MAX_SIZE);
+                return {
+                    gap: gap,
+                    size: size,
+                    perRow: 4,
+                    rowStep: 1.22 * size
+                };
+            }
+            let perRow = FLOWERS_PER_PAGE, gap = gapForRow(perRow, Math.min(.118 * cw, 190)), size = Math.min(1.04 * gap, FLOWERS_PATIENT_MAX_SIZE);
+            return size < FLOWERS_PATIENT_MIN_SIZE_FOR_8 && (perRow = 6, gap = gapForRow(perRow, Math.min(.157 * cw, 220)), 
+            size = Math.min(1.04 * gap, FLOWERS_PATIENT_MAX_SIZE)), {
+                gap: gap,
+                size: size,
+                perRow: perRow,
+                rowStep: 1.22 * size
+            };
+        }(cw, 0, portrait, patientLarge), {gap: gap, size: size, perRow: perRow, rowStep: rowStep} = layout, shown = perRow < FLOWERS_PER_PAGE && !portrait ? batch.slice(0, perRow) : batch, rows = Math.ceil(shown.length / perRow), lastRowY = ch - .62 * size - 8, trayTop = lastRowY - (rows - 1) * rowStep - .62 * size;
+        flowers.palette = shown.map((k, i) => {
+            const row = Math.floor(i / perRow), col = i % perRow;
+            return {
+                id: "pal" + (flowers.palettePage * FLOWERS_PER_PAGE + i),
+                kind: k.key,
+                name: k.name,
+                x: cw / 2 + (col - (perRow - 1) / 2) * gap,
+                y: lastRowY - (rows - 1 - row) * rowStep,
+                r: .5 * size,
+                size: size
+            };
+        });
         const vaseH = patientLarge ? .25 * ch : Math.min(ch * (portrait ? .34 : .42), 400);
         flowers.layout = {
             vase: {
@@ -11081,7 +11255,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
 <script src="level4-three-games-module.js"></script>
 <script>
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
-  const LEVEL_APP_BUILD = "v122-20261118-privacy-window";
+  const LEVEL_APP_BUILD = "v123-20261118-laundry-four-racks";
   const levelAppHadController = Boolean(navigator.serviceWorker.controller);
   let levelAppReloading = false;
 
