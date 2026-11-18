@@ -178,6 +178,7 @@ self.__OFFLINE_ASSETS = [
   "./img/shop_cart.png",
   "./img/shop_cashier_bg.jpg",
   "./img/shop_ecobag.png",
+  "./img/shop_hand.png",
   "./img/shop_home_bg.jpg",
   "./img/shop_octopus.png",
   "./img/shop_orange.png",

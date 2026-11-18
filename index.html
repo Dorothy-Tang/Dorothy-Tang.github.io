@@ -1776,7 +1776,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         fridgeDifficulty: "basic",
         dimsumDifficulty: "basic",
         theme: "dimsum",
-        shopListSize: "short",
+        shopListSize: "medium",
         dimsumSceneMode: "teahouse",
         mode: "single",
         duration: 300,
@@ -2230,7 +2230,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         steps: [],
         idx: 0,
         stepStartedMs: 0,
-        listSize: "short",
+        listSize: "medium",
         list: [],
         cart: [],
         counter: [],
@@ -2249,10 +2249,10 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         return isShoulderFlexionLevel() && "supermarket" === state.theme;
     }
     function shopListSizeKey() {
-        return SHOP_LIST_SIZES[state.shopListSize] ? state.shopListSize : "short";
+        return SHOP_LIST_SIZES[state.shopListSize] ? state.shopListSize : "medium";
     }
     function buildShopList(sizeKey) {
-        const n = SHOP_LIST_SIZES[sizeKey] || 2;
+        const n = SHOP_LIST_SIZES[sizeKey] || 4;
         return SHOP_LIST_POOL.slice(0, n).map(id => ({
             id: id,
             need: "apple" === id || "orange" === id ? 2 : 1,
@@ -2410,14 +2410,17 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         const p = clamp01(progress), x0 = g.laneX, y0 = g.laneBottom, x = x0 + (targetX - x0) * p, y = y0 + (targetY - y0) * p;
         ctx.save(), ctx.setLineDash([ 12, 10 ]), ctx.lineWidth = 5, ctx.strokeStyle = "rgba(26,107,90,0.45)", 
         ctx.beginPath(), ctx.moveTo(x0, y0), ctx.lineTo(targetX, targetY), ctx.stroke(), 
-        ctx.setLineDash([]), ctx.lineWidth = Math.max(14, .18 * g.itemSize), ctx.lineCap = "round", 
-        ctx.strokeStyle = "rgba(240,140,0,0.78)", ctx.beginPath(), ctx.moveTo(x0, y0), ctx.lineTo(x, y), 
-        ctx.stroke();
-        const r = Math.max(22, .24 * g.itemSize);
-        ctx.beginPath(), ctx.arc(x, y, r, 0, 2 * Math.PI), ctx.fillStyle = "#F6B04E", ctx.fill(), 
-        ctx.lineWidth = 4, ctx.strokeStyle = "#8a4b00", ctx.stroke(), ctx.fillStyle = "#4a2a00", 
-        ctx.font = "800 " + Math.round(1.05 * r) + 'px "PingFang TC","Noto Sans TC",sans-serif', 
-        ctx.textAlign = "center", ctx.textBaseline = "middle", ctx.fillText("手", x, y + 1), 
+        ctx.setLineDash([]), ctx.lineWidth = Math.max(16, .22 * g.itemSize), ctx.lineCap = "round", 
+        ctx.strokeStyle = "rgba(88,184,176,0.92)", ctx.beginPath(), ctx.moveTo(x0, y0 + .3 * g.itemSize), 
+        ctx.lineTo(x, y + .28 * g.itemSize), ctx.stroke();
+        const hh = Math.max(80, 1.15 * g.itemSize);
+        if (imgShopHand && imgShopHand.complete && imgShopHand.naturalWidth) {
+            const hw = hh * imgShopHand.naturalWidth / imgShopHand.naturalHeight;
+            ctx.drawImage(imgShopHand, x - hw / 2, y - .5 * hh, hw, hh);
+        } else {
+            const r = Math.max(22, .24 * g.itemSize);
+            ctx.beginPath(), ctx.arc(x, y, r, 0, 2 * Math.PI), ctx.fillStyle = "#F6B04E", ctx.fill();
+        }
         ctx.restore();
     }
     function drawShopGlow(ctx, x, y, r) {
@@ -5026,6 +5029,8 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     imgShopToiletpaper.src = "img/shop_toiletpaper.png";
     const imgShopEggs = new Image;
     imgShopEggs.src = "img/advanced/eggs.png";
+    const imgShopHand = new Image;
+    imgShopHand.src = "img/shop_hand.png";
     const imgSteamerEmpty = new Image;
     imgSteamerEmpty.src = "img/steamer_empty.png";
     const imgThPlate = new Image;
@@ -8715,18 +8720,51 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                     ctx.save(), ctx.fillStyle = "rgba(0,0,0,0.18)", ctx.fillRect(sx + 6, sy + g.shelfH + 4, g.shelfW, 10), 
                                     ctx.fillStyle = "#c9a46a", ctx.fillRect(sx, sy, g.shelfW, g.shelfH), ctx.fillStyle = "#8d6a3a", 
                                     ctx.fillRect(sx, sy + g.shelfH - 4, g.shelfW, 4), ctx.restore();
-                                    const slots = Math.max(1, (line ? line.need : 1) + 1), slotW = g.shelfW / (slots + 1), shelfItems = [];
-                                    for (let i = 0; i < slots; i++) shelfItems.push({
-                                        x: sx + slotW * (i + 1),
-                                        y: g.shelfItemY
-                                    });
-                                    const showN = Math.min(slots, remaining + 1);
-                                    for (let i = 0; i < showN; i++) drawShopImgFit(ctx, shopItemImg(itemId), shelfItems[i].x, shelfItems[i].y, g.itemSize, g.itemSize);
-                                    const targetSlot = shelfItems[Math.max(0, showN - 1)];
-                                    if (step.walk ? drawShopBanner(ctx, cw, g, step.text) : (drawShopBanner(ctx, cw, g, step.text, line ? "已攞 " + line.got + "／" + line.need : ""), 
-                                    "fly" !== anim.phase && remaining > 0 && (drawShopGlow(ctx, targetSlot.x, targetSlot.y, .62 * g.itemSize), 
-                                    drawShopImgFit(ctx, shopItemImg(itemId), targetSlot.x, targetSlot.y, g.itemSize, g.itemSize), 
-                                    drawShopArmMarker(ctx, g, targetSlot.x, targetSlot.y + .55 * g.itemSize, progress))), 
+                                    const layout = function(g, itemId, remaining) {
+                                        const it = SHOP_ITEMS[itemId] || {}, cx = g.laneX;
+                                        if ("個" === it.unit) {
+                                            const s = .66 * g.itemSize, n = Math.min(9, 5 + Math.max(0, remaining)), off = [ [ -1.5, 0 ], [ -.5, 0 ], [ .5, 0 ], [ 1.5, 0 ], [ -1, -.72 ], [ 0, -.72 ], [ 1, -.72 ], [ -.5, -1.42 ], [ .5, -1.42 ] ], baseY = g.shelfItemY + .2 * g.itemSize, items = [];
+                                            for (let i = 0; i < n; i++) items.push({
+                                                x: cx + off[i][0] * s * .78,
+                                                y: baseY + off[i][1] * s * .78,
+                                                s: s
+                                            });
+                                            return {
+                                                items: items,
+                                                crate: {
+                                                    x: cx - 2.05 * s,
+                                                    y: baseY - .55 * s,
+                                                    w: 4.1 * s,
+                                                    h: 1.25 * s
+                                                }
+                                            };
+                                        }
+                                        const s = .9 * g.itemSize, n = Math.min(6, 3 + Math.max(0, remaining)), gap = .58 * s, items = [];
+                                        for (let i = 0; i < n; i++) items.push({
+                                            x: cx + (n - 1 - i) * gap - (n - 1) * gap / 2,
+                                            y: g.shelfItemY - i * s * .03,
+                                            s: s
+                                        });
+                                        return {
+                                            items: items,
+                                            crate: null
+                                        };
+                                    }(g, itemId, remaining);
+                                    layout.crate && function(ctx, c) {
+                                        ctx.save(), ctx.fillStyle = "rgba(0,0,0,0.16)", ctx.fillRect(c.x + 6, c.y + c.h + 2, c.w, 8), 
+                                        ctx.fillStyle = "#b98a4f", rrPath(ctx, c.x, c.y, c.w, c.h, 8), ctx.fill(), ctx.fillStyle = "#8d6333", 
+                                        ctx.fillRect(c.x, c.y + .42 * c.h, c.w, .12 * c.h), ctx.fillRect(c.x, c.y + c.h - .18 * c.h, c.w, .18 * c.h), 
+                                        ctx.strokeStyle = "#6d4a24", ctx.lineWidth = 3, rrPath(ctx, c.x, c.y, c.w, c.h, 8), 
+                                        ctx.stroke(), ctx.restore();
+                                    }(ctx, layout.crate);
+                                    for (let i = 0; i < layout.items.length - 1; i++) {
+                                        const q = layout.items[i];
+                                        drawShopImgFit(ctx, shopItemImg(itemId), q.x, q.y, q.s, q.s);
+                                    }
+                                    const targetSlot = layout.items[layout.items.length - 1], drawTop = () => drawShopImgFit(ctx, shopItemImg(itemId), targetSlot.x, targetSlot.y, targetSlot.s, targetSlot.s);
+                                    if (step.walk ? (drawTop(), drawShopBanner(ctx, cw, g, step.text)) : (drawShopBanner(ctx, cw, g, step.text, line ? "已攞 " + line.got + "／" + line.need : ""), 
+                                    "fly" !== anim.phase && remaining > 0 && drawShopGlow(ctx, targetSlot.x, targetSlot.y, .72 * targetSlot.s), 
+                                    drawTop(), "fly" !== anim.phase && remaining > 0 && drawShopArmMarker(ctx, g, targetSlot.x, targetSlot.y + .55 * targetSlot.s, progress)), 
                                     drawShopCartWithItems(ctx, g, shopStory.cart), "fly" === anim.phase && "take" === anim.step.action) {
                                         const p = shopFlyPos({
                                             x: targetSlot.x,
@@ -8735,7 +8773,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                             x: g.cartX - .05 * g.cartW,
                                             y: g.cartY - .25 * g.cartW
                                         }, animP);
-                                        drawShopImgFit(ctx, shopItemImg(itemId), p.x, p.y, g.itemSize * (1 - .35 * animP), g.itemSize * (1 - .35 * animP));
+                                        drawShopImgFit(ctx, shopItemImg(itemId), p.x, p.y, targetSlot.s * (1 - .25 * animP), targetSlot.s * (1 - .25 * animP));
                                     }
                                 } else if ("walk_cashier" === scene) drawShopBanner(ctx, cw, g, step.text), drawShopCartWithItems(ctx, g, shopStory.cart); else if ("cashier" === scene) {
                                     const g2 = Object.assign({}, g, {
@@ -9070,7 +9108,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                         el.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:99998;pointer-events:none;background:rgba(10,20,18,.82);color:#e8fff6;font:12px/1.4 -apple-system,"PingFang TC",sans-serif;padding:6px 9px;border-radius:10px;white-space:pre;', 
                         document.body.appendChild(el), framePerf.overlayEl = el);
                         const p = framePerfSnapshot();
-                        el.textContent = `perf v125  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}\n左右手檢查 ${"off" === p.hand.check ? "關" : "開"}  鎖定手形 ${p.hand.lockSize || "-"}  大小拒絕 ${p.hand.sizeRejected}  遠處拒絕 ${p.hand.farRejected}` + (p.tool ? `\n衣夾 近指 ${p.tool.near} 放手≥${p.tool.nearExit} 張開≥${p.tool.nearOpen}  遠指 ${p.tool.far} 放手≥${p.tool.farExit} 張開≥${p.tool.farOpen}  門檻 ${p.tool.source}\n衣夾 合併 ${p.tool.combo} 拎起≤${p.tool.enter} 放手閘≥${p.tool.gate}` : ""), 
+                        el.textContent = `perf v126  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}\n左右手檢查 ${"off" === p.hand.check ? "關" : "開"}  鎖定手形 ${p.hand.lockSize || "-"}  大小拒絕 ${p.hand.sizeRejected}  遠處拒絕 ${p.hand.farRejected}` + (p.tool ? `\n衣夾 近指 ${p.tool.near} 放手≥${p.tool.nearExit} 張開≥${p.tool.nearOpen}  遠指 ${p.tool.far} 放手≥${p.tool.farExit} 張開≥${p.tool.farOpen}  門檻 ${p.tool.source}\n衣夾 合併 ${p.tool.combo} 拎起≤${p.tool.enter} 放手閘≥${p.tool.gate}` : ""), 
                         el.style.display = state.running ? "block" : "none";
                     }(perfT2);
                 } catch (e) {
@@ -11919,7 +11957,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
 <script src="level4-three-games-module.js"></script>
 <script>
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
-  const LEVEL_APP_BUILD = "v125-20261118-supermarket-story";
+  const LEVEL_APP_BUILD = "v126-20261119-shelf-heap-hand";
   const levelAppHadController = Boolean(navigator.serviceWorker.controller);
   let levelAppReloading = false;
 
