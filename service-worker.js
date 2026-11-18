@@ -1,4 +1,4 @@
-const CACHE_VERSION = "fthue-rehab-v118-20261113-calib-face-hide";
+const CACHE_VERSION = "fthue-rehab-v119-20261118-peg-release-35";
 const OFFLINE_PAGE = "./offline.html";
 
 importScripts("./offline-assets.js");
