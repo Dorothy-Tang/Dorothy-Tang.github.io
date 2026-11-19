@@ -8182,15 +8182,31 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                         active: p < 1
                                     };
                                 }(now), s = g.s, cx = g.cx, cy = g.cy;
+                                let bgRect = {
+                                    x: 0,
+                                    y: 0,
+                                    w: cw,
+                                    h: ch
+                                };
                                 if (imgCookKitchenBg.complete && imgCookKitchenBg.naturalWidth) {
-                                    const iw = imgCookKitchenBg.naturalWidth, ih = imgCookKitchenBg.naturalHeight, sc = Math.max(cw / iw, ch / ih), dw = iw * sc, dh = ih * sc;
-                                    ctx.drawImage(imgCookKitchenBg, (cw - dw) / 2, .7 * (ch - dh), dw, dh);
-                                } else ctx.fillStyle = "#f1e6d2", ctx.fillRect(0, 0, cw, ch);
+                                    const iw = imgCookKitchenBg.naturalWidth, ih = imgCookKitchenBg.naturalHeight, sc = Math.max(cw / iw, ch / ih), dw = iw * sc, dh = ih * sc, ox = Math.max(cw - dw, Math.min(0, .36 * cw - COOK_BG_BURNER.u * dw)), oy = .7 * (ch - dh);
+                                    ctx.drawImage(imgCookKitchenBg, ox, oy, dw, dh), bgRect = {
+                                        x: ox,
+                                        y: oy,
+                                        w: dw,
+                                        h: dh
+                                    };
+                                } else ctx.fillStyle = "#f1e6d2", ctx.fillRect(0, 0, cw, ch), bgRect = {
+                                    x: 0,
+                                    y: 0,
+                                    w: cw,
+                                    h: 720 * cw / 1280
+                                };
                                 ctx.save();
                                 const sh = ctx.createLinearGradient(0, .42 * ch, 0, ch);
                                 sh.addColorStop(0, "rgba(255,255,255,0)"), sh.addColorStop(1, "rgba(255,255,255,0.35)"), 
                                 ctx.fillStyle = sh, ctx.fillRect(0, .42 * ch, cw, .58 * ch), ctx.restore();
-                                const wokImg = advImg("wok"), riceImg = advImg("friedrice");
+                                const wokImg = advImg("wok");
                                 switch ([ "heat", "oil", "pour", "salt", "onion", "off", "plate" ].includes(st.id), 
                                 st.id) {
                                   case "loosen":
@@ -8308,64 +8324,56 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                   case "off":
                                   case "plate":
                                     {
-                                        const wokX = "plate" === st.id ? cx - .42 * s : cx, wokY = cy + .05 * s, wokS = "plate" === st.id ? .95 * s : 1.15 * s, flameCount = "heat" === st.id ? Math.min(cook.reps, 6) : "off" === st.id ? 6 : 5, flameAlpha = "off" === st.id ? Math.max(0, 1 - frac) : "plate" === st.id ? 0 : .9, bob = "plate" === st.id || "off" === st.id ? 0 : a.sign * a.pulse * s * .04;
-                                        if (flameAlpha > 0 && flameCount > 0) {
-                                            ctx.save(), ctx.globalAlpha = .45 * flameAlpha;
-                                            const glow = ctx.createRadialGradient(wokX, wokY + .36 * wokS, .05 * wokS, wokX, wokY + .36 * wokS, .45 * wokS);
-                                            glow.addColorStop(0, "#ff9f1a"), glow.addColorStop(1, "rgba(255,159,26,0)"), ctx.fillStyle = glow, 
-                                            ctx.beginPath(), ctx.ellipse(wokX, wokY + .36 * wokS, .5 * wokS, .14 * wokS, 0, 0, 2 * Math.PI), 
-                                            ctx.fill(), ctx.restore();
+                                        const burnerX = bgRect.x + COOK_BG_BURNER.u * bgRect.w, burnerY = bgRect.y + COOK_BG_BURNER.v * bgRect.h, wokS = Math.min(.28 * bgRect.w, .6 * cw), panCX = burnerX, wokX = panCX + .14 * wokS, panBottom = burnerY + .05 * wokS, wokY = panBottom - .32 * wokS, flameAlpha = ("heat" === st.id ? cook.reps > 0 : ![ "plate" ].includes(st.id)) ? "off" === st.id ? Math.max(0, 1 - frac) : 1 : 0, flameScale = "heat" === st.id ? .6 + .4 * frac : 1, bob = "plate" === st.id || "off" === st.id ? 0 : a.sign * a.pulse * s * .04;
+                                        if (flameAlpha > 0) {
+                                            ctx.save(), ctx.globalAlpha = .5 * flameAlpha;
+                                            const glow = ctx.createRadialGradient(panCX, panBottom, .05 * wokS, panCX, panBottom, .5 * wokS);
+                                            glow.addColorStop(0, "#ffb13b"), glow.addColorStop(1, "rgba(255,159,26,0)"), ctx.fillStyle = glow, 
+                                            ctx.beginPath(), ctx.ellipse(panCX, panBottom, .55 * wokS, .2 * wokS, 0, 0, 2 * Math.PI), 
+                                            ctx.fill(), ctx.restore(), drawCookFlames(ctx, panCX, panBottom - .02 * wokS, .78 * wokS, 7, flameAlpha, now, .3 * wokS * flameScale, "back");
                                         }
-                                        if (drawSprite(ctx, wokImg, wokX + bob, wokY, wokS, {
+                                        drawSprite(ctx, wokImg, wokX + bob, wokY, wokS, {
                                             shadow: !0,
                                             rot: a.sign * a.pulse * .04
-                                        }), function(ctx, cx, cy, w, count, alpha, now) {
-                                            if (!(count <= 0 || alpha <= 0)) {
-                                                ctx.save(), ctx.globalAlpha = alpha;
-                                                for (let i = 0; i < count; i++) {
-                                                    const fx = cx - w / 2 + w * (i + .5) / count, h = .16 * w * (.8 + .35 * Math.sin(now / 90 + 1.7 * i));
-                                                    ctx.beginPath(), ctx.moveTo(fx - .035 * w, cy), ctx.quadraticCurveTo(fx, cy - 1.5 * h, fx + .035 * w, cy), 
-                                                    ctx.fillStyle = "#ff9f1a", ctx.fill(), ctx.beginPath(), ctx.moveTo(fx - .018 * w, cy), 
-                                                    ctx.quadraticCurveTo(fx, cy - .9 * h, fx + .018 * w, cy), ctx.fillStyle = "#4aa3ff", 
-                                                    ctx.fill();
-                                                }
-                                                ctx.restore();
-                                            }
-                                        }(ctx, wokX, wokY + .4 * wokS, .5 * wokS, flameCount, flameAlpha, now), "oil" === st.id) {
+                                        }), flameAlpha > 0 && drawCookFlames(ctx, panCX, panBottom, .62 * wokS, 6, flameAlpha, now, .16 * wokS * flameScale, "front");
+                                        const innerY = wokY + .02 * wokS;
+                                        if ("oil" === st.id) {
                                             ctx.save(), ctx.globalAlpha = .9;
-                                            const rx = .14 * wokS + .2 * wokS * frac, ry = .05 * wokS + .07 * wokS * frac, og = ctx.createRadialGradient(wokX - .3 * rx, wokY - .02 * wokS - .3 * ry, 1, wokX, wokY - .02 * wokS, rx);
+                                            const rx = .12 * wokS + .18 * wokS * frac, ry = .04 * wokS + .06 * wokS * frac, og = ctx.createRadialGradient(panCX - .3 * rx, innerY - .3 * ry, 1, panCX, innerY, rx);
                                             og.addColorStop(0, "#ffe08a"), og.addColorStop(1, "#e0a92a"), ctx.fillStyle = og, 
-                                            ctx.beginPath(), ctx.ellipse(wokX, wokY - .02 * wokS, rx, ry, 0, 0, 2 * Math.PI), 
-                                            ctx.fill(), ctx.restore();
+                                            ctx.beginPath(), ctx.ellipse(panCX, innerY, rx, ry, 0, 0, 2 * Math.PI), ctx.fill(), 
+                                            ctx.restore();
                                         }
                                         if ([ "pour", "salt", "onion", "off", "plate" ].includes(st.id)) {
                                             const riceAlpha = "pour" === st.id ? Math.max(.25, frac) : "plate" === st.id ? Math.max(.15, 1 - frac) : 1;
-                                            drawSprite(ctx, riceImg, wokX + bob, wokY - .07 * wokS, .56 * wokS * ("plate" === st.id ? 1 - .5 * frac : 1), {
+                                            drawSprite(ctx, imgCookRice, panCX + bob, innerY - .03 * wokS, .46 * wokS * ("plate" === st.id ? 1 - .5 * frac : 1), {
                                                 alpha: riceAlpha
                                             });
                                         }
-                                        if ([ "onion", "off", "plate" ].includes(st.id) || "onion" === st.id) {
+                                        if ([ "onion", "off", "plate" ].includes(st.id)) {
                                             const bits = "onion" === st.id ? 5 * cook.reps : 20;
-                                            ctx.save(), ctx.fillStyle = "#5bb134";
+                                            ctx.save(), ctx.fillStyle = "#5bb134", ctx.globalAlpha = "plate" === st.id ? Math.max(.15, 1 - frac) : 1;
                                             for (let i = 0; i < bits; i++) {
-                                                const px = wokX + bob + (cookSeeded(i, 8) - .5) * wokS * .42, py = wokY - .12 * wokS + (cookSeeded(i, 9) - .5) * wokS * .12;
+                                                const px = panCX + bob + (cookSeeded(i, 8) - .5) * wokS * .36, py = innerY - .07 * wokS + (cookSeeded(i, 9) - .5) * wokS * .1;
                                                 ctx.beginPath(), ctx.ellipse(px, py, .012 * wokS, .008 * wokS, 3 * cookSeeded(i, 10), 0, 2 * Math.PI), 
                                                 ctx.fill();
                                             }
                                             ctx.restore();
                                         }
+                                        const propS = .5 * wokS, propX = wokX + .5 * wokS, propY = Math.max(wokY - .25 * wokS, .5 * propS + 12 * g.cssScale);
                                         if ("heat" === st.id && a.active) {
                                             ctx.save(), ctx.strokeStyle = "rgba(255,255,255,0.7)", ctx.lineWidth = 3;
                                             for (let i = 0; i < 3; i++) {
-                                                const x = wokX - .2 * wokS + i * wokS * .2, y0 = wokY - .35 * wokS - a.p * wokS * .25;
+                                                const x = panCX - .2 * wokS + i * wokS * .2, y0 = wokY - .3 * wokS - a.p * wokS * .25;
                                                 ctx.beginPath(), ctx.moveTo(x, y0), ctx.quadraticCurveTo(x + 10, y0 - 18, x, y0 - 36), 
                                                 ctx.stroke();
                                             }
                                             ctx.restore();
                                         }
                                         if ("oil" === st.id && (a.pulse > .3 && (ctx.save(), ctx.strokeStyle = "#f2c14e", 
-                                        ctx.lineWidth = Math.max(4, .022 * s), ctx.lineCap = "round", ctx.beginPath(), ctx.moveTo(cx + .36 * s, cy - .38 * s), 
-                                        ctx.lineTo(wokX + .05 * s, wokY - .08 * s), ctx.stroke(), ctx.restore()), drawSprite(ctx, advImg("oil_bottle"), cx + .5 * s, cy - .5 * s, .6 * s, {
+                                        ctx.lineWidth = Math.max(4, .022 * s), ctx.lineCap = "round", ctx.beginPath(), ctx.moveTo(propX - .25 * propS, propY + .1 * propS), 
+                                        ctx.lineTo(panCX + .05 * wokS, innerY - .04 * wokS), ctx.stroke(), ctx.restore()), 
+                                        drawSprite(ctx, advImg("oil_bottle"), propX, propY, propS, {
                                             shadow: !0,
                                             rot: -1.1 * a.pulse
                                         })), "pour" === st.id) {
@@ -8373,58 +8381,61 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                                 ctx.save(), ctx.fillStyle = "rgba(250,240,200,0.9)";
                                                 for (let i = 0; i < 8; i++) {
                                                     const t = (cookSeeded(i, 11) + a.p) % 1;
-                                                    ctx.beginPath(), ctx.arc(cx - .36 * s + t * s * .3, cy - .36 * s + t * s * .3, .016 * s, 0, 2 * Math.PI), 
+                                                    ctx.beginPath(), ctx.arc(propX - .3 * propS - t * (propX - .3 * propS - panCX), propY + .1 * propS + t * (innerY - propY - .1 * propS), .016 * s, 0, 2 * Math.PI), 
                                                     ctx.fill();
                                                 }
                                                 ctx.restore();
                                             }
-                                            drawSprite(ctx, advImg("rice_bowl"), cx - .5 * s, cy - .5 * s, .62 * s, {
+                                            drawSprite(ctx, advImg("rice_bowl"), propX, propY, propS, {
                                                 shadow: !0,
-                                                rot: 1 * a.pulse
+                                                rot: -1 * a.pulse
                                             });
                                         }
                                         if ("salt" === st.id) {
-                                            const sx = cx + .46 * s + a.sign * a.pulse * s * .06;
+                                            const sx = propX + a.sign * a.pulse * s * .06;
                                             if (a.active) {
                                                 ctx.save(), ctx.fillStyle = "#fff";
                                                 for (let i = 0; i < 10; i++) {
                                                     const t = (cookSeeded(i, 12) + a.p) % 1;
-                                                    ctx.beginPath(), ctx.arc(sx - .2 * s + (cookSeeded(i, 13) - .5) * s * .2, cy - .3 * s + t * s * .3, .009 * s, 0, 2 * Math.PI), 
+                                                    ctx.beginPath(), ctx.arc(sx - .4 * propS + (cookSeeded(i, 13) - .5) * propS * .3, propY + .1 * propS + t * (innerY - propY), .009 * s, 0, 2 * Math.PI), 
                                                     ctx.fill();
                                                 }
                                                 ctx.restore();
                                             }
-                                            drawSprite(ctx, advImg("salt_dish"), sx, cy - .48 * s, .42 * s, {
+                                            drawSprite(ctx, advImg("salt_dish"), sx, propY, .8 * propS, {
                                                 shadow: !0,
                                                 rot: a.sign * a.pulse * .25
                                             });
                                         }
                                         if ("onion" === st.id) {
-                                            const ox = cx + .46 * s;
                                             if (a.active) {
                                                 ctx.save(), ctx.fillStyle = "#5bb134";
                                                 for (let i = 0; i < 10; i++) {
                                                     const t = (cookSeeded(i, 14) + a.p) % 1;
-                                                    ctx.beginPath(), ctx.arc(ox - .2 * s + (cookSeeded(i, 15) - .5) * s * .2, cy - .3 * s + t * s * .3, .012 * s, 0, 2 * Math.PI), 
+                                                    ctx.beginPath(), ctx.arc(propX - .4 * propS + (cookSeeded(i, 15) - .5) * propS * .3, propY + .1 * propS + t * (innerY - propY), .012 * s, 0, 2 * Math.PI), 
                                                     ctx.fill();
                                                 }
                                                 ctx.restore();
                                             }
-                                            drawSprite(ctx, advImg("onion_chopped"), ox, cy - .48 * s, .42 * s, {
+                                            drawSprite(ctx, advImg("onion_chopped"), propX, propY, .8 * propS, {
                                                 shadow: !0,
                                                 rot: .5 * -a.pulse
                                             });
                                         }
-                                        if ("off" === st.id && drawSprite(ctx, advImg("stove_knob"), cx - .62 * s, cy + .22 * s, .32 * s, {
-                                            shadow: !0,
-                                            rot: frac * Math.PI / 2
-                                        }), "plate" === st.id) {
-                                            const plateX = cx + .5 * s, plateY = cy + .12 * s;
-                                            drawSprite(ctx, advImg("plate_empty"), plateX, plateY, .85 * s, {
+                                        if ("off" === st.id) {
+                                            const knobX = bgRect.x + COOK_BG_KNOB.u * bgRect.w, knobY = bgRect.y + COOK_BG_KNOB.v * bgRect.h;
+                                            drawSprite(ctx, advImg("stove_knob"), knobX, knobY, .2 * wokS, {
+                                                shadow: !0,
+                                                rot: frac * Math.PI / 2
+                                            });
+                                        }
+                                        if ("plate" === st.id) {
+                                            const plateS = Math.min(.85 * s, .9 * wokS), plateX = Math.min(wokX + .72 * wokS, cw - .55 * plateS - 10 * g.cssScale), plateY = burnerY + .08 * wokS;
+                                            drawSprite(ctx, advImg("plate_empty"), plateX, plateY, plateS, {
                                                 shadow: !0
-                                            }), frac > 0 && drawSprite(ctx, riceImg, plateX, plateY - .04 * s, .62 * s * (.35 + .65 * frac));
+                                            }), frac > 0 && drawSprite(ctx, imgCookRice, plateX, plateY - .08 * plateS, .62 * plateS * (.35 + .65 * frac));
                                             const t = a.active ? a.pulse : 0;
-                                            drawSprite(ctx, imgCookSpatula, wokX + (plateX - wokX) * t, cy - .35 * s - t * (1 - t) * s * .3, .6 * s, {
+                                            drawSprite(ctx, imgCookSpatula, panCX + (plateX - panCX) * t, wokY - .3 * wokS - t * (1 - t) * s * .3, .6 * s, {
                                                 shadow: !0,
                                                 rot: .9 * t - .6
                                             });
@@ -9583,7 +9594,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                         el.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:99998;pointer-events:none;background:rgba(10,20,18,.82);color:#e8fff6;font:12px/1.4 -apple-system,"PingFang TC",sans-serif;padding:6px 9px;border-radius:10px;white-space:pre;', 
                         document.body.appendChild(el), framePerf.overlayEl = el);
                         const p = framePerfSnapshot();
-                        el.textContent = `perf v132  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}\n左右手檢查 ${"off" === p.hand.check ? "關" : "開"}  鎖定手形 ${p.hand.lockSize || "-"}  大小拒絕 ${p.hand.sizeRejected}  遠處拒絕 ${p.hand.farRejected}` + (p.tool ? `\n衣夾 近指 ${p.tool.near} 放手≥${p.tool.nearExit} 張開≥${p.tool.nearOpen}  遠指 ${p.tool.far} 放手≥${p.tool.farExit} 張開≥${p.tool.farOpen}  門檻 ${p.tool.source}\n衣夾 合併 ${p.tool.combo} 拎起≤${p.tool.enter} 放手閘≥${p.tool.gate}\n衣夾 相對 基線 近${p.tool.relBaseNear} 遠${p.tool.relBaseFar} 合併${p.tool.relBaseCombo} 相對放手 ${p.tool.relOpen}` : ""), 
+                        el.textContent = `perf v133  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}\n左右手檢查 ${"off" === p.hand.check ? "關" : "開"}  鎖定手形 ${p.hand.lockSize || "-"}  大小拒絕 ${p.hand.sizeRejected}  遠處拒絕 ${p.hand.farRejected}` + (p.tool ? `\n衣夾 近指 ${p.tool.near} 放手≥${p.tool.nearExit} 張開≥${p.tool.nearOpen}  遠指 ${p.tool.far} 放手≥${p.tool.farExit} 張開≥${p.tool.farOpen}  門檻 ${p.tool.source}\n衣夾 合併 ${p.tool.combo} 拎起≤${p.tool.enter} 放手閘≥${p.tool.gate}\n衣夾 相對 基線 近${p.tool.relBaseNear} 遠${p.tool.relBaseFar} 合併${p.tool.relBaseCombo} 相對放手 ${p.tool.relOpen}` : ""), 
                         el.style.display = state.running ? "block" : "none";
                     }(perfT2);
                 } catch (e) {
@@ -11631,6 +11642,29 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         const x = 43758.5453 * Math.sin(12.9898 * i + 78.233 * k);
         return x - Math.floor(x);
     }
+    function drawCookFlames(ctx, cx, cy, w, count, alpha, now, flameH, layer) {
+        if (!(count <= 0 || alpha <= 0)) {
+            ctx.save(), ctx.globalAlpha = alpha;
+            for (let i = 0; i < count; i++) {
+                const k = (i + .5) / count * 2 - 1, fx = cx + k * w / 2, fy = cy - k * k * w * .1, h = flameH * (.75 + .35 * Math.sin(now / 85 + 1.9 * i) + .1 * Math.sin(now / 37 + 3.1 * i)) * ("back" === layer ? .7 + .5 * Math.abs(k) : 1), hw = w / count * .42, tongue = (hh, ww, col) => {
+                    ctx.beginPath(), ctx.moveTo(fx - ww, fy), ctx.bezierCurveTo(fx - ww, fy - .5 * hh, fx - .15 * ww, fy - .85 * hh, fx + .05 * ww, fy - hh), 
+                    ctx.bezierCurveTo(fx + .3 * ww, fy - .75 * hh, fx + ww, fy - .4 * hh, fx + ww, fy), 
+                    ctx.closePath(), ctx.fillStyle = col, ctx.fill();
+                };
+                tongue(h, hw, "#ff7a1a"), tongue(.68 * h, .68 * hw, "#ffb52e"), tongue(.38 * h, .45 * hw, "#fff0a0"), 
+                tongue(.18 * h, .5 * hw, "#4aa3ff");
+            }
+            ctx.restore();
+        }
+    }
+    const COOK_BG_BURNER = {
+        u: .156,
+        v: .66
+    }, COOK_BG_KNOB = {
+        u: .125,
+        v: .722
+    }, imgCookRice = new Image;
+    imgCookRice.src = "img/cook_rice_only.png";
     const MJ_WINDS = [ "E", "S", "W", "N" ], MJ_DRAGONS = [ "C", "F", "B" ];
     function mjSuit(t) {
         return function(t) {
@@ -12603,7 +12637,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
 <script src="level4-three-games-module.js"></script>
 <script>
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
-  const LEVEL_APP_BUILD = "v132-20261119-digiflex-lenient";
+  const LEVEL_APP_BUILD = "v133-20261119-wok-on-stove";
   const levelAppHadController = Boolean(navigator.serviceWorker.controller);
   let levelAppReloading = false;
 
