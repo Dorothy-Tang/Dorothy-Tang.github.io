@@ -1407,6 +1407,26 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         </div>
       </div>
     </div>
+    <div class="card collapsible" id="cookSqueezeCard" data-accordion="cook-squeeze" hidden>
+      <h2><span>煮飯：握力器揸幾多下</span>
+        <span class="selected-preview" id="preview-cook-squeeze">中（44 下）</span></h2>
+      <div class="card-body">
+        <div class="option-row" id="cookSqueezeOptions">
+          <button class="option-btn" type="button" data-cook-squeeze="less">
+            少（25 下）
+            <small>每步次數約減半（最少 1 下），適合手較易攰嘅病人</small>
+          </button>
+          <button class="option-btn selected" type="button" data-cook-squeeze="normal">
+            中（44 下）
+            <small>抓鬆飯 3 → 打蛋 4 → 拌蛋 4 → 洗蔥 3 → 切蔥 5 → 熱鍋 2 → 落油 2 → 倒飯 3 → 落鹽 4 → 落蔥花 5 → 熄火 1 → 上碟 8</small>
+          </button>
+          <button class="option-btn" type="button" data-cook-squeeze="more">
+            多（69 下）
+            <small>每步次數約 ×1.5</small>
+          </button>
+        </div>
+      </div>
+    </div>
     <div class="card collapsible" id="dimsumDifficultyCard" data-accordion="dimsum-difficulty" hidden>
       <h2><span>筷子點心難度</span>
         <span class="selected-preview" id="preview-dimsum-difficulty">基本</span></h2>
@@ -1774,6 +1794,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         shoulderExerciseMode: "active",
         laundryDifficulty: "basic",
         fridgeDifficulty: "basic",
+        cookSqueezeAmount: "normal",
         dimsumDifficulty: "basic",
         theme: "dimsum",
         shopListSize: "medium",
@@ -1884,6 +1905,9 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     }
     function isLevel6RealToolTask() {
         return isLevel6() && "peg" === state.level6Task;
+    }
+    function isLevel6DigiflexTask() {
+        return isLevel6() && "cooking" === state.level6Task;
     }
     function level6ToolWords() {
         return "peg" === state.level6Task ? {
@@ -2792,7 +2816,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         3: '<b>Level 3 肩屈曲設定</b><br>患者持續握住所選物件；不需對鏡頭做抓放。治療師選擇 30–60° 相機估算目標。<br><span lang="en">OT selects a 30–60° camera-estimated target. Practise 3 slow, steady attempts.</span><br><span style="color:#7d1a12;">注意：角度不是量角器 ROM；軟件不會自動 FTHUE 分級。</span>',
         4: '<b>Level 4 肩屈曲設定</b><br>患者持續握住所選物件；不需對鏡頭做抓放。治療師選擇 60° 或以上相機估算目標。<br><span lang="en">OT selects a camera-estimated target of 60° or above. Practise 3 slow, steady attempts.</span><br><span style="color:#7d1a12;">注意：軟件不會自動偵測代償，代償需由治療師人手觀察及確認。</span>',
         5: "<b>Level 5 個人化放手標準</b><br>校準時拍到的「張開手」幅度，就是本節的放手標準；<b>患者不需要張到完全伸直</b>，只需張回自己校準時的幅度就可以放下。<br>拿取用「<b>輕輕合手拿起</b>」，不要大力握實；拿住物件超過 <b>5 秒</b> 系統會自動暫停，提示放下物件、張開手、放鬆。<br>預設使用<b>較大物件及較短距離</b>；如連續放手困難，系統會提示重新評估。",
-        67: '<b>Level 6 患手三點捏握功能任務</b><br>六款活動都用已選患手：先張開三指，輕捏拿起，用手的位置移動，再張開放下。<br><span lang="en">All six activities use the selected affected hand: open three fingers, lightly pinch to pick up, move with the hand, then reopen to release.</span><br>可選插花、筷子點心、衣夾晾衫、啤牌、麻雀或煮蛋炒飯。六款活動都偵測已選患手三點捏握：先張開、輕捏拿起、用手的位置移動，再張開放下。網頁不識別實體工具，亦不量度握力或捏力。<br>筷子點心及衣夾晾衫由患手揸住真筷子／衣夾玩：校準同遊戲全程揸住工具，系統會對照參加者自己揸住工具時嘅開合幅度嚟判斷夾起與放開。<br><span style="color:#7d1a12;">注意：相機追蹤只控制遊戲，亦不作診斷或自動 FTHUE 分級。</span>'
+        67: '<b>Level 6 患手三點捏握功能任務</b><br>六款活動都用已選患手：插花、筷子點心、衣夾晾衫、啤牌、麻雀用三點捏握（先張開三指，輕捏拿起，用手的位置移動，再張開放下）；煮蛋炒飯則揸住握力器（Digi-Flex）成隻手揸實再放鬆計一下。<br><span lang="en">All six activities use the selected affected hand: five tasks use a tripod pinch (open three fingers, lightly pinch to pick up, move with the hand, then reopen to release); egg fried rice uses a whole-hand squeeze on a hand exerciser (squeeze, then relax = one count).</span><br>網頁不識別實體工具，亦不量度握力或捏力。<br>筷子點心、衣夾晾衫及煮蛋炒飯由患手揸住真筷子／衣夾／握力器玩：校準同遊戲全程揸住工具，系統會對照參加者自己揸住工具時嘅開合幅度嚟判斷夾起、放開或揸實、放鬆。<br><span style="color:#7d1a12;">注意：相機追蹤只控制遊戲，亦不作診斷或自動 FTHUE 分級。</span>'
     };
     function renderCalibLevelBrief() {
         const el = document.getElementById("calibLevelBrief");
@@ -2907,11 +2931,11 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         cooking: {
             id: "cooking",
             theme: "cooking",
-            gameType: "pinch",
+            gameType: "grasp",
             label: "煮蛋炒飯",
             labelEn: "Cook Egg Fried Rice",
-            hint: "患手三指張開，輕捏拿起食材，移到目標，再張開放下",
-            actionCue: "三指張開 → 輕捏拿起 → 移動 → 張開放下"
+            hint: "患手揸住握力器（Digi-Flex），成隻手揸實再放鬆計一下；每一步揸夠次數就煮到",
+            actionCue: "揸實握力器 → 放鬆 ＝ 1 下"
         }
     };
     function level6TaskProfile() {
@@ -2979,6 +3003,18 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         document.getElementById("preview-laundry-difficulty").textContent = LAUNDRY_DIFFICULTY_LABELS[key] || "基本：一架", 
         document.querySelectorAll("#laundryDifficultyOptions [data-laundry-difficulty]").forEach(button => {
             const selected = button.dataset.laundryDifficulty === key;
+            button.classList.toggle("selected", selected), button.setAttribute("aria-pressed", selected ? "true" : "false");
+        });
+    }
+    function renderCookSqueezeSettings() {
+        const card = document.getElementById("cookSqueezeCard");
+        if (!card) return;
+        const enabled = "67" === state.level && "cooking" === state.level6Task && !0;
+        if (card.hidden = !enabled, !enabled) return;
+        const key = cookSqueezeAmountKey();
+        document.getElementById("preview-cook-squeeze").textContent = COOK_SQUEEZE_LABELS[key], 
+        document.querySelectorAll("#cookSqueezeOptions [data-cook-squeeze]").forEach(button => {
+            const selected = button.dataset.cookSqueeze === key;
             button.classList.toggle("selected", selected), button.setAttribute("aria-pressed", selected ? "true" : "false");
         });
     }
@@ -3127,8 +3163,8 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                 const setupGuide = document.getElementById("cameraSetupGuide");
                 setupGuide && (setupGuide.textContent = "2" === state.level ? "相機：患側前斜約 45°；肩、肘、腕及桌面入鏡。" : "3" === state.level || "4" === state.level ? "相機：橫放，患側前斜約 30–45°；軀幹及全臂入鏡。" : "相機：患手及手指入鏡。"), 
                 renderShoulderExerciseModeSettings(), renderHandCheckSettings(), renderShoulderTargetSettings(), 
-                renderLaundryDifficultySettings(), renderFridgeDifficultySettings(), renderDimsumDifficultySettings(), 
-                renderTimingSettings();
+                renderLaundryDifficultySettings(), renderFridgeDifficultySettings(), renderCookSqueezeSettings(), 
+                renderDimsumDifficultySettings(), renderTimingSettings();
                 const go = document.getElementById("btnGoCalib");
                 go && (go.textContent = isShoulderFlexionLevel() ? "開始追蹤" : "相機校準"), renderLevel4ScenarioDemo(), 
                 showScreen("start");
@@ -3227,7 +3263,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             try {
                 await ensureHandLandmarker(), trackingModelReady = !0;
             } catch (err) {}
-            if ("cooking" === state.theme) {
+            if ("cooking" === state.theme && !isLevel6DigiflexTask()) {
                 const pose = await ensurePoseLandmarker().catch(() => null);
                 trackingModelReady = trackingModelReady || Boolean(pose);
             }
@@ -3483,26 +3519,22 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                                 const w = level6ToolWords();
                                                 return "請慢慢" + w.open + "同" + w.close + w.noun + "幾次。";
                                             }
-                                            return isPegMode() ? "請先放鬆打開。" : isPinchMode() ? "請先張開手指。" : "請先張開手。";
+                                            return isLevel6DigiflexTask() ? "請揸住握力器，放鬆、揸實幾次。" : isPegMode() ? "請先放鬆打開。" : isPinchMode() ? "請先張開手指。" : "請先張開手。";
                                         }());
                                     }
                                 }
                             } else {
                                 const previousOpenTick = c.openTickAt;
-                                c.openTickAt = now, isLevel6RealToolTask() && Number.isFinite(value) && (c.toolVals = c.toolVals || [], 
+                                c.openTickAt = now, (isLevel6RealToolTask() || isLevel6DigiflexTask()) && Number.isFinite(value) && (c.toolVals = c.toolVals || [], 
                                 c.toolVals.push(value), c.toolVals.length > 240 && c.toolVals.shift()), isLevel6RealToolTask() && Number.isFinite(res.pinchScale) && res.pinchScale >= TOOL_HAND_TOO_CLOSE_SCALE && (hint.textContent = "手太貼近鏡頭，請後移少少，俾成隻手入鏡。");
                                 const openQualifies = isLevel6RealToolTask() ? function(vals, value) {
                                     if (!Number.isFinite(value)) return !1;
-                                    const range = function(vals) {
-                                        if (!Array.isArray(vals) || vals.length < TOOL_CALIB_MIN_SAMPLES) return null;
-                                        const sorted = vals.slice().sort((a, b) => a - b), lo = sorted[Math.floor(.08 * sorted.length)], hi = sorted[Math.min(sorted.length - 1, Math.floor(.92 * sorted.length))], span = hi - lo;
-                                        return Number.isFinite(span) ? {
-                                            lo: lo,
-                                            hi: hi,
-                                            span: span
-                                        } : null;
-                                    }(vals);
+                                    const range = toolCalibRange(vals);
                                     return !(!range || range.span < TOOL_CALIB_MIN_RANGE) && value >= range.hi - .35 * range.span;
+                                }(c.toolVals, value) : isLevel6DigiflexTask() ? function(vals, value) {
+                                    if (!Number.isFinite(value)) return !1;
+                                    const range = toolCalibRange(vals);
+                                    return !(!range || range.span < DIGIFLEX_CALIB_MIN_RANGE) && value <= range.lo + .35 * range.span;
                                 }(c.toolVals, value) : Number.isFinite(value) && function(res) {
                                     return isPinchMode() || isPegMode() ? !0 === res.isOpenPrep : Number.isFinite(res.graspOpenCount) && Number.isFinite(res.graspCurledCount) ? res.graspOpenCount >= 2 || res.graspCurledCount <= 1 : !0 === res.isOpenPrep;
                                 }(res);
@@ -3515,7 +3547,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                     c.openHoldMs = (c.openHoldMs || 0) + openDelta;
                                     const requiredOpenHoldMs = isLevel6RealToolTask() ? 450 : 750;
                                     c.openHoldMs >= requiredOpenHoldMs && (c.openDone = !0, c.closedHoldMs = 0, c.closedTickAt = 0, 
-                                    c.moreOpenMs = 0, hint.textContent = isLevel6RealToolTask() ? "而家" + level6ToolWords().close + level6ToolWords().noun + "。" : isPinchMode() ? "而家輕捏。" : "而家輕合手。");
+                                    c.moreOpenMs = 0, hint.textContent = isLevel6RealToolTask() ? "而家" + level6ToolWords().close + level6ToolWords().noun + "。" : isLevel6DigiflexTask() ? "而家揸實握力器。" : isPinchMode() ? "而家輕捏。" : "而家輕合手。");
                                 }
                             }
                         } else c.openDone = !0, c.closedDone = !0;
@@ -3621,6 +3653,11 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         const pick = button.dataset.laundryDifficulty;
         state.laundryDifficulty = LAUNDRY_DIFFICULTY_KEYS.includes(pick) ? pick : "basic", 
         renderLaundryDifficultySettings();
+    }), document.getElementById("cookSqueezeOptions").addEventListener("click", e => {
+        const button = e.target.closest("[data-cook-squeeze]");
+        if (!button || "67" !== state.level || "cooking" !== state.level6Task) return;
+        const pick = button.dataset.cookSqueeze;
+        state.cookSqueezeAmount = COOK_SQUEEZE_AMOUNTS[pick] ? pick : "normal", renderCookSqueezeSettings();
     }), document.getElementById("fridgeDifficultyOptions").addEventListener("click", e => {
         const button = e.target.closest("[data-fridge-difficulty]");
         button && isFridgeGame() && (state.fridgeDifficulty = "zones" === button.dataset.fridgeDifficulty ? "zones" : "basic", 
@@ -3676,6 +3713,11 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             tail: "手腕／前臂旋轉為螢幕估算回饋，並非醫學量度。",
             tts: "煮飯。跟住指示，一步一步煮一碟蛋炒飯，總共十二步。每一步做夠動作就會自動去下一步。"
         },
+        cooking_digiflex: {
+            lines: [ "揸住握力器，每一步揸實再放鬆，揸夠次數就煮到（共 12 步）", "每揸一下，畫面即時有動作：切蔥、落油、兜炒", "如有需要，可以按「跳過這一步」" ],
+            tail: "網頁只睇手指開合，唔識別器材，亦唔量度握力。",
+            tts: "煮飯。揸住握力器，每一步揸實再放鬆，揸夠次數就煮到。總共十二步。"
+        },
         mahjong: {
             lines: [ "拼牌挑戰：手上有一副未完成的牌", "揀一組候選牌，拼成 14 隻的和牌", "有時有幾條路線，睇清花色可以做大糊" ],
             tail: "番數為簡化訓練計分，並非官方規則裁判。",
@@ -3700,7 +3742,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     function updateRulesForActivity() {
         const th = getTheme(), shoulderModeCue = shoulderExerciseModeAvailable() ? shoulderExerciseProfile().cue + " · " : "", actionCue = "2" === state.level ? "患臂桌面承托 → 由中線向患側外滑 → 返回中線" : "3" === state.level ? shoulderModeCue + "0° 起點 → 治療師選定 30°／40°／50°／60° 目標 → 返回 0°" : "4" === state.level ? shoulderModeCue + "0° 起點 → 治療師選定 60° 或以上目標 → 返回 0°" : "67" === state.level ? activeLevel67ToolProfile().actionCue : "張手 → 輕握 → 放手";
         if (usesAdvancedThemeModule()) {
-            const r = ADV_RULES[state.theme], rulesEl0 = document.getElementById("rulesContent");
+            const r = "cooking" === state.theme && isLevel6DigiflexTask() ? ADV_RULES.cooking_digiflex : ADV_RULES[state.theme], rulesEl0 = document.getElementById("rulesContent");
             return rulesEl0 && (rulesEl0.innerHTML = `<div style="font-size:22px;font-weight:800;color:#0a7d75;margin-bottom:12px;">${th.title}</div><div style="font-size:clamp(28px,4vw,38px);font-weight:900;line-height:1.35;margin-bottom:16px;">${actionCue}</div><div style="font-size:17px;color:#5a5a5a;line-height:1.5;">${r.lines[0]}</div>`), 
             void (window.__CURRENT_RULES_CANTONESE = ("2" === state.level ? "按職業治療師選定的桌面承托玩法移動。慢慢做，不計速度。" : "3" === state.level || "4" === state.level ? shoulderExerciseProfile().patient + "至治療師所選目標，再返回。相機只追蹤已選患側手臂；角度只作訓練估算。" : "67" === state.level ? activeLevel67ToolProfile().actionCue + "。移到位置。" : "先張開手，輕輕合手拿起。移到位置，再張開手放下。") + r.lines[0] + "慢慢來。");
         }
@@ -3895,11 +3937,13 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                     const statusBar = document.getElementById("statusBar");
                     if (statusBar.textContent = "", delete statusBar.dataset.actionRenderKey, "cooking" === advCurrent) {
                         if (!themeAvailableForLevel("cooking")) return state.theme = "dimsum", void (advCurrent = "dimsum");
-                        cook.active = !0, cook.reset(), cook.layout = cookLayout(), cook.poseOn = !1, advSetNote(poseFailed ? "姿勢追蹤（肩／肘）未能載入，已轉為手部動作練習：追蹤有限，可用「跳過此步」繼續。" : "正在載入姿勢追蹤（肩／肘）…期間可先用手部動作練習。前臂旋前／旋後為螢幕估算回饋，並非醫學量度。"), 
+                        cook.active = !0, cook.reset(), cook.layout = cookLayout(), cook.poseOn = !1, isLevel6DigiflexTask() ? (cook.introUntil = nowMs() + 3200, 
+                        cook.readyAt = cook.introUntil + 400, advSetNote(""), cookRenderPanel(), speakCantonese("買完餸返到屋企，而家煮蛋炒飯。"), 
+                        cook.announceAt = cook.introUntil - 400, setActionPrompt("揸實", "")) : (advSetNote(poseFailed ? "姿勢追蹤（肩／肘）未能載入，已轉為手部動作練習：追蹤有限，可用「跳過此步」繼續。" : "正在載入姿勢追蹤（肩／肘）…期間可先用手部動作練習。前臂旋前／旋後為螢幕估算回饋，並非醫學量度。"), 
                         state.qaMode || ensurePoseLandmarker().then(p => {
                             cook.poseOn = !!p, advSetNote(p ? "姿勢追蹤已啟用。前臂旋前／旋後為螢幕估算回饋，並非醫學量度。" : "姿勢追蹤（肩／肘）未能載入，已轉為手部動作練習：追蹤有限，可用「跳過此步」繼續。"), 
                             cookRenderPanel();
-                        }), cookAnnounce();
+                        }), cookAnnounce());
                     } else "mahjong" === advCurrent ? (mj.active = !0, mj.reset(), mjStartRound(0)) : "cards" === advCurrent ? (cards.active = !0, 
                     cards.reset(), cardsNewBoard(!1)) : "laundry" === advCurrent ? (laundry.active = !0, 
                     laundry.reset(), laundrySetup()) : "flowers" === advCurrent && (flowers.active = !0, 
@@ -4655,8 +4699,12 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                     }, palmScale = Math.max(distance(lm[0], lm[9]), distance(lm[5], lm[17]), .001), mainFingerPairs = [ [ 5, 8 ], [ 9, 12 ], [ 13, 16 ], [ 17, 20 ] ], graspFingerPairs = [ [ 2, 4 ], ...mainFingerPairs ], fingerExtensionRatios = mainFingerPairs.map(([mcp, tip]) => distance(lm[tip], lm[0]) / Math.max(distance(lm[mcp], lm[0]), .001)), meanTipDistance = mainFingerPairs.map(([, tip]) => tip).map(index => distance(lm[index], palmCenter) / palmScale).reduce((sum, value) => sum + value, 0) / 4, score = clamp01((1.72 - meanTipDistance) / 1.02), curledCount = graspFingerPairs.map(([mcp, tip]) => distance(lm[tip], lm[0]) / Math.max(distance(lm[mcp], lm[0]), .001)).filter(value => value <= 1.58).length, openCount = fingerExtensionRatios.filter(value => value >= 1.62).length, visibleGrasp = curledCount >= 2, visibleRelease = openCount >= 2;
                     let isGrasping = isGraspingPrev ? openCount < 2 : curledCount >= 2;
                     const graspThresholds = state;
-                    return Number.isFinite(graspThresholds.personalGraspEnter) && Number.isFinite(graspThresholds.personalGraspExit) && (isGrasping = isGraspingPrev ? !visibleRelease && score >= graspThresholds.personalGraspExit : visibleGrasp || score >= graspThresholds.personalGraspEnter), 
-                    {
+                    if (Number.isFinite(graspThresholds.personalGraspEnter) && Number.isFinite(graspThresholds.personalGraspExit) && (isGrasping = isGraspingPrev ? !visibleRelease && score >= graspThresholds.personalGraspExit : visibleGrasp || score >= graspThresholds.personalGraspEnter), 
+                    isLevel6DigiflexTask()) {
+                        const enter = Number.isFinite(state.personalGraspEnter) ? state.personalGraspEnter : .56, exit = Number.isFinite(state.personalGraspExit) ? state.personalGraspExit : .5;
+                        isGrasping = isGraspingPrev ? score >= exit : score >= enter;
+                    }
+                    return {
                         isGrasping: isGrasping,
                         score: score,
                         curledCount: curledCount,
@@ -4971,12 +5019,23 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             const w = level6ToolWords();
             hint.textContent = "患手揸住" + w.noun + "入鏡。慢慢" + w.open + "、" + w.close + "幾次。", openCheck.textContent = "○ " + w.open + w.noun, 
             closeCheck.textContent = "○ " + w.close + w.noun;
-        } else isChopsticksMode() ? hint.textContent = "患手揸住筷子入鏡（手背向鏡頭）；見綠點即可按「開始遊戲」。" : isLevel6() || isLevel67BareMode() ? (hint.textContent = "拇指、食指、中指入鏡。先張開，再輕捏。", 
+        } else isLevel6DigiflexTask() ? (hint.textContent = "患手揸住握力器入鏡（手指向鏡頭）。先放鬆，再揸實，重複幾次。", 
+        openCheck.textContent = "○ 放鬆揸住握力器", closeCheck.textContent = "○ 揸實握力器") : isChopsticksMode() ? hint.textContent = "患手揸住筷子入鏡（手背向鏡頭）；見綠點即可按「開始遊戲」。" : isLevel6() || isLevel67BareMode() ? (hint.textContent = "拇指、食指、中指入鏡。先張開，再輕捏。", 
         openCheck.textContent = "○ 張開三指", closeCheck.textContent = "○ 三指輕捏") : isPegMode() ? (hint.textContent = "手掌及指尖入鏡。先放鬆，再輕輕合手指。", 
         openCheck.textContent = "○ 放鬆打開", closeCheck.textContent = "○ 輕輕合手指") : "grasp" === state.gameType ? (hint.textContent = "掌心向鏡頭。張到可達幅度，再輕合手。", 
         openCheck.textContent = "○ 張手", closeCheck.textContent = "○ 輕合手") : hint.textContent = "手掌／滑墊入鏡；見綠點即可。";
     }
     const CALIB_DROPOUT_GRACE_MS = 1500, TOOL_CALIB_MIN_RANGE = .012, TOOL_CALIB_MIN_SAMPLES = 8;
+    function toolCalibRange(vals) {
+        if (!Array.isArray(vals) || vals.length < TOOL_CALIB_MIN_SAMPLES) return null;
+        const sorted = vals.slice().sort((a, b) => a - b), lo = sorted[Math.floor(.08 * sorted.length)], hi = sorted[Math.min(sorted.length - 1, Math.floor(.92 * sorted.length))], span = hi - lo;
+        return Number.isFinite(span) ? {
+            lo: lo,
+            hi: hi,
+            span: span
+        } : null;
+    }
+    const DIGIFLEX_CALIB_MIN_RANGE = .02;
     function renderCalibCheck(id, done) {
         const el = document.getElementById(id);
         if (!el) return;
@@ -6564,7 +6623,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         const categories = getTheme().categoriesFor(state.level);
         return isLevel3Tabletop() || isShoulderFlexionLevel() ? [ level3RoundVariant || chooseLevel3RoundVariant() || categories[0] ] : categories;
     }
-    let cursorX = -1, cursorY = -1, dotEmaX = -1, dotEmaY = -1, handDetected = !1, lastHandLm = null, gripActive = !1, isGrasping = !1, handOpenPrep = !1, lastPathX = -1, lastPathY = -1, transportStartX = -1, transportStartY = -1, transportStartAt = 0, dwellTarget = null, dwellStartTime = 0, DWELL_MS = 500;
+    let cursorX = -1, cursorY = -1, dotEmaX = -1, dotEmaY = -1, handDetected = !1, lastHandLm = null, lastGraspScore = NaN, gripActive = !1, isGrasping = !1, handOpenPrep = !1, lastPathX = -1, lastPathY = -1, transportStartX = -1, transportStartY = -1, transportStartAt = 0, dwellTarget = null, dwellStartTime = 0, DWELL_MS = 500;
     const STILL_WINDOW_MS = 400, STILL_MAX_DISP_ENTER = 55, STILL_MAX_DISP_HOLD = 120;
     let posHistory = [], stillHoldFlag = !1;
     function isStill(now) {
@@ -7448,6 +7507,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                     nx: qaHand.nx,
                                     ny: qaHand.ny,
                                     isGrasping: !!qaHand.isGrasping,
+                                    graspScore: Number.isFinite(qaHand.graspScore) ? qaHand.graspScore : qaHand.isGrasping ? .9 : .2,
                                     isOpenPrep: void 0 === qaHand.isOpenPrep ? !qaHand.isGrasping : !!qaHand.isOpenPrep
                                 };
                             }
@@ -7512,7 +7572,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                 x: cursorX,
                                 y: cursorY
                             }), lastPathX = cursorX, lastPathY = cursorY, handOpenPrep = void 0 === res.isOpenPrep ? !res.isGrasping : !!res.isOpenPrep, 
-                            isGraspStyleMode() ? isGrasping = res.isGrasping || !1 : usesAdvancedThemeModule() && void 0 !== res.isGrasping && (isGrasping = !!res.isGrasping);
+                            Number.isFinite(res.graspScore) && (lastGraspScore = res.graspScore), isGraspStyleMode() ? isGrasping = res.isGrasping || !1 : usesAdvancedThemeModule() && void 0 !== res.isGrasping && (isGrasping = !!res.isGrasping);
                         } else isGraspStyleMode() && function(res) {
                             return !res?.reason || "no-hand-detected" === res.reason || "5" === state.level && "required-landmarks-missing" === res.reason || ("5" === state.level || "67" === state.level) && "affected-hand-not-detected" === res.reason;
                         }(res) && cursorX >= 0 && now - lastDetectedAt < ("5" === state.level || "67" === state.level ? PUBLIC_LEVEL56_DETECTION_LOST_GRACE_MS : DETECTION_LOST_GRACE_MS) ? (handDetected = !0, 
@@ -7575,7 +7635,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                         advLastH = gameCanvas.height, "cooking" === advCurrent && (cook.layout = cookLayout()), 
                         "mahjong" === advCurrent && (mj.layout = mjLayout()), "cards" === advCurrent && cardsNewBoard(!1), 
                         "laundry" === advCurrent && laundrySetup(), "flowers" === advCurrent && flowersSetup()), 
-                        handDetected) {
+                        isLevel6DigiflexTask()) handDetected ? (nowMs() < cook.outcomeUntil || nowMs() < cook.readyAt) && setActionPrompt("放鬆", "") : setActionPrompt("患手入鏡", ""); else if (handDetected) {
                             const advancedHeld = !(!carrier.heldId && !picker.heldId), advancedHover = !(!carrier.hoverId && !picker.hoverId);
                             if (advancedHeld) setActionPrompt(level6AutoPlaceEnabled() ? "移到目標停住" : isGrasping ? "保持揸住" : "張開手放低", ""); else if (advancedHover) {
                                 const advancedArmed = !(!carrier.armed && !picker.armed);
@@ -7591,14 +7651,36 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                             if (now < cook.outcomeUntil) return cook.metric = "請先觀看目前成果，稍後自動開始下一步。", void cookLiveFeedback();
                             if (now < cook.readyAt) return cook.metric = "準備中，請先回到舒適的起始位置。", void cookLiveFeedback();
                             const bumpRep = () => !(now - cook.lastRepAt < th.repCooldown || (cook.lastRepAt = now, 
-                            cook.reps++, cook.reps < st.need && (playCorrectSound(), rewardSmall({
-                                achievement: "第 " + (cook.idx + 1) + " 步 · " + cook.reps + "/" + st.need,
-                                detail: st.goal,
+                            cook.reps++, isLevel6DigiflexTask() && (cook.digi.animAt = now, cook.digi.animSign = -cook.digi.animSign), 
+                            cook.reps < cookStepNeed(st) && (playCorrectSound(), rewardSmall({
+                                achievement: "第 " + (cook.idx + 1) + " 步 · " + cook.reps + "/" + cookStepNeed(st),
+                                detail: cookStepGoal(st),
                                 x: cursorX > 0 ? cursorX : gameCanvas.width / 2,
                                 y: cursorY > 0 ? cursorY : gameCanvas.height / 2,
                                 silent: !0,
                                 tts: !1
                             })), 0));
+                            if (isLevel6DigiflexTask()) return function(st, now, bumpRep) {
+                                const d = cook.digi;
+                                if (!handDetected || !Number.isFinite(lastGraspScore)) return cook.metric = "未偵測到患手，請將揸住握力器嘅手放入鏡頭。", 
+                                void setActionPrompt("等待偵測手部", "");
+                                d.hist.push(lastGraspScore), d.hist.length > 5 && d.hist.shift();
+                                const sc = medianValue(d.hist);
+                                d.lastScore = sc;
+                                const enter = Number.isFinite(state.personalGraspEnter) ? state.personalGraspEnter : .56, exit = Number.isFinite(state.personalGraspExit) ? state.personalGraspExit : .5, gap = Math.max(.03, (enter - exit) / .25), rise = Math.max(DIGIFLEX_MIN_RISE, gap * DIGIFLEX_RELATIVE_RISE);
+                                if (d.squeezing) {
+                                    sc > d.peak && (d.peak = sc);
+                                    const riseNow = Math.max(.012, d.peak - (null == d.baseline ? exit : d.baseline));
+                                    if (sc <= d.peak - .5 * riseNow) {
+                                        d.squeezing = !1;
+                                        const held = now - d.since;
+                                        d.baseline = sc, held >= DIGIFLEX_MIN_SQUEEZE_MS && bumpRep();
+                                    }
+                                } else null == d.baseline || sc < d.baseline ? d.baseline = sc : d.baseline += (sc - d.baseline) * (sc < d.baseline + .5 * rise ? .03 : .005), 
+                                (isGrasping || sc >= enter || sc >= d.baseline + rise) && (d.squeezing = !0, d.since = now, 
+                                d.peak = sc);
+                                cook.metric = d.squeezing ? "揸實中 ✊ — 而家放鬆" : "放鬆 🖐 — 而家揸實握力器", setActionPrompt(d.squeezing ? "放鬆" : "揸實", "");
+                            }(0, now, bumpRep), cookLiveFeedback(), void (cook.reps >= cookStepNeed(st) && cookAdvance(!0));
                             switch (st.kind) {
                               case "grasp":
                                 isGrasping && !cook.graspPrev && (cook.graspPhase = 1), !isGrasping && cook.graspPrev && 1 === cook.graspPhase && (cook.graspPhase = 0, 
@@ -8057,6 +8139,341 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                     }(), function() {
                         const ctx = gameCtx;
                         ctx.clearRect(0, 0, gameCanvas.width, gameCanvas.height), "cooking" === advCurrent ? function(ctx) {
+                            if (isLevel6DigiflexTask()) return void function(ctx) {
+                                const cw = gameCanvas.width, ch = gameCanvas.height, g = function(cw, ch) {
+                                    const portrait = ch > cw, cssScale = cw / Math.max(1, gameCanvas.clientWidth || cw), base = Math.min(cw, ch);
+                                    return {
+                                        portrait: portrait,
+                                        cssScale: cssScale,
+                                        cx: .5 * cw,
+                                        cy: ch * (portrait ? .5 : .55),
+                                        s: base * (portrait ? .42 : .46),
+                                        bannerY: (portrait ? 150 : 96) * cssScale,
+                                        bannerFont: Math.round(base * (portrait ? .046 : .05)),
+                                        titleFont: Math.round(base * (portrait ? .034 : .04)),
+                                        countY: ch * (portrait ? .8 : .84),
+                                        dotsY: ch - 34 * cssScale,
+                                        badgeS: .24 * base,
+                                        badgeX: cw - .12 * base - 18 * cssScale,
+                                        badgeY: ch - 14 * cssScale - .24 * base * .17 * 1.6 - 8 * cssScale - .12 * base
+                                    };
+                                }(cw, ch), st = cook.step(), now = nowMs(), need = cookStepNeed(st), frac = clamp01(cook.reps / Math.max(1, need)), a = function(now) {
+                                    const d = cook.digi, p = d.animAt ? clamp01((now - d.animAt) / DIGIFLEX_ANIM_MS) : 1;
+                                    return {
+                                        p: p,
+                                        pulse: Math.sin(p * Math.PI),
+                                        sign: d.animSign,
+                                        active: p < 1
+                                    };
+                                }(now), s = g.s, cx = g.cx, cy = g.cy;
+                                if (imgCookKitchenBg.complete && imgCookKitchenBg.naturalWidth) {
+                                    const iw = imgCookKitchenBg.naturalWidth, ih = imgCookKitchenBg.naturalHeight, sc = Math.max(cw / iw, ch / ih), dw = iw * sc, dh = ih * sc;
+                                    ctx.drawImage(imgCookKitchenBg, (cw - dw) / 2, .7 * (ch - dh), dw, dh);
+                                } else ctx.fillStyle = "#f1e6d2", ctx.fillRect(0, 0, cw, ch);
+                                ctx.save();
+                                const sh = ctx.createLinearGradient(0, .42 * ch, 0, ch);
+                                sh.addColorStop(0, "rgba(255,255,255,0)"), sh.addColorStop(1, "rgba(255,255,255,0.35)"), 
+                                ctx.fillStyle = sh, ctx.fillRect(0, .42 * ch, cw, .58 * ch), ctx.restore();
+                                const wokImg = advImg("wok"), riceImg = advImg("friedrice");
+                                switch ([ "heat", "oil", "pour", "salt", "onion", "off", "plate" ].includes(st.id), 
+                                st.id) {
+                                  case "loosen":
+                                    {
+                                        const dx = a.sign * a.pulse * s * .07, rot = a.sign * a.pulse * .08;
+                                        drawSprite(ctx, advImg("rice_bowl"), cx + dx, cy, s, {
+                                            shadow: !0,
+                                            rot: rot
+                                        }), ctx.save(), ctx.fillStyle = "#fff6e0";
+                                        for (let i = 0; i < 4 * cook.reps; i++) {
+                                            const px = cx + (cookSeeded(i, 1) - .5) * s * .9, py = cy - .32 * s - cookSeeded(i, 2) * s * .18;
+                                            ctx.beginPath(), ctx.ellipse(px, py, .018 * s, .011 * s, 3 * cookSeeded(i, 3), 0, 2 * Math.PI), 
+                                            ctx.fill();
+                                        }
+                                        ctx.restore();
+                                        break;
+                                    }
+
+                                  case "beat":
+                                    {
+                                        drawSprite(ctx, cook.reps >= 1 ? advImg("egg_beaten") : advImg("eggs"), cx, cy, s, {
+                                            shadow: !0
+                                        });
+                                        const ang = (cook.reps + a.p) * Math.PI * 2 * .5, r = .22 * s;
+                                        ctx.save(), ctx.strokeStyle = "#8a5a2b", ctx.lineWidth = Math.max(4, .018 * s), 
+                                        ctx.lineCap = "round";
+                                        for (let k = 0; k < 2; k++) {
+                                            const ox = cx + Math.cos(ang + .12 * k) * r, oy = cy - .12 * s + Math.sin(ang + .12 * k) * r * .45;
+                                            ctx.beginPath(), ctx.moveTo(ox, oy), ctx.lineTo(ox + .18 * s, oy - .46 * s), ctx.stroke();
+                                        }
+                                        ctx.strokeStyle = "rgba(255,255,255,0.55)", ctx.lineWidth = Math.max(2, .01 * s);
+                                        for (let i = 0; i < Math.min(cook.reps, 6); i++) ctx.beginPath(), ctx.ellipse(cx, cy - .12 * s, r * (.35 + .1 * i), r * (.16 + .045 * i), 0, 0, 2 * Math.PI), 
+                                        ctx.stroke();
+                                        ctx.restore();
+                                        break;
+                                    }
+
+                                  case "mix":
+                                    {
+                                        drawSprite(ctx, advImg("rice_bowl"), cx - .08 * s, cy + .05 * s, s, {
+                                            shadow: !0
+                                        });
+                                        const tilt = -.9 * a.pulse;
+                                        a.pulse > .25 && (ctx.save(), ctx.strokeStyle = "#f5b800", ctx.lineWidth = Math.max(5, .03 * s), 
+                                        ctx.lineCap = "round", ctx.beginPath(), ctx.moveTo(cx + .32 * s, cy - .36 * s), 
+                                        ctx.quadraticCurveTo(cx + .2 * s, cy - .2 * s, cx + .05 * s, cy - .12 * s), ctx.stroke(), 
+                                        ctx.restore()), drawSprite(ctx, advImg("egg_beaten"), cx + .46 * s, cy - .42 * s, .52 * s, {
+                                            shadow: !0,
+                                            rot: tilt
+                                        }), ctx.save(), ctx.globalAlpha = .35 * frac, ctx.fillStyle = "#f7c531", ctx.beginPath(), 
+                                        ctx.ellipse(cx - .08 * s, cy - .19 * s, .33 * s, .11 * s, 0, 0, 2 * Math.PI), ctx.fill(), 
+                                        ctx.restore();
+                                        break;
+                                    }
+
+                                  case "wash":
+                                    drawSprite(ctx, advImg("spring_onion"), cx, cy, s, {
+                                        shadow: !0
+                                    }), ctx.save(), ctx.fillStyle = "rgba(90,170,255,0.75)";
+                                    for (let i = 0; i < 10; i++) {
+                                        const px = cx + (cookSeeded(i, 4) - .5) * s * .8, py = cy - .55 * s + (cookSeeded(i, 5) + a.p) % 1 * s * .9;
+                                        ctx.beginPath(), ctx.ellipse(px, py, .012 * s, .02 * s, 0, 0, 2 * Math.PI), ctx.fill();
+                                    }
+                                    ctx.fillStyle = "rgba(255,255,255,0.9)";
+                                    for (let i = 0; i < 2 * cook.reps; i++) {
+                                        const px = cx + (cookSeeded(i, 6) - .5) * s * .9, py = cy + (cookSeeded(i, 7) - .5) * s * .5;
+                                        ctx.font = "bold " + Math.round(.06 * s) + "px sans-serif", ctx.textAlign = "center", 
+                                        ctx.textBaseline = "middle", ctx.fillText("✦", px, py);
+                                    }
+                                    ctx.restore();
+                                    break;
+
+                                  case "chop":
+                                    {
+                                        !function(ctx, cx, cy, w, h) {
+                                            ctx.save(), ctx.shadowColor = "rgba(0,0,0,0.25)", ctx.shadowBlur = 12, ctx.shadowOffsetY = 6, 
+                                            ctx.fillStyle = "#c99a5b", rrPath(ctx, cx - w / 2, cy - h / 2, w, h, .12 * h), ctx.fill(), 
+                                            ctx.shadowColor = "transparent", ctx.strokeStyle = "rgba(120,75,30,0.35)", ctx.lineWidth = 2;
+                                            for (let i = 1; i < 5; i++) ctx.beginPath(), ctx.moveTo(cx - w / 2 + 8, cy - h / 2 + h * i / 5), 
+                                            ctx.lineTo(cx + w / 2 - 8, cy - h / 2 + h * i / 5 + 3), ctx.stroke();
+                                            ctx.restore();
+                                        }(ctx, cx, cy + .1 * s, 1.25 * s, .58 * s);
+                                        const pieces = Math.min(need, cook.reps) + 1;
+                                        !function(ctx, img, cx, cy, size, n, gap) {
+                                            if (!img || !img.complete || !img.naturalWidth) return;
+                                            const iw = img.naturalWidth, ih = img.naturalHeight, dw = size, dh = size * ih / iw;
+                                            let x = cx - (dw + gap * (n - 1)) / 2;
+                                            for (let i = 0; i < n; i++) {
+                                                const sx0 = Math.floor(iw * i / n), sx1 = Math.floor(iw * (i + 1) / n), w = dw * (sx1 - sx0) / iw;
+                                                ctx.drawImage(img, sx0, 0, sx1 - sx0, ih, x, cy - dh / 2 + (i % 2 ? .35 * gap : 0), w, dh), 
+                                                x += w + gap;
+                                            }
+                                        }(ctx, advImg("spring_onion"), cx, cy, .92 * s, pieces, .03 * s), function(ctx, x, y, s) {
+                                            ctx.save(), ctx.translate(x, y), ctx.shadowColor = "rgba(0,0,0,0.25)", ctx.shadowBlur = 10, 
+                                            ctx.shadowOffsetY = 4;
+                                            const g = ctx.createLinearGradient(0, .26 * -s, 0, .05 * s);
+                                            g.addColorStop(0, "#e6eaee"), g.addColorStop(.7, "#b9c1c8"), g.addColorStop(1, "#f4f6f8"), 
+                                            ctx.fillStyle = g, ctx.beginPath(), ctx.moveTo(.42 * -s, .26 * -s), ctx.lineTo(.2 * s, .26 * -s), 
+                                            ctx.lineTo(.2 * s, .02 * s), ctx.quadraticCurveTo(.1 * -s, .08 * s, .4 * -s, .03 * s), 
+                                            ctx.closePath(), ctx.fill(), ctx.strokeStyle = "rgba(70,80,90,0.5)", ctx.lineWidth = 1.5, 
+                                            ctx.stroke(), ctx.shadowColor = "transparent", ctx.fillStyle = "rgba(255,255,255,0.55)", 
+                                            ctx.fillRect(.38 * -s, .22 * -s, .5 * s, .03 * s), ctx.fillStyle = "#5a3a24", rrPath(ctx, .2 * s, .19 * -s, .36 * s, .13 * s, .06 * s), 
+                                            ctx.fill(), ctx.fillStyle = "#8a5a2b", rrPath(ctx, .23 * s, .17 * -s, .3 * s, .04 * s, .02 * s), 
+                                            ctx.fill(), ctx.fillStyle = "#c9c9c9", ctx.beginPath(), ctx.arc(.3 * s, .125 * -s, .012 * s, 0, 2 * Math.PI), 
+                                            ctx.arc(.46 * s, .125 * -s, .012 * s, 0, 2 * Math.PI), ctx.fill(), ctx.restore();
+                                        }(ctx, cx + .1 * s, cy - .38 * s * (1 - a.pulse) - .12 * s, .9 * s);
+                                        break;
+                                    }
+
+                                  case "heat":
+                                  case "oil":
+                                  case "pour":
+                                  case "salt":
+                                  case "onion":
+                                  case "off":
+                                  case "plate":
+                                    {
+                                        const wokX = "plate" === st.id ? cx - .42 * s : cx, wokY = cy + .05 * s, wokS = "plate" === st.id ? .95 * s : 1.15 * s, flameCount = "heat" === st.id ? Math.min(cook.reps, 6) : "off" === st.id ? 6 : 5, flameAlpha = "off" === st.id ? Math.max(0, 1 - frac) : "plate" === st.id ? 0 : .9, bob = "plate" === st.id || "off" === st.id ? 0 : a.sign * a.pulse * s * .04;
+                                        if (flameAlpha > 0 && flameCount > 0) {
+                                            ctx.save(), ctx.globalAlpha = .45 * flameAlpha;
+                                            const glow = ctx.createRadialGradient(wokX, wokY + .36 * wokS, .05 * wokS, wokX, wokY + .36 * wokS, .45 * wokS);
+                                            glow.addColorStop(0, "#ff9f1a"), glow.addColorStop(1, "rgba(255,159,26,0)"), ctx.fillStyle = glow, 
+                                            ctx.beginPath(), ctx.ellipse(wokX, wokY + .36 * wokS, .5 * wokS, .14 * wokS, 0, 0, 2 * Math.PI), 
+                                            ctx.fill(), ctx.restore();
+                                        }
+                                        if (drawSprite(ctx, wokImg, wokX + bob, wokY, wokS, {
+                                            shadow: !0,
+                                            rot: a.sign * a.pulse * .04
+                                        }), function(ctx, cx, cy, w, count, alpha, now) {
+                                            if (!(count <= 0 || alpha <= 0)) {
+                                                ctx.save(), ctx.globalAlpha = alpha;
+                                                for (let i = 0; i < count; i++) {
+                                                    const fx = cx - w / 2 + w * (i + .5) / count, h = .16 * w * (.8 + .35 * Math.sin(now / 90 + 1.7 * i));
+                                                    ctx.beginPath(), ctx.moveTo(fx - .035 * w, cy), ctx.quadraticCurveTo(fx, cy - 1.5 * h, fx + .035 * w, cy), 
+                                                    ctx.fillStyle = "#ff9f1a", ctx.fill(), ctx.beginPath(), ctx.moveTo(fx - .018 * w, cy), 
+                                                    ctx.quadraticCurveTo(fx, cy - .9 * h, fx + .018 * w, cy), ctx.fillStyle = "#4aa3ff", 
+                                                    ctx.fill();
+                                                }
+                                                ctx.restore();
+                                            }
+                                        }(ctx, wokX, wokY + .4 * wokS, .5 * wokS, flameCount, flameAlpha, now), "oil" === st.id) {
+                                            ctx.save(), ctx.globalAlpha = .9;
+                                            const rx = .14 * wokS + .2 * wokS * frac, ry = .05 * wokS + .07 * wokS * frac, og = ctx.createRadialGradient(wokX - .3 * rx, wokY - .02 * wokS - .3 * ry, 1, wokX, wokY - .02 * wokS, rx);
+                                            og.addColorStop(0, "#ffe08a"), og.addColorStop(1, "#e0a92a"), ctx.fillStyle = og, 
+                                            ctx.beginPath(), ctx.ellipse(wokX, wokY - .02 * wokS, rx, ry, 0, 0, 2 * Math.PI), 
+                                            ctx.fill(), ctx.restore();
+                                        }
+                                        if ([ "pour", "salt", "onion", "off", "plate" ].includes(st.id)) {
+                                            const riceAlpha = "pour" === st.id ? Math.max(.25, frac) : "plate" === st.id ? Math.max(.15, 1 - frac) : 1;
+                                            drawSprite(ctx, riceImg, wokX + bob, wokY - .07 * wokS, .56 * wokS * ("plate" === st.id ? 1 - .5 * frac : 1), {
+                                                alpha: riceAlpha
+                                            });
+                                        }
+                                        if ([ "onion", "off", "plate" ].includes(st.id) || "onion" === st.id) {
+                                            const bits = "onion" === st.id ? 5 * cook.reps : 20;
+                                            ctx.save(), ctx.fillStyle = "#5bb134";
+                                            for (let i = 0; i < bits; i++) {
+                                                const px = wokX + bob + (cookSeeded(i, 8) - .5) * wokS * .42, py = wokY - .12 * wokS + (cookSeeded(i, 9) - .5) * wokS * .12;
+                                                ctx.beginPath(), ctx.ellipse(px, py, .012 * wokS, .008 * wokS, 3 * cookSeeded(i, 10), 0, 2 * Math.PI), 
+                                                ctx.fill();
+                                            }
+                                            ctx.restore();
+                                        }
+                                        if ("heat" === st.id && a.active) {
+                                            ctx.save(), ctx.strokeStyle = "rgba(255,255,255,0.7)", ctx.lineWidth = 3;
+                                            for (let i = 0; i < 3; i++) {
+                                                const x = wokX - .2 * wokS + i * wokS * .2, y0 = wokY - .35 * wokS - a.p * wokS * .25;
+                                                ctx.beginPath(), ctx.moveTo(x, y0), ctx.quadraticCurveTo(x + 10, y0 - 18, x, y0 - 36), 
+                                                ctx.stroke();
+                                            }
+                                            ctx.restore();
+                                        }
+                                        if ("oil" === st.id && (a.pulse > .3 && (ctx.save(), ctx.strokeStyle = "#f2c14e", 
+                                        ctx.lineWidth = Math.max(4, .022 * s), ctx.lineCap = "round", ctx.beginPath(), ctx.moveTo(cx + .36 * s, cy - .38 * s), 
+                                        ctx.lineTo(wokX + .05 * s, wokY - .08 * s), ctx.stroke(), ctx.restore()), drawSprite(ctx, advImg("oil_bottle"), cx + .5 * s, cy - .5 * s, .6 * s, {
+                                            shadow: !0,
+                                            rot: -1.1 * a.pulse
+                                        })), "pour" === st.id) {
+                                            if (a.pulse > .3) {
+                                                ctx.save(), ctx.fillStyle = "rgba(250,240,200,0.9)";
+                                                for (let i = 0; i < 8; i++) {
+                                                    const t = (cookSeeded(i, 11) + a.p) % 1;
+                                                    ctx.beginPath(), ctx.arc(cx - .36 * s + t * s * .3, cy - .36 * s + t * s * .3, .016 * s, 0, 2 * Math.PI), 
+                                                    ctx.fill();
+                                                }
+                                                ctx.restore();
+                                            }
+                                            drawSprite(ctx, advImg("rice_bowl"), cx - .5 * s, cy - .5 * s, .62 * s, {
+                                                shadow: !0,
+                                                rot: 1 * a.pulse
+                                            });
+                                        }
+                                        if ("salt" === st.id) {
+                                            const sx = cx + .46 * s + a.sign * a.pulse * s * .06;
+                                            if (a.active) {
+                                                ctx.save(), ctx.fillStyle = "#fff";
+                                                for (let i = 0; i < 10; i++) {
+                                                    const t = (cookSeeded(i, 12) + a.p) % 1;
+                                                    ctx.beginPath(), ctx.arc(sx - .2 * s + (cookSeeded(i, 13) - .5) * s * .2, cy - .3 * s + t * s * .3, .009 * s, 0, 2 * Math.PI), 
+                                                    ctx.fill();
+                                                }
+                                                ctx.restore();
+                                            }
+                                            drawSprite(ctx, advImg("salt_dish"), sx, cy - .48 * s, .42 * s, {
+                                                shadow: !0,
+                                                rot: a.sign * a.pulse * .25
+                                            });
+                                        }
+                                        if ("onion" === st.id) {
+                                            const ox = cx + .46 * s;
+                                            if (a.active) {
+                                                ctx.save(), ctx.fillStyle = "#5bb134";
+                                                for (let i = 0; i < 10; i++) {
+                                                    const t = (cookSeeded(i, 14) + a.p) % 1;
+                                                    ctx.beginPath(), ctx.arc(ox - .2 * s + (cookSeeded(i, 15) - .5) * s * .2, cy - .3 * s + t * s * .3, .012 * s, 0, 2 * Math.PI), 
+                                                    ctx.fill();
+                                                }
+                                                ctx.restore();
+                                            }
+                                            drawSprite(ctx, advImg("onion_chopped"), ox, cy - .48 * s, .42 * s, {
+                                                shadow: !0,
+                                                rot: .5 * -a.pulse
+                                            });
+                                        }
+                                        if ("off" === st.id && drawSprite(ctx, advImg("stove_knob"), cx - .62 * s, cy + .22 * s, .32 * s, {
+                                            shadow: !0,
+                                            rot: frac * Math.PI / 2
+                                        }), "plate" === st.id) {
+                                            const plateX = cx + .5 * s, plateY = cy + .12 * s;
+                                            drawSprite(ctx, advImg("plate_empty"), plateX, plateY, .85 * s, {
+                                                shadow: !0
+                                            }), frac > 0 && drawSprite(ctx, riceImg, plateX, plateY - .04 * s, .62 * s * (.35 + .65 * frac));
+                                            const t = a.active ? a.pulse : 0;
+                                            drawSprite(ctx, imgCookSpatula, wokX + (plateX - wokX) * t, cy - .35 * s - t * (1 - t) * s * .3, .6 * s, {
+                                                shadow: !0,
+                                                rot: .9 * t - .6
+                                            });
+                                        }
+                                        break;
+                                    }
+
+                                  default:
+                                    drawSprite(ctx, advImg(st.prop), cx, cy, s, {
+                                        shadow: !0
+                                    });
+                                }
+                                now < cook.introUntil && function(ctx, cw, g, text, sub) {
+                                    const font = g.bannerFont;
+                                    ctx.save(), ctx.font = "800 " + font + 'px "PingFang TC","Noto Sans TC",sans-serif';
+                                    const maxW = cw - 28;
+                                    let tw = ctx.measureText(text).width;
+                                    if (tw + 1.2 * font > maxW) {
+                                        const f2 = Math.max(18, Math.floor(font * (maxW - 1.2 * font) / tw));
+                                        ctx.font = "800 " + f2 + 'px "PingFang TC","Noto Sans TC",sans-serif', tw = ctx.measureText(text).width;
+                                    }
+                                    const bw = Math.min(maxW, tw + 1.6 * font), bh = font * (sub ? 2.55 : 1.75), bx = cw / 2 - bw / 2, by = g.bannerY;
+                                    rrPath(ctx, bx, by, bw, bh, 18), ctx.fillStyle = "rgba(255,255,255,0.94)", ctx.fill(), 
+                                    ctx.lineWidth = 4, ctx.strokeStyle = "#1A6B5A", ctx.stroke(), ctx.fillStyle = "#17463d", 
+                                    ctx.textAlign = "center", ctx.textBaseline = "middle", ctx.fillText(text, cw / 2, by + .95 * font), 
+                                    sub && (ctx.font = "700 " + Math.round(.62 * font) + 'px "PingFang TC","Noto Sans TC",sans-serif', 
+                                    ctx.fillStyle = "#8a5a12", ctx.fillText(sub, cw / 2, by + 1.95 * font)), ctx.restore();
+                                }(ctx, cw, g, "買完餸返到屋企，而家煮蛋炒飯！", "揸住握力器：揸實 → 放鬆 ＝ 1 下");
+                                {
+                                    const f = g.titleFont;
+                                    ctx.save(), ctx.font = "900 " + f + 'px "PingFang TC","Noto Sans TC",sans-serif';
+                                    const t1 = "第 " + (cook.idx + 1) + " 步／" + COOK_STEPS.length + "：" + (COOK_DIGIFLEX_TITLES[st.id] || st.text), pw = ctx.measureText(t1).width + 1.3 * f, ph = 1.7 * f, px = 14 * g.cssScale, py = 14 * g.cssScale;
+                                    rrPath(ctx, px, py, pw, ph, ph / 2), ctx.fillStyle = "rgba(255,255,255,0.94)", ctx.fill(), 
+                                    ctx.lineWidth = 3, ctx.strokeStyle = "#1A6B5A", ctx.stroke(), ctx.fillStyle = "#17463d", 
+                                    ctx.textAlign = "left", ctx.textBaseline = "middle", ctx.fillText(t1, px + .65 * f, py + ph / 2 + .04 * f), 
+                                    ctx.restore();
+                                }
+                                ctx.save();
+                                const pillFont = Math.round(.055 * Math.min(cw, ch));
+                                ctx.font = "900 " + pillFont + 'px "PingFang TC","Noto Sans TC",sans-serif';
+                                const label = "已揸 " + cook.reps + " / " + need + " 下", pw = ctx.measureText(label).width + 1.6 * pillFont, ph = 1.7 * pillFont;
+                                rrPath(ctx, cx - pw / 2, g.countY - ph / 2, pw, ph, ph / 2), ctx.fillStyle = "rgba(255,255,255,0.94)", 
+                                ctx.fill(), ctx.lineWidth = 4, ctx.strokeStyle = cook.digi.squeezing ? "#E07B39" : "#1A6B5A", 
+                                ctx.stroke(), ctx.fillStyle = "#17463d", ctx.textAlign = "center", ctx.textBaseline = "middle", 
+                                ctx.fillText(label, cx, g.countY + .04 * pillFont), ctx.restore(), cook.outcomeIdx >= 0 && now < cook.outcomeUntil && drawCookOutcomeVisual(ctx, cook.outcomeIdx, .5 * cw, .4 * ch, .22 * Math.min(cw, ch), !0), 
+                                ctx.save();
+                                const dotR = Math.max(6, .009 * Math.min(cw, ch)), gap = 3.2 * dotR, startX = cw / 2 - (COOK_STEPS.length - 1) * gap / 2;
+                                for (let i = 0; i < COOK_STEPS.length; i++) ctx.beginPath(), ctx.arc(startX + i * gap, g.dotsY, dotR, 0, 2 * Math.PI), 
+                                ctx.fillStyle = i < cook.idx ? "#1A6B5A" : i === cook.idx ? "#E07B39" : "rgba(255,255,255,0.75)", 
+                                ctx.fill(), ctx.lineWidth = 1.5, ctx.strokeStyle = "rgba(0,0,0,0.25)", ctx.stroke();
+                                ctx.restore(), function(ctx, g) {
+                                    const sq = cook.digi.squeezing, sz = g.badgeS * (sq ? .9 : 1);
+                                    ctx.save(), sq && (ctx.shadowColor = "rgba(224,123,57,0.9)", ctx.shadowBlur = 28), 
+                                    drawSprite(ctx, imgCookDigiflex, g.badgeX, g.badgeY, sz, {
+                                        alpha: handDetected ? 1 : .35
+                                    }), ctx.shadowColor = "transparent";
+                                    const f = Math.round(.17 * g.badgeS);
+                                    ctx.font = "900 " + f + 'px "PingFang TC","Noto Sans TC",sans-serif';
+                                    const txt = handDetected ? sq ? "揸實 ✊" : "放鬆 🖐" : "請將手入鏡", pw = ctx.measureText(txt).width + 1.2 * f, ph = 1.6 * f, px = g.badgeX, py = g.badgeY + .5 * g.badgeS + 8 * g.cssScale + ph / 2;
+                                    rrPath(ctx, px - pw / 2, py - ph / 2, pw, ph, ph / 2), ctx.fillStyle = sq ? "#E07B39" : "rgba(255,255,255,0.94)", 
+                                    ctx.fill(), ctx.lineWidth = 2, ctx.strokeStyle = sq ? "#E07B39" : "#1A6B5A", ctx.stroke(), 
+                                    ctx.fillStyle = sq ? "#fff" : "#17463d", ctx.textAlign = "center", ctx.textBaseline = "middle", 
+                                    ctx.fillText(txt, px, py + .05 * f), ctx.restore();
+                                }(ctx, g);
+                            }(ctx);
                             const cw = gameCanvas.width, ch = gameCanvas.height, L = cook.layout = cookLayout(), st = cook.step();
                             ctx.save();
                             const g = ctx.createLinearGradient(0, .6 * ch, 0, ch);
@@ -8083,45 +8500,8 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                             const bob = 6 * Math.sin(nowMs() / 420);
                             drawSprite(ctx, advImg(st.prop), L.prop.x, L.prop.y + bob, L.prop.s, {
                                 shadow: !0
-                            }), cook.outcomeIdx >= 0 && nowMs() < cook.outcomeUntil && function(ctx, idx, cx, cy, size) {
-                                if (idx < 0) return;
-                                ctx.save();
-                                {
-                                    const w = Math.min(.88 * gameCanvas.width, 620), h = Math.min(.29 * gameCanvas.height, 250);
-                                    rrPath(ctx, cx - w / 2, cy - h / 2, w, h, 18), ctx.fillStyle = "rgba(255,255,255,0.96)", 
-                                    ctx.fill(), ctx.strokeStyle = "rgba(10,125,117,0.35)", ctx.lineWidth = 3, ctx.stroke(), 
-                                    ctx.fillStyle = "#0a7d75", ctx.font = '800 14px "PingFang TC","Noto Sans TC",sans-serif', 
-                                    ctx.textAlign = "center", ctx.textBaseline = "top", ctx.fillText("這一步完成", cx, cy - h / 2 + 12), 
-                                    ctx.fillStyle = "#222", ctx.font = '900 20px "PingFang TC","Noto Sans TC",sans-serif', 
-                                    ctx.fillText(COOK_OUTCOME_LABELS[idx] || "已完成", cx, cy - h / 2 + 34), cy += 26;
-                                }
-                                const s = size;
-                                0 === idx ? drawSprite(ctx, advImg("rice_bowl"), cx, cy, s, {
-                                    shadow: !0
-                                }) : 1 === idx ? drawSprite(ctx, advImg("egg_beaten"), cx, cy, s, {
-                                    shadow: !0
-                                }) : 2 === idx ? (drawSprite(ctx, advImg("rice_bowl"), cx - .18 * s, cy, .82 * s, {
-                                    shadow: !0
-                                }), drawSprite(ctx, advImg("egg_beaten"), cx + .24 * s, cy + .08 * s, .58 * s, {
-                                    shadow: !0
-                                })) : 3 === idx ? drawSprite(ctx, advImg("spring_onion"), cx, cy, s, {
-                                    shadow: !0
-                                }) : 4 === idx ? drawSprite(ctx, advImg("onion_chopped"), cx, cy, s, {
-                                    shadow: !0
-                                }) : 5 === idx ? (ctx.fillStyle = "rgba(224,123,57,0.28)", ctx.beginPath(), ctx.ellipse(cx, cy + .24 * s, .5 * s, .16 * s, 0, 0, 2 * Math.PI), 
-                                ctx.fill(), drawSprite(ctx, advImg("wok"), cx, cy, s, {
-                                    shadow: !0
-                                })) : 6 === idx ? (drawSprite(ctx, advImg("wok"), cx - .1 * s, cy, .9 * s, {
-                                    shadow: !0
-                                }), drawSprite(ctx, advImg("oil_bottle"), cx + .35 * s, cy - .1 * s, .55 * s, {
-                                    shadow: !0
-                                })) : idx >= 7 && idx <= 10 ? (drawSprite(ctx, advImg("wok"), cx, cy, s, {
-                                    shadow: !0
-                                }), drawSprite(ctx, advImg("friedrice"), cx, cy - .04 * s, .62 * s), 8 === idx && drawSprite(ctx, advImg("salt_dish"), cx + .36 * s, cy - .2 * s, .34 * s), 
-                                9 === idx && drawSprite(ctx, advImg("onion_chopped"), cx + .3 * s, cy - .18 * s, .32 * s)) : (drawSprite(ctx, advImg("plate_empty"), cx, cy, s, {
-                                    shadow: !0
-                                }), drawSprite(ctx, advImg("friedrice"), cx, cy - .03 * s, .7 * s)), ctx.restore();
-                            }(ctx, cook.outcomeIdx, .5 * cw, .43 * ch, .22 * Math.min(cw, ch)), ctx.save();
+                            }), cook.outcomeIdx >= 0 && nowMs() < cook.outcomeUntil && drawCookOutcomeVisual(ctx, cook.outcomeIdx, .5 * cw, .43 * ch, .22 * Math.min(cw, ch), !0), 
+                            ctx.save();
                             const startX = cw / 2 - 22 * (COOK_STEPS.length - 1) / 2;
                             for (let i = 0; i < COOK_STEPS.length; i++) ctx.beginPath(), ctx.arc(startX + 22 * i, ch - 88, 7, 0, 2 * Math.PI), 
                             ctx.fillStyle = i < cook.idx ? "#1A6B5A" : i === cook.idx ? "#E07B39" : "rgba(0,0,0,0.18)", 
@@ -9178,7 +9558,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                         el.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:99998;pointer-events:none;background:rgba(10,20,18,.82);color:#e8fff6;font:12px/1.4 -apple-system,"PingFang TC",sans-serif;padding:6px 9px;border-radius:10px;white-space:pre;', 
                         document.body.appendChild(el), framePerf.overlayEl = el);
                         const p = framePerfSnapshot();
-                        el.textContent = `perf v130  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}\n左右手檢查 ${"off" === p.hand.check ? "關" : "開"}  鎖定手形 ${p.hand.lockSize || "-"}  大小拒絕 ${p.hand.sizeRejected}  遠處拒絕 ${p.hand.farRejected}` + (p.tool ? `\n衣夾 近指 ${p.tool.near} 放手≥${p.tool.nearExit} 張開≥${p.tool.nearOpen}  遠指 ${p.tool.far} 放手≥${p.tool.farExit} 張開≥${p.tool.farOpen}  門檻 ${p.tool.source}\n衣夾 合併 ${p.tool.combo} 拎起≤${p.tool.enter} 放手閘≥${p.tool.gate}\n衣夾 相對 基線 近${p.tool.relBaseNear} 遠${p.tool.relBaseFar} 合併${p.tool.relBaseCombo} 相對放手 ${p.tool.relOpen}` : ""), 
+                        el.textContent = `perf v131  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}\n左右手檢查 ${"off" === p.hand.check ? "關" : "開"}  鎖定手形 ${p.hand.lockSize || "-"}  大小拒絕 ${p.hand.sizeRejected}  遠處拒絕 ${p.hand.farRejected}` + (p.tool ? `\n衣夾 近指 ${p.tool.near} 放手≥${p.tool.nearExit} 張開≥${p.tool.nearOpen}  遠指 ${p.tool.far} 放手≥${p.tool.farExit} 張開≥${p.tool.farOpen}  門檻 ${p.tool.source}\n衣夾 合併 ${p.tool.combo} 拎起≤${p.tool.enter} 放手閘≥${p.tool.gate}\n衣夾 相對 基線 近${p.tool.relBaseNear} 遠${p.tool.relBaseFar} 合併${p.tool.relBaseCombo} 相對放手 ${p.tool.relOpen}` : ""), 
                         el.style.display = state.running ? "block" : "none";
                     }(perfT2);
                 } catch (e) {
@@ -10101,7 +10481,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     const ADV_THEMES = [ "mahjong", "cards", "cooking", "flowers", "laundry" ], LEVEL6_SHARED_LEVEL5_THEMES = [ "flowers", "cards", "mahjong" ];
     function usesAdvancedThemeModule(id) {
         const theme = id || state.theme;
-        return !(!isLevel6() || !LEVEL6_SHARED_LEVEL5_THEMES.includes(theme)) || !isGrossTabletop() && function(id) {
+        return !(!isLevel6() || !LEVEL6_SHARED_LEVEL5_THEMES.includes(theme)) || !("cooking" !== theme || !isLevel6DigiflexTask()) || !isGrossTabletop() && function(id) {
             return ADV_THEMES.indexOf(id || state.theme) >= 0;
         }(theme);
     }
@@ -10892,7 +11272,28 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             moveMin: 36,
             repCooldown: 700
         }
-    }, cook = {
+    }, COOK_DIGIFLEX_NEED = [ 3, 4, 4, 3, 5, 2, 2, 3, 4, 5, 1, 8 ], COOK_SQUEEZE_AMOUNTS = {
+        less: .5,
+        normal: 1,
+        more: 1.5
+    }, COOK_SQUEEZE_LABELS = {
+        less: "少（25 下）",
+        normal: "中（44 下）",
+        more: "多（69 下）"
+    };
+    function cookSqueezeAmountKey() {
+        return COOK_SQUEEZE_AMOUNTS[state.cookSqueezeAmount] ? state.cookSqueezeAmount : "normal";
+    }
+    function cookStepNeed(st) {
+        return isLevel6DigiflexTask() ? function(idx) {
+            const base = COOK_DIGIFLEX_NEED[Math.max(0, Math.min(COOK_DIGIFLEX_NEED.length - 1, idx))] || 1;
+            return Math.max(1, Math.round(base * COOK_SQUEEZE_AMOUNTS[cookSqueezeAmountKey()]));
+        }(cook.idx) : st.need;
+    }
+    function cookStepGoal(st) {
+        return isLevel6DigiflexTask() ? "揸實握力器再放鬆，" + cookStepNeed(st) + " 下" : st.goal;
+    }
+    const DIGIFLEX_RELATIVE_RISE = .35, DIGIFLEX_MIN_RISE = .03, DIGIFLEX_MIN_SQUEEZE_MS = 100, DIGIFLEX_ANIM_MS = 520, cook = {
         idx: 0,
         reps: 0,
         holdStart: 0,
@@ -10928,6 +11329,17 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         scoopZone: "",
         scoopCount: 0,
         layout: null,
+        digi: {
+            hist: [],
+            baseline: null,
+            peak: 0,
+            squeezing: !1,
+            since: 0,
+            animAt: 0,
+            animSign: 1,
+            lastScore: NaN
+        },
+        introUntil: 0,
         reset() {
             this.idx = 0, this.reps = 0, this.holdStart = 0, this.done = !1, this.msg = "", 
             this.metric = "", this.ring = [], this.angAccum = 0, this.rollSign = 0, this.rollPeak = 0, 
@@ -10936,7 +11348,16 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             this.scoopZone = "", this.scoopCount = 0, this.graspPrev = !1, this.readyAt = nowMs() + 1400, 
             this.lastRepAt = 0, this.phaseSince = 0, this.neutralSince = 0, this.rollPhase = 0, 
             this.rollExtremeSign = 0, this.rollLastSign = 0, this.outcomeIdx = -1, this.outcomeUntil = 0, 
-            this.announceAt = 0;
+            this.announceAt = 0, this.digi = {
+                hist: [],
+                baseline: null,
+                peak: 0,
+                squeezing: !1,
+                since: 0,
+                animAt: 0,
+                animSign: 1,
+                lastScore: NaN
+            }, this.introUntil = 0;
         },
         step() {
             return COOK_STEPS[Math.min(this.idx, COOK_STEPS.length - 1)];
@@ -10989,10 +11410,10 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         if (cookFeedbackFrame++ % 4 != 0) return;
         const st = cook.step(), total = COOK_STEPS.length, mEl = document.getElementById("advMetric");
         mEl && (mEl.innerHTML = cook.metric + (cook.poseOn ? "" : "<br>姿勢追蹤（肩／肘）未啟用：以手部動作估算，追蹤有限。"));
-        const gEl = document.getElementById("advStepGoal");
-        gEl && (gEl.textContent = "目標動作：" + st.goal + "　（" + cook.reps + " / " + st.need + "）");
+        const gEl = document.getElementById("advStepGoal"), need = cookStepNeed(st);
+        gEl && (gEl.textContent = "目標動作：" + cookStepGoal(st) + "　（" + cook.reps + " / " + need + "）");
         const bar = document.getElementById("advStepBar");
-        bar && (bar.style.width = Math.round((cook.idx + Math.min(1, cook.reps / st.need)) / total * 100) + "%");
+        bar && (bar.style.width = Math.round((cook.idx + Math.min(1, cook.reps / need)) / total * 100) + "%");
     }
     const COOK_OUTCOME_LABELS = [ "冷飯已完全抓鬆", "雞蛋已打散", "蛋液已均勻拌入白飯", "青蔥已洗淨", "青蔥已切成蔥花", "炒鍋已預熱", "油已加入炒鍋", "蛋液白飯已倒入炒鍋", "已加入鹽調味", "已加入蔥花", "爐火已關掉", "蛋炒飯已上碟" ];
     function cookAdvance(earned) {
@@ -11025,7 +11446,8 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         cook.idx = nextIdx, cook.reps = 0, cook.holdStart = 0, cook.ring = [], cook.angAccum = 0, 
         cook.rollSign = 0, cook.chopPhase = 0, cook.chopAnchor = 0, cook.shakeDir = 0, cook.shakeAnchor = 0, 
         cook.elbowPhase = 0, cook.tiltPhase = 0, cook.pinchPrev = !1, cook.scoopZone = "", 
-        cook.rollPhase = 0, cook.rollExtremeSign = 0, cook.neutralSince = 0, cook.phaseSince = 0, 
+        cook.rollPhase = 0, cook.rollExtremeSign = 0, cook.neutralSince = 0, cook.digi.squeezing = !1, 
+        cook.digi.hist = [], cook.digi.peak = 0, cook.digi.animAt = 0, cook.phaseSince = 0, 
         cook.readyAt = Math.max(nowMs() + 1400, cook.outcomeUntil + 900), cook.lastRepAt = 0, 
         cookRenderPanel(), earned ? (rewardSmall({
             achievement: "完成第 " + nextIdx + " 步 · " + st.text.slice(0, 12),
@@ -11040,19 +11462,21 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     }
     function cookAnnounce() {
         const st = cook.step();
-        cookRenderPanel(), speakCantonese(st.tts);
+        cookRenderPanel(), speakCantonese(function(st) {
+            return isLevel6DigiflexTask() ? st.text + "。揸實握力器，再放鬆，做" + cookStepNeed(st) + "下。" : st.tts;
+        }(st));
     }
     function cookRenderPanel() {
-        const st = cook.step(), motionGuide = document.getElementById("cookMotionGuide"), motionGif = document.getElementById("cookMotionGif");
-        motionGuide && motionGif && (motionGif.src = st.motionGif, motionGif.alt = st.goal, 
-        motionGuide.classList.add("show"), motionGuide.setAttribute("aria-hidden", "false"));
-        const total = COOK_STEPS.length, stepGoal = isLevel4Tabletop() && "pinchDrop" === st.kind ? "沿中線向前滑，在鍋上停住" : st.goal;
+        const st = cook.step(), motionGuide = document.getElementById("cookMotionGuide"), motionGif = document.getElementById("cookMotionGif"), digiflex = isLevel6DigiflexTask();
+        motionGuide && motionGif && (motionGif.src = digiflex ? "img/cook_digiflex_relax.png" : st.motionGif, 
+        motionGif.alt = cookStepGoal(st), motionGuide.classList.add("show"), motionGuide.setAttribute("aria-hidden", "false"));
+        const total = COOK_STEPS.length, need = cookStepNeed(st), stepGoal = isLevel4Tabletop() && "pinchDrop" === st.kind ? "沿中線向前滑，在鍋上停住" : cookStepGoal(st);
         advSetPanel({
             stepNo: "步驟 " + (cook.idx + 1) + " / " + total + (cook.done ? " · 已完成" : ""),
             text: st.text,
-            goal: "目標動作：" + stepGoal + "　（" + cook.reps + " / " + st.need + "）",
-            metric: cook.metric + (cook.poseOn ? "" : "<br>姿勢追蹤（肩／肘）未啟用：以手部動作估算，追蹤有限。"),
-            pct: (cook.idx + Math.min(1, cook.reps / st.need)) / total,
+            goal: "目標動作：" + stepGoal + "　（" + cook.reps + " / " + need + "）",
+            metric: cook.metric + (cook.poseOn || digiflex ? "" : "<br>姿勢追蹤（肩／肘）未啟用：以手部動作估算，追蹤有限。"),
+            pct: (cook.idx + Math.min(1, cook.reps / need)) / total,
             buttons: [ {
                 label: "跳過這一步",
                 warn: !0,
@@ -11109,6 +11533,68 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                 s: base * (patientLarge ? .31 : .27)
             }
         };
+    }
+    function drawCookOutcomeVisual(ctx, idx, cx, cy, size, withCard) {
+        if (idx < 0) return;
+        if (ctx.save(), withCard) {
+            const w = Math.min(.88 * gameCanvas.width, 620), h = Math.min(.29 * gameCanvas.height, 250);
+            rrPath(ctx, cx - w / 2, cy - h / 2, w, h, 18), ctx.fillStyle = "rgba(255,255,255,0.96)", 
+            ctx.fill(), ctx.strokeStyle = "rgba(10,125,117,0.35)", ctx.lineWidth = 3, ctx.stroke(), 
+            ctx.fillStyle = "#0a7d75", ctx.font = '800 14px "PingFang TC","Noto Sans TC",sans-serif', 
+            ctx.textAlign = "center", ctx.textBaseline = "top", ctx.fillText("這一步完成", cx, cy - h / 2 + 12), 
+            ctx.fillStyle = "#222", ctx.font = '900 20px "PingFang TC","Noto Sans TC",sans-serif', 
+            ctx.fillText(COOK_OUTCOME_LABELS[idx] || "已完成", cx, cy - h / 2 + 34), cy += 26;
+        }
+        const s = size;
+        0 === idx ? drawSprite(ctx, advImg("rice_bowl"), cx, cy, s, {
+            shadow: !0
+        }) : 1 === idx ? drawSprite(ctx, advImg("egg_beaten"), cx, cy, s, {
+            shadow: !0
+        }) : 2 === idx ? (drawSprite(ctx, advImg("rice_bowl"), cx - .18 * s, cy, .82 * s, {
+            shadow: !0
+        }), drawSprite(ctx, advImg("egg_beaten"), cx + .24 * s, cy + .08 * s, .58 * s, {
+            shadow: !0
+        })) : 3 === idx ? drawSprite(ctx, advImg("spring_onion"), cx, cy, s, {
+            shadow: !0
+        }) : 4 === idx ? drawSprite(ctx, advImg("onion_chopped"), cx, cy, s, {
+            shadow: !0
+        }) : 5 === idx ? (ctx.fillStyle = "rgba(224,123,57,0.28)", ctx.beginPath(), ctx.ellipse(cx, cy + .24 * s, .5 * s, .16 * s, 0, 0, 2 * Math.PI), 
+        ctx.fill(), drawSprite(ctx, advImg("wok"), cx, cy, s, {
+            shadow: !0
+        })) : 6 === idx ? (drawSprite(ctx, advImg("wok"), cx - .1 * s, cy, .9 * s, {
+            shadow: !0
+        }), drawSprite(ctx, advImg("oil_bottle"), cx + .35 * s, cy - .1 * s, .55 * s, {
+            shadow: !0
+        })) : idx >= 7 && idx <= 10 ? (drawSprite(ctx, advImg("wok"), cx, cy, s, {
+            shadow: !0
+        }), drawSprite(ctx, advImg("friedrice"), cx, cy - .04 * s, .62 * s), 8 === idx && drawSprite(ctx, advImg("salt_dish"), cx + .36 * s, cy - .2 * s, .34 * s), 
+        9 === idx && drawSprite(ctx, advImg("onion_chopped"), cx + .3 * s, cy - .18 * s, .32 * s)) : (drawSprite(ctx, advImg("plate_empty"), cx, cy, s, {
+            shadow: !0
+        }), drawSprite(ctx, advImg("friedrice"), cx, cy - .03 * s, .7 * s)), ctx.restore();
+    }
+    const imgCookKitchenBg = new Image;
+    imgCookKitchenBg.src = "img/cook_kitchen_bg.jpg";
+    const imgCookDigiflex = new Image;
+    imgCookDigiflex.src = "img/cook_digiflex_relax.png";
+    const imgCookSpatula = new Image;
+    imgCookSpatula.src = "img/cook_spatula.png";
+    const COOK_DIGIFLEX_TITLES = {
+        loosen: "抓鬆冷飯",
+        beat: "打蛋",
+        mix: "蛋液拌飯",
+        wash: "洗蔥",
+        chop: "切蔥花",
+        heat: "開火熱鑊",
+        oil: "落油",
+        pour: "倒飯落鑊",
+        salt: "落鹽",
+        onion: "落蔥花",
+        off: "熄火",
+        plate: "上碟"
+    };
+    function cookSeeded(i, k) {
+        const x = 43758.5453 * Math.sin(12.9898 * i + 78.233 * k);
+        return x - Math.floor(x);
     }
     const MJ_WINDS = [ "E", "S", "W", "N" ], MJ_DRAGONS = [ "C", "F", "B" ];
     function mjSuit(t) {
@@ -12082,7 +12568,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
 <script src="level4-three-games-module.js"></script>
 <script>
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
-  const LEVEL_APP_BUILD = "v130-20261119-bare-reopen-after-place";
+  const LEVEL_APP_BUILD = "v131-20261119-digiflex-cooking";
   const levelAppHadController = Boolean(navigator.serviceWorker.controller);
   let levelAppReloading = false;
 
