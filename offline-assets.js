@@ -169,6 +169,8 @@ self.__OFFLINE_ASSETS = [
   "./img/leaf_06.png",
   "./img/leaf_07.png",
   "./img/leaf_08.png",
+  "./img/level6_open_left.png",
+  "./img/level6_open_right.png",
   "./img/level6_pinch_left.png",
   "./img/level6_pinch_right.png",
   "./img/lotusrice.jpeg",

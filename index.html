@@ -4615,10 +4615,15 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                             nearRatio: nearRatio,
                             farRatio: farRatio,
                             isSeparated: indexRatio > open && middleRatio > open || farRatio > open && nearRatio >= exit,
+                            closedNow: bothClearlyClosed || asymmetricLightClose,
+                            idleReopenMark: enter - .56 * Math.max(.025, (exit - enter) / .14) + PUBLIC_BARE_IDLE_REOPEN_RANGE * Math.max(.025, (exit - enter) / .14),
                             score: Math.max(0, Math.min(1, 1 - ratio / Math.max(open, .001))),
                             valid: !0
                         };
-                    }(lm, isGrasping), midX = (lm[4].x + lm[8].x + lm[12].x) / 3, midY = (lm[4].y + lm[8].y + lm[12].y) / 3, pinchHeld = stabiliseDetectedGesture(pinch.isPinching, "pinch");
+                    }(lm, isGrasping), midX = (lm[4].x + lm[8].x + lm[12].x) / 3, midY = (lm[4].y + lm[8].y + lm[12].y) / 3, bareReopen = level6AutoPlaceEnabled() && !(heldItem || void 0 !== carrier && carrier && carrier.heldId || void 0 !== picker && picker && picker.heldId) && !0 === pinch.valid;
+                    bareReopen && Number.isFinite(pinch.ratio) && pinch.ratio >= pinch.idleReopenMark ? bareUnpinchedSinceMs || (bareUnpinchedSinceMs = nowMs()) : bareUnpinchedSinceMs = 0, 
+                    bareReopen && pinch.isPinching && bareUnpinchedSinceMs > 0 && nowMs() - bareUnpinchedSinceMs >= PUBLIC_BARE_REOPEN_PREP_MS && (pinch.isPinching = !1);
+                    const pinchHeld = stabiliseDetectedGesture(pinch.isPinching, "pinch");
                     pinchHeld ? pegUnpinchedSinceMs = 0 : pegUnpinchedSinceMs || (pegUnpinchedSinceMs = nowMs());
                     const pegUnpinchedSustained = !pinchHeld && isLevel6RealToolTask() && null != heldItem && pegUnpinchedSinceMs > 0 && nowMs() - pegUnpinchedSinceMs >= PUBLIC_PEG_UNPINCHED_PREP_MS;
                     return {
@@ -4770,6 +4775,8 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     function level6AutoPlaceEnabled() {
         return isLevel6() && isGraspStyleMode() && !isLevel6RealToolTask() && LEVEL6_AUTO_PLACE_THEMES.includes(state.theme);
     }
+    const PUBLIC_BARE_REOPEN_PREP_MS = 300, PUBLIC_BARE_IDLE_REOPEN_RANGE = .4;
+    let bareUnpinchedSinceMs = 0;
     function pegRelativeHoldReset() {
         pegRelative.base = null, pegRelative.holdSince = 0, pegRelative.open = !1;
     }
@@ -4804,7 +4811,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     function resetToolPinchAdapt() {
         toolPinchAdapt.near.length = 0, toolPinchAdapt.far.length = 0, toolPinchAdapt.combo.length = 0, 
         toolPinchAdapt.counter = 0, toolPinchAdapt.thresholds = null, pegUnpinchedSinceMs = 0, 
-        pegRelative.hist.length = 0, pegRelativeHoldReset(), chopstickFlexAdapt.index.length = 0, 
+        bareUnpinchedSinceMs = 0, pegRelative.hist.length = 0, pegRelativeHoldReset(), chopstickFlexAdapt.index.length = 0, 
         chopstickFlexAdapt.middle.length = 0, chopstickFlexAdapt.counter = 0, chopstickFlexAdapt.thresholds = null, 
         lastToolPinchLive = null;
     }
@@ -5100,6 +5107,10 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     imgLevel6PinchRight.src = "img/level6_pinch_right.png";
     const imgLevel6PinchLeft = new Image;
     imgLevel6PinchLeft.src = "img/level6_pinch_left.png";
+    const imgLevel6OpenRight = new Image;
+    imgLevel6OpenRight.src = "img/level6_open_right.png";
+    const imgLevel6OpenLeft = new Image;
+    imgLevel6OpenLeft.src = "img/level6_open_left.png";
     const imgCharsiu = new Image;
     imgCharsiu.src = "img/charsiu.png";
     const imgLotusrice = new Image;
@@ -6625,18 +6636,19 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     }
     function drawPublicLevel6ClosedPinchCursor(ctx, x, y, alpha = .82) {
         if (!isLevel6()) return !1;
-        const geometry = function(x, y) {
-            const side = "left" === activeAffectedSide() ? "left" : "right", minSide = Math.max(1, Math.min(gameCanvas.width, gameCanvas.height)), width = Math.max(230, Math.min(330, .35 * minSide)), height = width * (133 / 191), anchorX = "right" === side ? .035 : .965;
+        const open = !isGrasping, geometry = function(x, y, open = !1) {
+            const side = "left" === activeAffectedSide() ? "left" : "right", minSide = Math.max(1, Math.min(gameCanvas.width, gameCanvas.height)), width = Math.max(230, Math.min(330, .35 * minSide)), height = width * (open ? 150 / 191 : 133 / 191), anchorX = "right" === side ? .035 : .965, anchorY = open ? .447 : .505;
             return {
                 side: side,
                 width: width,
                 height: height,
                 x: x - width * anchorX,
-                y: y - .505 * height,
+                y: y - height * anchorY,
                 anchorX: anchorX,
-                anchorY: .505
+                anchorY: anchorY,
+                open: open
             };
-        }(x, y), image = "left" === geometry.side ? imgLevel6PinchLeft : imgLevel6PinchRight;
+        }(x, y, open), image = open ? "left" === geometry.side ? imgLevel6OpenLeft : imgLevel6OpenRight : "left" === geometry.side ? imgLevel6PinchLeft : imgLevel6PinchRight;
         return !(!image.complete || !image.naturalWidth || (ctx.save(), ctx.globalAlpha = alpha, 
         ctx.drawImage(image, geometry.x, geometry.y, geometry.width, geometry.height), ctx.restore(), 
         0));
@@ -7565,7 +7577,10 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                         "laundry" === advCurrent && laundrySetup(), "flowers" === advCurrent && flowersSetup()), 
                         handDetected) {
                             const advancedHeld = !(!carrier.heldId && !picker.heldId), advancedHover = !(!carrier.hoverId && !picker.hoverId);
-                            setActionPrompt(advancedHeld ? level6AutoPlaceEnabled() ? "移到目標停住" : isGrasping ? "保持揸住" : "張開手放低" : advancedHover ? isGrasping ? "揸實" : "揸實拿起" : "張開手", "");
+                            if (advancedHeld) setActionPrompt(level6AutoPlaceEnabled() ? "移到目標停住" : isGrasping ? "保持揸住" : "張開手放低", ""); else if (advancedHover) {
+                                const advancedArmed = !(!carrier.armed && !picker.armed);
+                                setActionPrompt(isGrasping ? level6AutoPlaceEnabled() && !advancedArmed ? "先張開手" : "揸實" : "揸實拿起", "");
+                            } else setActionPrompt("張開手", "");
                         } else setActionPrompt("患手入鏡", "");
                         advDom && advDom.reward.classList.contains("show") || advDom && advDom.keep && advDom.keep.classList.contains("show") || ("cooking" === advCurrent ? (cook.announceAt && nowMs() >= cook.announceAt && (cook.announceAt = 0, 
                         cookAnnounce()), !state.qaMode && poseLandmarker && advPoseFrame++ % 2 == 0 && detectPose(document.getElementById("gameVideo")), 
@@ -9085,7 +9100,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                             if (ctx.save(), isGraspStyleMode()) if (isPatientVisualCueMode()) {
                                 const handEmoji = isGrasping ? "✊🏻" : "✋🏻", closedHandSize = isLevel6() ? Math.max(210, Math.min(280, .27 * Math.min(cw, ch))) : Math.max(104, Math.min(124, .16 * Math.min(cw, ch))), handSize = isGrasping ? closedHandSize : 1.5 * closedHandSize, overlapsObject = foods.some(f => !f.removed && Math.hypot(cursorPoint.x - f.x, cursorPoint.y - f.y) <= f.r + .34 * handSize);
                                 if (isLevel6()) {
-                                    const alpha = isGrasping ? overlapsObject ? .76 : .86 : overlapsObject ? .54 : .66;
+                                    const alpha = isGrasping ? overlapsObject ? .76 : .86 : overlapsObject ? .6 : .72;
                                     drawPublicLevel6ClosedPinchCursor(ctx, cursorPoint.x, cursorPoint.y, alpha);
                                 } else ctx.globalAlpha = isGrasping ? overlapsObject ? .92 : .98 : overlapsObject ? .58 : .88, 
                                 ctx.font = `${Math.round(handSize)}px "Apple Color Emoji","Segoe UI Emoji",sans-serif`, 
@@ -9163,7 +9178,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                         el.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:99998;pointer-events:none;background:rgba(10,20,18,.82);color:#e8fff6;font:12px/1.4 -apple-system,"PingFang TC",sans-serif;padding:6px 9px;border-radius:10px;white-space:pre;', 
                         document.body.appendChild(el), framePerf.overlayEl = el);
                         const p = framePerfSnapshot();
-                        el.textContent = `perf v129  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}\n左右手檢查 ${"off" === p.hand.check ? "關" : "開"}  鎖定手形 ${p.hand.lockSize || "-"}  大小拒絕 ${p.hand.sizeRejected}  遠處拒絕 ${p.hand.farRejected}` + (p.tool ? `\n衣夾 近指 ${p.tool.near} 放手≥${p.tool.nearExit} 張開≥${p.tool.nearOpen}  遠指 ${p.tool.far} 放手≥${p.tool.farExit} 張開≥${p.tool.farOpen}  門檻 ${p.tool.source}\n衣夾 合併 ${p.tool.combo} 拎起≤${p.tool.enter} 放手閘≥${p.tool.gate}\n衣夾 相對 基線 近${p.tool.relBaseNear} 遠${p.tool.relBaseFar} 合併${p.tool.relBaseCombo} 相對放手 ${p.tool.relOpen}` : ""), 
+                        el.textContent = `perf v130  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}\n左右手檢查 ${"off" === p.hand.check ? "關" : "開"}  鎖定手形 ${p.hand.lockSize || "-"}  大小拒絕 ${p.hand.sizeRejected}  遠處拒絕 ${p.hand.farRejected}` + (p.tool ? `\n衣夾 近指 ${p.tool.near} 放手≥${p.tool.nearExit} 張開≥${p.tool.nearOpen}  遠指 ${p.tool.far} 放手≥${p.tool.farExit} 張開≥${p.tool.farOpen}  門檻 ${p.tool.source}\n衣夾 合併 ${p.tool.combo} 拎起≤${p.tool.enter} 放手閘≥${p.tool.gate}\n衣夾 相對 基線 近${p.tool.relBaseNear} 遠${p.tool.relBaseFar} 合併${p.tool.relBaseCombo} 相對放手 ${p.tool.relOpen}` : ""), 
                         el.style.display = state.running ? "block" : "none";
                     }(perfT2);
                 } catch (e) {
@@ -9569,7 +9584,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     }
     function publicPatientVoiceSay(phase, itemId, silent = !1) {
         const phrase = function(phase) {
-            return "contact" === phase ? "5" === state.level ? "揸拳頭" : "夾住" : "raise" === phase ? "舉高手" : "target" === phase ? "5" === state.level ? "打開隻手" : isLevel6Chopsticks() ? "打開筷子" : isLevel6() && "peg" === state.level6Task ? laundryAutoHangEnabled() ? "停住" : "放手" : level6AutoPlaceEnabled() ? "停住" : "打開隻手" : "";
+            return "contact" === phase ? "5" === state.level ? "揸拳頭" : "夾住" : "reopen" === phase ? level6AutoPlaceEnabled() ? "張開手" : "" : "raise" === phase ? "舉高手" : "target" === phase ? "5" === state.level ? "打開隻手" : isLevel6Chopsticks() ? "打開筷子" : isLevel6() && "peg" === state.level6Task ? laundryAutoHangEnabled() ? "停住" : "放手" : level6AutoPlaceEnabled() ? "停住" : "打開隻手" : "";
         }(phase);
         if (!phrase) return "";
         const now = nowMs(), key = publicPatientVoiceGuide.cycle + ":" + phase + ":" + String(itemId || "");
@@ -9582,7 +9597,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     function updatePublicPatientVoiceGuide(spec) {
         if (!isPatientVisualCueMode() || !state.running || state.paused) return "";
         const s = spec || {}, item = s.item || null, itemId = s.itemId || item?.id || item?.label || "item";
-        if ("contact" === s.phase) return s.touching && s.openForPickup ? publicPatientVoiceSay("contact", itemId, !!s.silent) : "";
+        if ("contact" === s.phase) return s.touching && s.openForPickup ? publicPatientVoiceSay("contact", itemId, !!s.silent) : s.touching && isGrasping && level6AutoPlaceEnabled() ? publicPatientVoiceSay("reopen", itemId, !!s.silent) : "";
         if ("pickup" === s.phase) {
             const target = function(item, zones) {
                 const list = Array.isArray(zones) ? zones.filter(Boolean) : [];
@@ -11902,7 +11917,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             if (ctx.save(), isGraspStyleMode()) {
                 if (isPatientVisualCueMode()) {
                     const handEmoji = isGrasping ? "✊🏻" : "✋🏻", closedHandSize = isLevel6() ? Math.max(210, Math.min(280, .27 * Math.min(gameCanvas.width, gameCanvas.height))) : Math.max(104, Math.min(124, .16 * Math.min(gameCanvas.width, gameCanvas.height))), handSize = isGrasping ? closedHandSize : 1.5 * closedHandSize;
-                    isLevel6() ? drawPublicLevel6ClosedPinchCursor(ctx, cursorX, cursorY, isGrasping ? .84 : .66) : (ctx.globalAlpha = isGrasping ? .98 : .88, 
+                    isLevel6() ? drawPublicLevel6ClosedPinchCursor(ctx, cursorX, cursorY, isGrasping ? .84 : .72) : (ctx.globalAlpha = isGrasping ? .98 : .88, 
                     ctx.font = `${Math.round(handSize)}px "Apple Color Emoji","Segoe UI Emoji",sans-serif`, 
                     ctx.textAlign = "center", ctx.textBaseline = "middle", ctx.fillText(handEmoji, cursorX, cursorY + .03 * handSize));
                 } else ctx.beginPath(), ctx.arc(cursorX, cursorY, isGrasping ? 28 : 30, 0, 2 * Math.PI), 
@@ -12067,7 +12082,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
 <script src="level4-three-games-module.js"></script>
 <script>
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
-  const LEVEL_APP_BUILD = "v129-20261119-laundry-auto-hang";
+  const LEVEL_APP_BUILD = "v130-20261119-bare-reopen-after-place";
   const levelAppHadController = Boolean(navigator.serviceWorker.controller);
   let levelAppReloading = false;
 
