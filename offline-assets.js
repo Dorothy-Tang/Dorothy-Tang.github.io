@@ -126,6 +126,7 @@ self.__OFFLINE_ASSETS = [
   "./img/cook_digiflex_relax.png",
   "./img/cook_kitchen_bg.jpg",
   "./img/cook_rice_only.png",
+  "./img/cook_sink.png",
   "./img/cook_spatula.png",
   "./img/dog.png",
   "./img/elephant.png",

@@ -8181,7 +8181,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                         sign: d.animSign,
                                         active: p < 1
                                     };
-                                }(now), s = g.s, cx = g.cx, cy = g.cy;
+                                }(now), s = g.s, cx = g.cx, cy = g.cy, stoveView = [ "heat", "oil", "pour", "salt", "onion", "off", "plate" ].includes(st.id);
                                 let bgRect = {
                                     x: 0,
                                     y: 0,
@@ -8189,7 +8189,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                     h: ch
                                 };
                                 if (imgCookKitchenBg.complete && imgCookKitchenBg.naturalWidth) {
-                                    const iw = imgCookKitchenBg.naturalWidth, ih = imgCookKitchenBg.naturalHeight, sc = Math.max(cw / iw, ch / ih), dw = iw * sc, dh = ih * sc, ox = Math.max(cw - dw, Math.min(0, .36 * cw - COOK_BG_BURNER.u * dw)), oy = .7 * (ch - dh);
+                                    const iw = imgCookKitchenBg.naturalWidth, ih = imgCookKitchenBg.naturalHeight, sc = Math.max(cw / iw, ch / ih), dw = iw * sc, dh = ih * sc, anchor = stoveView ? .36 * cw - COOK_BG_BURNER.u * dw : .5 * (cw - dw), ox = Math.max(cw - dw, Math.min(0, anchor)), oy = .7 * (ch - dh);
                                     ctx.drawImage(imgCookKitchenBg, ox, oy, dw, dh), bgRect = {
                                         x: ox,
                                         y: oy,
@@ -8207,8 +8207,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                 sh.addColorStop(0, "rgba(255,255,255,0)"), sh.addColorStop(1, "rgba(255,255,255,0.35)"), 
                                 ctx.fillStyle = sh, ctx.fillRect(0, .42 * ch, cw, .58 * ch), ctx.restore();
                                 const wokImg = advImg("wok");
-                                switch ([ "heat", "oil", "pour", "salt", "onion", "off", "plate" ].includes(st.id), 
-                                st.id) {
+                                switch (st.id) {
                                   case "loosen":
                                     {
                                         const dx = a.sign * a.pulse * s * .07, rot = a.sign * a.pulse * .08;
@@ -8263,21 +8262,63 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                     }
 
                                   case "wash":
-                                    drawSprite(ctx, advImg("spring_onion"), cx, cy, s, {
-                                        shadow: !0
-                                    }), ctx.save(), ctx.fillStyle = "rgba(90,170,255,0.75)";
-                                    for (let i = 0; i < 10; i++) {
-                                        const px = cx + (cookSeeded(i, 4) - .5) * s * .8, py = cy - .55 * s + (cookSeeded(i, 5) + a.p) % 1 * s * .9;
-                                        ctx.beginPath(), ctx.ellipse(px, py, .012 * s, .02 * s, 0, 0, 2 * Math.PI), ctx.fill();
+                                    {
+                                        const sinkBottom = g.countY - 12 * g.cssScale, sinkS = Math.min(cw * (g.portrait ? .62 : .4), (sinkBottom - .3 * ch) / COOK_SINK_ASPECT), sinkH = sinkS * COOK_SINK_ASPECT, sinkX = cx - (g.portrait ? 0 : .12 * sinkS), sinkY = sinkBottom - .5 * sinkH;
+                                        drawSprite(ctx, imgCookSink, sinkX, sinkY, sinkS, {
+                                            shadow: !0
+                                        });
+                                        const tapX = sinkX + (COOK_SINK_SPOUT.u - .5) * sinkS, tapY = sinkY + (COOK_SINK_SPOUT.v - .5) * sinkH, basinY = sinkY + (COOK_SINK_BASIN_V - .5) * sinkH;
+                                        !function(ctx, x, top, bottom, sinkS, now) {
+                                            const h = Math.max(1, bottom - top), w0 = .018 * sinkS, w1 = .036 * sinkS;
+                                            ctx.save();
+                                            const grad = ctx.createLinearGradient(0, top, 0, bottom);
+                                            grad.addColorStop(0, "rgba(140,200,255,0.8)"), grad.addColorStop(1, "rgba(110,180,245,0.9)"), 
+                                            ctx.fillStyle = grad, ctx.beginPath(), ctx.moveTo(x - w0, top), ctx.lineTo(x + w0, top), 
+                                            ctx.lineTo(x + w1, bottom), ctx.lineTo(x - w1, bottom), ctx.closePath(), ctx.fill(), 
+                                            ctx.fillStyle = "rgba(255,255,255,0.55)", ctx.beginPath(), ctx.moveTo(x - .35 * w0, top), 
+                                            ctx.lineTo(x + .35 * w0, top), ctx.lineTo(x + .3 * w1, bottom), ctx.lineTo(x - .3 * w1, bottom), 
+                                            ctx.closePath(), ctx.fill(), ctx.strokeStyle = "rgba(255,255,255,0.9)", ctx.lineWidth = Math.max(1.5, .005 * sinkS), 
+                                            ctx.lineCap = "round";
+                                            for (let i = 0; i < 6; i++) {
+                                                const t = (now / 600 + i / 6) % 1, y = top + t * h, w = w0 + (w1 - w0) * t;
+                                                ctx.beginPath(), ctx.moveTo(x - .6 * w, y), ctx.lineTo(x - .6 * w, Math.min(bottom, y + .07 * h)), 
+                                                ctx.stroke();
+                                            }
+                                            ctx.fillStyle = "rgba(200,230,255,0.9)";
+                                            for (let i = 0; i < 8; i++) {
+                                                const t = (now / 500 + cookSeeded(i, 21)) % 1, dx = (cookSeeded(i, 22) - .5) * sinkS * .16 * (.3 + t), dy = -Math.sin(t * Math.PI) * sinkS * .05;
+                                                ctx.beginPath(), ctx.arc(x + dx, bottom + dy, .005 * sinkS * (1 - .5 * t), 0, 2 * Math.PI), 
+                                                ctx.fill();
+                                            }
+                                            ctx.strokeStyle = "rgba(255,255,255,0.55)", ctx.lineWidth = Math.max(1, .003 * sinkS);
+                                            for (let i = 0; i < 3; i++) {
+                                                const t = (now / 900 + i / 3) % 1;
+                                                ctx.globalAlpha = 1 - t, ctx.beginPath(), ctx.ellipse(x, bottom, sinkS * (.02 + .1 * t), sinkS * (.006 + .03 * t), 0, 0, 2 * Math.PI), 
+                                                ctx.stroke();
+                                            }
+                                            ctx.restore();
+                                        }(ctx, tapX, tapY, basinY, sinkS, now);
+                                        const dip = a.pulse * sinkH * .06, sway = a.sign * a.pulse * .12, onionY = basinY - .09 * sinkH + dip;
+                                        drawSprite(ctx, advImg("spring_onion"), tapX + .02 * sinkS, onionY, .38 * sinkS, {
+                                            shadow: !0,
+                                            rot: .35 + sway
+                                        }), function(ctx, x, y, sinkS, now) {
+                                            ctx.save(), ctx.fillStyle = "rgba(225,242,255,0.95)";
+                                            for (let i = 0; i < 10; i++) {
+                                                const t = (now / 450 + cookSeeded(i, 31)) % 1, dx = (cookSeeded(i, 32) - .5) * sinkS * .22 * (.2 + t), dy = -Math.sin(t * Math.PI) * sinkS * .07 + t * sinkS * .02;
+                                                ctx.beginPath(), ctx.arc(x + dx, y + dy, .007 * sinkS * (1 - .6 * t), 0, 2 * Math.PI), 
+                                                ctx.fill();
+                                            }
+                                            ctx.restore();
+                                        }(ctx, tapX, onionY - .05 * sinkH, sinkS, now), ctx.save(), ctx.fillStyle = "rgba(255,255,255,0.9)";
+                                        for (let i = 0; i < 2 * cook.reps; i++) {
+                                            const px = tapX + (cookSeeded(i, 6) - .3) * sinkS * .4, py = basinY - .16 * sinkH + (cookSeeded(i, 7) - .5) * sinkH * .3;
+                                            ctx.font = "bold " + Math.round(.06 * s) + "px sans-serif", ctx.textAlign = "center", 
+                                            ctx.textBaseline = "middle", ctx.fillText("✦", px, py);
+                                        }
+                                        ctx.restore();
+                                        break;
                                     }
-                                    ctx.fillStyle = "rgba(255,255,255,0.9)";
-                                    for (let i = 0; i < 2 * cook.reps; i++) {
-                                        const px = cx + (cookSeeded(i, 6) - .5) * s * .9, py = cy + (cookSeeded(i, 7) - .5) * s * .5;
-                                        ctx.font = "bold " + Math.round(.06 * s) + "px sans-serif", ctx.textAlign = "center", 
-                                        ctx.textBaseline = "middle", ctx.fillText("✦", px, py);
-                                    }
-                                    ctx.restore();
-                                    break;
 
                                   case "chop":
                                     {
@@ -9594,7 +9635,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                         el.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:99998;pointer-events:none;background:rgba(10,20,18,.82);color:#e8fff6;font:12px/1.4 -apple-system,"PingFang TC",sans-serif;padding:6px 9px;border-radius:10px;white-space:pre;', 
                         document.body.appendChild(el), framePerf.overlayEl = el);
                         const p = framePerfSnapshot();
-                        el.textContent = `perf v133  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}\n左右手檢查 ${"off" === p.hand.check ? "關" : "開"}  鎖定手形 ${p.hand.lockSize || "-"}  大小拒絕 ${p.hand.sizeRejected}  遠處拒絕 ${p.hand.farRejected}` + (p.tool ? `\n衣夾 近指 ${p.tool.near} 放手≥${p.tool.nearExit} 張開≥${p.tool.nearOpen}  遠指 ${p.tool.far} 放手≥${p.tool.farExit} 張開≥${p.tool.farOpen}  門檻 ${p.tool.source}\n衣夾 合併 ${p.tool.combo} 拎起≤${p.tool.enter} 放手閘≥${p.tool.gate}\n衣夾 相對 基線 近${p.tool.relBaseNear} 遠${p.tool.relBaseFar} 合併${p.tool.relBaseCombo} 相對放手 ${p.tool.relOpen}` : ""), 
+                        el.textContent = `perf v134  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}\n左右手檢查 ${"off" === p.hand.check ? "關" : "開"}  鎖定手形 ${p.hand.lockSize || "-"}  大小拒絕 ${p.hand.sizeRejected}  遠處拒絕 ${p.hand.farRejected}` + (p.tool ? `\n衣夾 近指 ${p.tool.near} 放手≥${p.tool.nearExit} 張開≥${p.tool.nearOpen}  遠指 ${p.tool.far} 放手≥${p.tool.farExit} 張開≥${p.tool.farOpen}  門檻 ${p.tool.source}\n衣夾 合併 ${p.tool.combo} 拎起≤${p.tool.enter} 放手閘≥${p.tool.gate}\n衣夾 相對 基線 近${p.tool.relBaseNear} 遠${p.tool.relBaseFar} 合併${p.tool.relBaseCombo} 相對放手 ${p.tool.relOpen}` : ""), 
                         el.style.display = state.running ? "block" : "none";
                     }(perfT2);
                 } catch (e) {
@@ -11665,6 +11706,11 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         v: .722
     }, imgCookRice = new Image;
     imgCookRice.src = "img/cook_rice_only.png";
+    const COOK_SINK_SPOUT = {
+        u: .423,
+        v: .228
+    }, COOK_SINK_BASIN_V = .72, COOK_SINK_ASPECT = 530 / 900, imgCookSink = new Image;
+    imgCookSink.src = "img/cook_sink.png";
     const MJ_WINDS = [ "E", "S", "W", "N" ], MJ_DRAGONS = [ "C", "F", "B" ];
     function mjSuit(t) {
         return function(t) {
@@ -12637,7 +12683,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
 <script src="level4-three-games-module.js"></script>
 <script>
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
-  const LEVEL_APP_BUILD = "v133-20261119-wok-on-stove";
+  const LEVEL_APP_BUILD = "v134-20261119-sink-wash";
   const levelAppHadController = Boolean(navigator.serviceWorker.controller);
   let levelAppReloading = false;
 
