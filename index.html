@@ -297,6 +297,7 @@ html[data-screen="game"] .language-switcher{ top:max(68px,calc(env(safe-area-ins
   font-size:18px; font-weight:950; text-align:center; font-variant-numeric:tabular-nums; }
 .level4-auto-progress[hidden]{ display:none; }
 .level4-live-readouts{ display:grid; grid-template-columns:1fr; gap:5px; }
+.level4-live-readouts[hidden]{ display:none !important; }
 .level4-reading{ display:flex; min-height:54px; align-items:center; justify-content:space-between; gap:8px; padding:7px 9px;
   border-radius:12px; background:#edf7f3; color:#254c44; font-size:16px; font-weight:850; line-height:1.1; }
 .level4-reading[hidden]{ display:none !important; }
@@ -8811,7 +8812,8 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                 }
                                 return shoulderFlexionState.newFrame ? void (isLevel6ToolGestureTask() ? updateGraspLogic() : function() {
                                     if (dwellTarget = null, dwellStartTime = 0, dwellActive = !1, lastDwellPct = 0, 
-                                    heldItem = null, gripActive = !1, shoulderFlexionState.repetitions !== shoulderFlexionLastRepetition) {
+                                    heldItem = null, gripActive = !1, shoulderRewardCycle.active && !shoulderRewardCycle.repetitionReady && shoulderRewardVisualFinished() && shoulderFlexionController && "function" == typeof shoulderFlexionController.completeHeldRepetition && shoulderFlexionController.completeHeldRepetition() && (shoulderFlexionState = shoulderFlexionController.snapshot()), 
+                                    shoulderFlexionState.repetitions !== shoulderFlexionLastRepetition) {
                                         const completed = shoulderFlexionState.repetitions > shoulderFlexionLastRepetition;
                                         shoulderFlexionLastRepetition = shoulderFlexionState.repetitions, completed && (score += 10, 
                                         correctCount++, wrongStreak = 0, adaptiveNoteTrial("shoulder_flexion_cycle", "success"), 
@@ -8821,11 +8823,10 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                     }
                                     shoulderRewardCycle.active && shoulderRewardCycle.repetitionReady && shoulderRewardVisualFinished() && (advanceLevel3RoundVariant(), 
                                     resetBowlingStrike(), resetBasketballShot(), resetTeahouseServe(), foods = [], spawnInitialFoods(), 
-                                    shoulderFlexionCycleAwarded = !1, shoulderRewardCycle.reset(), shoulderFlexionController && (shoulderFlexionController.setTarget(state.shoulderTargetDeg, state.level), 
-                                    shoulderFlexionState = shoulderFlexionController.snapshot()));
+                                    shoulderFlexionCycleAwarded = !1, shoulderRewardCycle.reset());
                                     let item = foods.find(food => !food.removed);
-                                    item || (spawnInitialFoods(), item = foods.find(food => !food.removed));
-                                    const target = Math.max(1, Number(shoulderFlexionState.selectedTargetDeg) || 1), estimated = Math.max(0, Number(shoulderFlexionState.estimatedAngle) || 0), visualProgress = shoulderRewardCycle.active ? 1 : clamp01(Number(shoulderFlexionState.progress) || 0), cw = gameCanvas.width, ch = gameCanvas.height;
+                                    item || (spawnInitialFoods(), item = foods.find(food => !food.removed)), Math.max(1, Number(shoulderFlexionState.selectedTargetDeg) || 1);
+                                    const estimated = Math.max(0, Number(shoulderFlexionState.estimatedAngle) || 0), visualProgress = shoulderRewardCycle.active ? 1 : clamp01(Number(shoulderFlexionState.progress) || 0), cw = gameCanvas.width, ch = gameCanvas.height;
                                     let laneX = cw * (ch > cw ? .68 : .58), bottom = .78 * ch, top = .34 * ch;
                                     if ("bowlinglane" === state.theme && (top = bowlingLaneGeometry(cw, ch).ballTopY), 
                                     "tsuenwan" === state.theme) {
@@ -8891,7 +8892,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                         teahouseServe.fromY = item ? item.y : .34 * gameCanvas.height, teahouseServe.img = item ? item.img : null, 
                                         teahouseServe.label = item ? item.label : "";
                                     }(), Math.round(estimated), state.shoulderExerciseMode), syncTargetHoldFeedback(), 
-                                    shoulderRewardCycle.active && !shoulderRewardVisualFinished() ? setActionPrompt("好！可以放低休息 · 睇埋動畫", "") : "target-hold" === shoulderFlexionState.phase && shoulderFlexionState.holdInterrupted ? setActionPrompt("再抬高 · 保持", "") : shoulderFlexionState.holdFeedbackActive ? setActionPrompt("好！", "") : shoulderFlexionState.holdCountdownActive ? setActionPrompt("保持舉高", shoulderFlexionState.holdRemainingSec + "") : shoulderFlexionState.targetReady ? setActionPrompt("慢慢返回", shoulderFlexionState.selectedStartDeg + "°") : "await-start" === shoulderFlexionState.phase ? setActionPrompt("到起點", shoulderFlexionState.selectedStartDeg + "°") : setActionPrompt("抬高至", target + "°");
+                                    shoulderRewardCycle.active && !shoulderRewardVisualFinished() ? setActionPrompt("好！可以放低休息 · 睇埋動畫", "") : "target-hold" === shoulderFlexionState.phase && shoulderFlexionState.holdInterrupted ? setActionPrompt("再抬高 · 保持", "") : shoulderFlexionState.holdFeedbackActive ? setActionPrompt("好！", "") : shoulderFlexionState.holdCountdownActive ? setActionPrompt("保持舉高", shoulderFlexionState.holdRemainingSec + "") : shoulderFlexionState.targetReady ? setActionPrompt("慢慢放低", "") : "await-start" === shoulderFlexionState.phase ? setActionPrompt("放低啲再抬高", "") : setActionPrompt("抬高", "");
                                 }()) : (syncTargetHoldFeedback(), void setActionPrompt("等待鏡頭", ""));
                             }
                             if (isLevel4Tabletop()) {
@@ -9477,19 +9478,12 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                     ctx.font = '800 26px "PingFang TC","Noto Sans TC",sans-serif', ctx.textAlign = "center", 
                                     ctx.textBaseline = "middle", ctx.fillText("醒目！繼續！", g.laneX, by + bh / 2 + 1), ctx.restore();
                                 }
-                                const topY = g.plateY - g.plateH / 2;
-                                if (topY >= 34) {
-                                    const target = shoulderFlexionState.selectedTargetDeg ?? "—";
-                                    ctx.save(), ctx.fillStyle = "#155f53", ctx.font = '800 16px "PingFang TC","Noto Sans TC",sans-serif', 
-                                    ctx.textAlign = "center", ctx.fillText("目標 " + target + "°", g.laneX, Math.max(20, topY - 10)), 
-                                    ctx.restore();
-                                }
+                                g.plateY, g.plateH;
                             }(ctx, cw, ch);
-                            const x = cw * (ch > cw ? .68 : .58), bottom = .8 * ch, top = .32 * ch, target = shoulderFlexionState.selectedTargetDeg ?? "—";
-                            ctx.save(), ctx.strokeStyle = "rgba(17,95,83,.62)", ctx.lineWidth = 6, ctx.setLineDash([ 14, 10 ]), 
-                            ctx.beginPath(), ctx.moveTo(x, bottom), ctx.lineTo(x, top), ctx.stroke(), ctx.setLineDash([]), 
-                            ctx.fillStyle = "#155f53", ctx.font = '800 16px "PingFang TC","Noto Sans TC",sans-serif', 
-                            ctx.textAlign = "center", ctx.fillText("目標 " + target + "°", x, top - 20), ctx.restore();
+                            const x = cw * (ch > cw ? .68 : .58), bottom = .8 * ch, top = .32 * ch;
+                            shoulderFlexionState.selectedTargetDeg, ctx.save(), ctx.strokeStyle = "rgba(17,95,83,.62)", 
+                            ctx.lineWidth = 6, ctx.setLineDash([ 14, 10 ]), ctx.beginPath(), ctx.moveTo(x, bottom), 
+                            ctx.lineTo(x, top), ctx.stroke(), ctx.setLineDash([]), ctx.restore();
                         }(ctx, cw, ch);
                         const LBL_SIZE = state.labelFont || 36;
                         for (const t of targets) {
@@ -9652,7 +9646,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                         el.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:99998;pointer-events:none;background:rgba(10,20,18,.82);color:#e8fff6;font:12px/1.4 -apple-system,"PingFang TC",sans-serif;padding:6px 9px;border-radius:10px;white-space:pre;', 
                         document.body.appendChild(el), framePerf.overlayEl = el);
                         const p = framePerfSnapshot();
-                        el.textContent = `perf v136  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}\n左右手檢查 ${"off" === p.hand.check ? "關" : "開"}  鎖定手形 ${p.hand.lockSize || "-"}  大小拒絕 ${p.hand.sizeRejected}  遠處拒絕 ${p.hand.farRejected}` + (p.tool ? `\n衣夾 近指 ${p.tool.near} 放手≥${p.tool.nearExit} 張開≥${p.tool.nearOpen}  遠指 ${p.tool.far} 放手≥${p.tool.farExit} 張開≥${p.tool.farOpen}  門檻 ${p.tool.source}\n衣夾 合併 ${p.tool.combo} 拎起≤${p.tool.enter} 放手閘≥${p.tool.gate}\n衣夾 相對 基線 近${p.tool.relBaseNear} 遠${p.tool.relBaseFar} 合併${p.tool.relBaseCombo} 相對放手 ${p.tool.relOpen}` : ""), 
+                        el.textContent = `perf v137  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}\n左右手檢查 ${"off" === p.hand.check ? "關" : "開"}  鎖定手形 ${p.hand.lockSize || "-"}  大小拒絕 ${p.hand.sizeRejected}  遠處拒絕 ${p.hand.farRejected}` + (p.tool ? `\n衣夾 近指 ${p.tool.near} 放手≥${p.tool.nearExit} 張開≥${p.tool.nearOpen}  遠指 ${p.tool.far} 放手≥${p.tool.farExit} 張開≥${p.tool.farOpen}  門檻 ${p.tool.source}\n衣夾 合併 ${p.tool.combo} 拎起≤${p.tool.enter} 放手閘≥${p.tool.gate}\n衣夾 相對 基線 近${p.tool.relBaseNear} 遠${p.tool.relBaseFar} 合併${p.tool.relBaseCombo} 相對放手 ${p.tool.relOpen}` : ""), 
                         el.style.display = state.running ? "block" : "none";
                     }(perfT2);
                 } catch (e) {
@@ -9853,8 +9847,8 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             selectedArmLabel && (selectedArmLabel.textContent = "患側：" + ("left" === activeAffectedSide() ? "左" : "右") + "手臂");
             const labels = document.querySelectorAll(".level4-live-readouts .level4-reading > span");
             labels[0] && (labels[0].textContent = "現在"), labels[1] && (labels[1].textContent = "目標");
-            const liveAngleReady = shoulder.framingReady && shoulder.gameReady && !0 === shoulder.frame?.fresh && "ready" === shoulder.reason && Number.isFinite(shoulder.estimatedAngle);
-            document.getElementById("level4FlexedEndpoint").textContent = liveAngleReady ? Math.round(shoulder.estimatedAngle) + "°" : "—", 
+            const liveAngleReady = shoulder.framingReady && shoulder.gameReady && !0 === shoulder.frame?.fresh && "ready" === shoulder.reason && Number.isFinite(shoulder.estimatedAngle), readouts = document.querySelector(".level4-live-readouts");
+            readouts && (readouts.hidden = !0), document.getElementById("level4FlexedEndpoint").textContent = liveAngleReady ? Math.round(shoulder.estimatedAngle) + "°" : "—", 
             document.getElementById("level4ExtendedEndpoint").textContent = Number.isFinite(shoulder.selectedTargetDeg) ? shoulder.selectedTargetDeg + "°" : "—", 
             document.getElementById("level4ShoulderAbductionReading").hidden = !0, document.getElementById("level4AutoAction").hidden = !0, 
             document.getElementById("level4ManualActions").hidden = !0, document.getElementById("btnLevel4AutoCancel").hidden = !0;
@@ -9864,6 +9858,8 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             return void (diag && (diag.textContent = (shoulderFlexionController?.toText() || "module missing") + "\nangle is camera-estimated training feedback, not medical-grade ROM"));
         }
         bar.classList.remove("shoulder-live");
+        const readoutsBox = document.querySelector(".level4-live-readouts");
+        readoutsBox && (readoutsBox.hidden = !1);
         const labels = document.querySelectorAll(".level4-live-readouts .level4-reading > span");
         labels[0] && (labels[0].innerHTML = '已記錄屈肘起點<span class="en">Captured flexed start</span>'), 
         labels[1] && (labels[1].innerHTML = '已記錄伸肘終點<span class="en">Captured extended end</span>');
@@ -12728,7 +12724,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
 <script src="level4-three-games-module.js"></script>
 <script>
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
-  const LEVEL_APP_BUILD = "v136-20261120-cashier-arrive-arm";
+  const LEVEL_APP_BUILD = "v137-20261120-shoulder-rearm-drop10";
   const levelAppHadController = Boolean(navigator.serviceWorker.controller);
   let levelAppReloading = false;
 
