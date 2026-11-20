@@ -3891,9 +3891,10 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                 fridgeCrashUntil = 0, fridgeCrashMsg = "", fridgeCrashPoint = null, fridgeRoundTimerId && (clearTimeout(fridgeRoundTimerId), 
                 fridgeRoundTimerId = null), releaseDwellStart = 0, releaseDwellPlate = null, releaseDwellPauseAt = 0, 
                 releaseDwellLastOpenAt = 0, basicOpenStart = 0, basicGraspStart = 0, basicGraspCandidate = "", 
-                basicGraspArmed = !1, basicPostReleaseOpenStart = 0, basicContactCandidate = "", 
-                basicContactUntil = 0, gripActive = !1, isGrasping = !1, handOpenPrep = !1, resetToolPinchAdapt(), 
-                resetPublicPatientVoiceGuideCycle(!0), detectedGestureState = {
+                basicGraspArmed = !1, basicArriveId = "", basicArriveStart = 0, basicArriveArmed = !1, 
+                basicPostReleaseOpenStart = 0, basicContactCandidate = "", basicContactUntil = 0, 
+                gripActive = !1, isGrasping = !1, handOpenPrep = !1, resetToolPinchAdapt(), resetPublicPatientVoiceGuideCycle(!0), 
+                detectedGestureState = {
                     mode: "",
                     stable: !1,
                     candidate: !1,
@@ -4664,7 +4665,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                             score: Math.max(0, Math.min(1, 1 - ratio / Math.max(open, .001))),
                             valid: !0
                         };
-                    }(lm, isGrasping), midX = (lm[4].x + lm[8].x + lm[12].x) / 3, midY = (lm[4].y + lm[8].y + lm[12].y) / 3, bareReopen = level6AutoPlaceEnabled() && !(heldItem || void 0 !== carrier && carrier && carrier.heldId || void 0 !== picker && picker && picker.heldId) && !0 === pinch.valid;
+                    }(lm, isGrasping), midX = (lm[4].x + lm[8].x + lm[12].x) / 3, midY = (lm[4].y + lm[8].y + lm[12].y) / 3, bareReopen = level6AutoPlaceEnabled() && !level6AnyItemHeld() && !0 === pinch.valid;
                     bareReopen && Number.isFinite(pinch.ratio) && pinch.ratio >= pinch.idleReopenMark ? bareUnpinchedSinceMs || (bareUnpinchedSinceMs = nowMs()) : bareUnpinchedSinceMs = 0, 
                     bareReopen && pinch.isPinching && bareUnpinchedSinceMs > 0 && nowMs() - bareUnpinchedSinceMs >= PUBLIC_BARE_REOPEN_PREP_MS && (pinch.isPinching = !1);
                     const pinchHeld = stabiliseDetectedGesture(pinch.isPinching, "pinch");
@@ -4825,6 +4826,20 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     }
     const PUBLIC_BARE_REOPEN_PREP_MS = 300, PUBLIC_BARE_IDLE_REOPEN_RANGE = .4;
     let bareUnpinchedSinceMs = 0;
+    function level6AnyItemHeld() {
+        return !!(heldItem || void 0 !== carrier && carrier && carrier.heldId || void 0 !== picker && picker && picker.heldId);
+    }
+    const LEVEL6_ARRIVE_ARM_MS = 700;
+    function level6ArriveArmEnabled() {
+        return isLevel6() && isGraspStyleMode() && (level6AutoPlaceEnabled() || isLevel6RealToolTask()) && !level6AnyItemHeld();
+    }
+    function level6ArriveArmPoll(ctl, best, now, canArm) {
+        return best && !best.placed && level6ArriveArmEnabled() ? (ctl.arriveId !== best.id && (ctl.arriveId = best.id, 
+        ctl.arriveStart = now), !1 !== canArm && !ctl.armed && now - ctl.arriveStart >= LEVEL6_ARRIVE_ARM_MS && (ctl.armed = !0, 
+        ctl.arriveArmed = !0), !(!ctl.armed || !ctl.arriveArmed)) : (ctl.arriveId = null, 
+        ctl.arriveStart = 0, ctl.arriveArmed && (ctl.arriveArmed = !1, ctl.armed = !1), 
+        !1);
+    }
     function pegRelativeHoldReset() {
         pegRelative.base = null, pegRelative.holdSince = 0, pegRelative.open = !1;
     }
@@ -6657,7 +6672,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     function shoulderRewardVisualFinished() {
         return shoulderRewardCycle.active && nowMs() >= shoulderRewardCycle.finishAtMs;
     }
-    let shoulderHoldSpokenSecond = null, shoulderHoldInterruptedSpoken = !1, totalWrong = 0, basicOpenStart = 0, basicGraspStart = 0, basicGraspCandidate = "", basicGraspArmed = !1, basicPostReleaseOpenStart = 0, basicContactCandidate = "", basicContactUntil = 0, wrongStreak = 0, timeLeft = 60, gameTimerId = null, foodIdSeq = 1;
+    let shoulderHoldSpokenSecond = null, shoulderHoldInterruptedSpoken = !1, totalWrong = 0, basicOpenStart = 0, basicGraspStart = 0, basicGraspCandidate = "", basicGraspArmed = !1, basicArriveId = "", basicArriveStart = 0, basicArriveArmed = !1, basicPostReleaseOpenStart = 0, basicContactCandidate = "", basicContactUntil = 0, wrongStreak = 0, timeLeft = 60, gameTimerId = null, foodIdSeq = 1;
     function beginLevel4StandardCarry(item) {
         if (!item || !isLevel4StandardTransportGame()) return;
         const matchingTarget = targets.find(target => target.type === item.targetType), pickupX = item.x, pickupFitsTarget = matchingTarget && Math.abs(pickupX - matchingTarget.x) <= matchingTarget.w / 2 + item.r;
@@ -9533,7 +9548,9 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                             if (isTeahouseDimsumMode() && "idle" !== teahouseServe.phase) continue;
                             ctx.save();
                             const visualR = f.visualR || f.r, visualPoint = publicLevel6HeldDisplayPoint(f.x, f.y, visualR, f.held), drawX = visualPoint.x, drawY = visualPoint.y;
-                            if (f.drawItem) f.drawItem(ctx, drawX, drawY, visualR * (f.drawScale || .92)), drawItemLabel(ctx, f.label, drawX, drawY + visualR * (f.labelGap || 1.04)); else if (f.img && f.img.complete && f.img.naturalWidth > 0) {
+                            if (isLaundryRackGame() && !heldItem && !f.held && basicGraspArmed && basicGraspCandidate === f.id && (ctx.fillStyle = "rgba(224,123,57,0.30)", 
+                            ctx.beginPath(), ctx.arc(drawX, drawY, 1.25 * visualR, 0, 2 * Math.PI), ctx.fill()), 
+                            f.drawItem) f.drawItem(ctx, drawX, drawY, visualR * (f.drawScale || .92)), drawItemLabel(ctx, f.label, drawX, drawY + visualR * (f.labelGap || 1.04)); else if (f.img && f.img.complete && f.img.naturalWidth > 0) {
                                 const iw = f.img.naturalWidth, ih = f.img.naturalHeight, targetMax = 2 * visualR;
                                 let dw, dh;
                                 iw >= ih ? (dw = targetMax, dh = targetMax * ih / iw) : (dh = targetMax, dw = targetMax * iw / ih), 
@@ -9635,7 +9652,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                         el.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:99998;pointer-events:none;background:rgba(10,20,18,.82);color:#e8fff6;font:12px/1.4 -apple-system,"PingFang TC",sans-serif;padding:6px 9px;border-radius:10px;white-space:pre;', 
                         document.body.appendChild(el), framePerf.overlayEl = el);
                         const p = framePerfSnapshot();
-                        el.textContent = `perf v135  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}\n左右手檢查 ${"off" === p.hand.check ? "關" : "開"}  鎖定手形 ${p.hand.lockSize || "-"}  大小拒絕 ${p.hand.sizeRejected}  遠處拒絕 ${p.hand.farRejected}` + (p.tool ? `\n衣夾 近指 ${p.tool.near} 放手≥${p.tool.nearExit} 張開≥${p.tool.nearOpen}  遠指 ${p.tool.far} 放手≥${p.tool.farExit} 張開≥${p.tool.farOpen}  門檻 ${p.tool.source}\n衣夾 合併 ${p.tool.combo} 拎起≤${p.tool.enter} 放手閘≥${p.tool.gate}\n衣夾 相對 基線 近${p.tool.relBaseNear} 遠${p.tool.relBaseFar} 合併${p.tool.relBaseCombo} 相對放手 ${p.tool.relOpen}` : ""), 
+                        el.textContent = `perf v136  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}\n左右手檢查 ${"off" === p.hand.check ? "關" : "開"}  鎖定手形 ${p.hand.lockSize || "-"}  大小拒絕 ${p.hand.sizeRejected}  遠處拒絕 ${p.hand.farRejected}` + (p.tool ? `\n衣夾 近指 ${p.tool.near} 放手≥${p.tool.nearExit} 張開≥${p.tool.nearOpen}  遠指 ${p.tool.far} 放手≥${p.tool.farExit} 張開≥${p.tool.farOpen}  門檻 ${p.tool.source}\n衣夾 合併 ${p.tool.combo} 拎起≤${p.tool.enter} 放手閘≥${p.tool.gate}\n衣夾 相對 基線 近${p.tool.relBaseNear} 遠${p.tool.relBaseFar} 合併${p.tool.relBaseCombo} 相對放手 ${p.tool.relOpen}` : ""), 
                         el.style.display = state.running ? "block" : "none";
                     }(perfT2);
                 } catch (e) {
@@ -10267,24 +10284,31 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             }
             const pickupMargin = isLaundryRackGame() ? 220 : isFridgeGame() ? 210 : isPublicLevel5DimsumLayout() ? 150 : 100, voiceMargin = isLaundryRackGame() ? 260 : isFridgeGame() ? 250 : 150, voiceNearFood = nearest && nearestDist <= pickupContactRadius(nearest.r, voiceMargin);
             let overFood = nearest && nearestDist <= pickupContactRadius(nearest.r, pickupMargin);
+            const directContact = !!overFood;
             if (overFood) basicContactCandidate = nearest.id, basicContactUntil = now + CONTACT_GRACE_MS; else if (basicContactCandidate && now <= basicContactUntil) {
                 const locked = foods.find(f => f.id === basicContactCandidate && !f.removed && !f.held);
                 locked && (nearest = locked, overFood = !0);
             }
-            if (updatePublicPatientVoiceGuide({
+            if (overFood && level6ArriveArmEnabled() ? (basicArriveId !== nearest.id && (basicArriveId = nearest.id, 
+            basicArriveStart = now), directContact && !isGrasping && !basicGraspArmed && now - basicArriveStart >= LEVEL6_ARRIVE_ARM_MS && (basicGraspArmed = !0, 
+            basicArriveArmed = !0, basicGraspCandidate = nearest.id, basicOpenStart = 0)) : (basicArriveId = "", 
+            basicArriveStart = 0, basicArriveArmed && (basicArriveArmed = !1, basicGraspArmed = !1)), 
+            updatePublicPatientVoiceGuide({
                 phase: "contact",
                 item: nearest,
                 touching: !!voiceNearFood,
-                openForPickup: !(!voiceNearFood || isGrasping || !openPrep)
+                openForPickup: !(!voiceNearFood || !(!isGrasping && openPrep || basicArriveArmed && basicGraspArmed))
             }), overFood) if (!isGrasping && openPrep) {
                 basicGraspStart = 0, basicGraspCandidate = nearest.id, basicOpenStart || (basicOpenStart = now);
                 const pct = Math.min(100, Math.round((now - basicOpenStart) / PREP_OPEN_MS * 100));
-                now - basicOpenStart >= PREP_OPEN_MS && (basicGraspArmed = !0), setActionPrompt(graspPrompt(basicGraspArmed ? "hold" : "prep"), basicGraspArmed ? graspPrompt("carry") : pct + "%");
+                now - basicOpenStart >= PREP_OPEN_MS && (basicGraspArmed = !0, basicArriveArmed = !1), 
+                setActionPrompt(graspPrompt(basicGraspArmed ? "hold" : "prep"), basicGraspArmed ? graspPrompt("carry") : pct + "%");
             } else if (!basicGraspArmed || basicGraspCandidate !== nearest.id || openPrep || isGrasping) if (basicGraspArmed && basicGraspCandidate === nearest.id && isGrasping) {
                 basicGraspStart || (basicGraspStart = now, isLevel67GestureMode());
                 const pct = Math.min(100, Math.round((now - basicGraspStart) / GRASP_HOLD_MS * 100));
-                now - basicGraspStart >= GRASP_HOLD_MS ? (nearest.held = !0, heldItem = nearest, 
-                grabCount++, pegRelativeHoldReset(), laundryAutoHangSince = 0, updatePublicPatientVoiceGuide({
+                now - basicGraspStart >= GRASP_HOLD_MS ? (basicArriveId = "", basicArriveStart = 0, 
+                basicArriveArmed = !1, nearest.held = !0, heldItem = nearest, grabCount++, pegRelativeHoldReset(), 
+                laundryAutoHangSince = 0, updatePublicPatientVoiceGuide({
                     phase: "pickup",
                     item: nearest,
                     zones: targets
@@ -10294,8 +10318,8 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                 basicGraspArmed = !1, basicContactCandidate = "", basicContactUntil = 0, setActionPrompt(graspPrompt("carry"), affectedDirectionLabel())) : setActionPrompt(graspPrompt("hold"), pct + "%");
             } else basicOpenStart = 0, basicGraspStart = 0, basicGraspArmed = !1, setActionPrompt(pickupArmPrompt(), isLevel6Chopsticks() ? "穩定張開後再合埋夾起" : isLevel67GestureMode() ? graspPrompt("hold") : "再輕輕合手"); else basicGraspStart = 0, 
             setActionPrompt(graspPrompt("hold"), "保持指定手指動作"); else basicOpenStart = 0, basicGraspStart = 0, 
-            basicGraspCandidate = "", basicGraspArmed = !1, basicContactCandidate = "", basicContactUntil = 0, 
-            setActionPrompt(basicGraspArmed ? graspPrompt("hold") : pickupArmPrompt(), basicGraspArmed ? graspPrompt("carry") : "穩定張開後再合埋夾起");
+            basicGraspCandidate = "", basicGraspArmed = !1, basicArriveId = "", basicArriveStart = 0, 
+            basicArriveArmed = !1, basicContactCandidate = "", basicContactUntil = 0, setActionPrompt(basicGraspArmed ? graspPrompt("hold") : pickupArmPrompt(), basicGraspArmed ? graspPrompt("carry") : "穩定張開後再合埋夾起");
         }
     }
     function drawItemLabel(ctx, text, x, y) {
@@ -10903,11 +10927,15 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         contactUntil: 0,
         postReleaseOpenStart: 0,
         autoPlaceStart: 0,
+        arriveId: null,
+        arriveStart: 0,
+        arriveArmed: !1,
         reset() {
             this.hoverId = null, this.start = 0, this.pct = 0, this.armed = !1, this.lock = null, 
             this.startId = null, this.openStart = 0, this.graspStart = 0, this.graspId = null, 
             this.heldId = null, this.relStart = 0, this.relPauseAt = 0, this.relLastOpenAt = 0, 
-            this.contactId = null, this.contactUntil = 0, this.postReleaseOpenStart = 0, this.autoPlaceStart = 0;
+            this.contactId = null, this.contactUntil = 0, this.postReleaseOpenStart = 0, this.autoPlaceStart = 0, 
+            this.arriveId = null, this.arriveStart = 0, this.arriveArmed = !1;
         },
         poll(items, releaseZone) {
             if (this.pct = 0, cursorX < 0 || !handDetected) return this.hoverId = null, this.openStart = 0, 
@@ -10971,31 +10999,38 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             }
             if (level5PostReleaseOpenLocked(this, now)) return this.hoverId = null, this.start = 0, 
             this.startId = null, this.lock = null, setActionPrompt("已放開", "保持張開手"), null;
-            let best = nearestItem(items);
+            const directContact = nearestItem(items);
+            let best = directContact;
             if (best ? (this.contactId = best.id, this.contactUntil = now + advancedContactGraceMs()) : isGraspStyleMode() && this.contactId && now <= this.contactUntil && (best = items.find(it => it.id === this.contactId && !it.gone) || null), 
             !best) return this.hoverId = null, this.start = 0, this.lock = null, this.graspStart = 0, 
-            this.graspId = null, this.contactId = null, this.contactUntil = 0, isGraspStyleMode() && handReleasedOrOpen() && (this.openStart || (this.openStart = now), 
+            this.graspId = null, this.contactId = null, this.contactUntil = 0, level6ArriveArmPoll(this, null, now), 
+            isGraspStyleMode() && handReleasedOrOpen() && (this.openStart || (this.openStart = now), 
             now - this.openStart >= advancedGraspArmMs() && (this.armed = !0)), isGraspStyleMode() && !this.armed && isLevel6Chopsticks() && setActionPrompt("先張開筷子", "穩定張開後再合埋夾起"), 
             null;
-            if (this.hoverId = best.id, updatePublicPatientVoiceGuide({
+            this.hoverId = best.id;
+            const arrived = level6ArriveArmPoll(this, best, now, !!directContact && !isGrasping);
+            if (updatePublicPatientVoiceGuide({
                 phase: "contact",
                 item: best,
                 touching: !0,
-                openForPickup: !(!isGraspStyleMode() || !handReleasedOrOpen())
+                openForPickup: !(!isGraspStyleMode() || !handReleasedOrOpen() && !arrived)
             }), isGraspStyleMode()) {
                 if (handReleasedOrOpen()) {
                     this.graspStart = 0, this.graspId = null, this.openStart || (this.openStart = now);
                     const armMs = advancedGraspArmMs();
-                    return this.pct = Math.min(1, (now - this.openStart) / armMs), now - this.openStart >= armMs && (this.armed = !0), 
-                    null;
+                    return this.pct = Math.min(1, (now - this.openStart) / armMs), now - this.openStart >= armMs && (this.armed = !0, 
+                    this.arriveArmed = !1), null;
                 }
                 if (this.openStart = 0, !this.armed) return isLevel6Chopsticks() && setActionPrompt("先張開筷子", "穩定張開後再合埋夾起"), 
+                null;
+                if (this.arriveArmed && !isGrasping) return this.graspStart = 0, this.graspId = null, 
                 null;
                 this.graspId !== best.id && (this.graspId = best.id, this.graspStart = now);
                 const holdMs = advancedGraspHoldMs();
                 return this.pct = Math.min(1, (now - this.graspStart) / holdMs), now - this.graspStart >= holdMs && (this.heldId = best.id, 
                 this.armed = !1, this.relStart = 0, this.relPauseAt = 0, this.relLastOpenAt = 0, 
-                this.pct = 0, isLevel6() && grabCount++, updatePublicPatientVoiceGuide({
+                this.pct = 0, isLevel6() && grabCount++, this.arriveId = null, this.arriveStart = 0, 
+                this.arriveArmed = !1, updatePublicPatientVoiceGuide({
                     phase: "pickup",
                     item: best,
                     zones: releaseZone ? [ releaseZone ] : []
@@ -11026,11 +11061,15 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         contactUntil: 0,
         postReleaseOpenStart: 0,
         autoPlaceStart: 0,
+        arriveId: null,
+        arriveStart: 0,
+        arriveArmed: !1,
         reset() {
             this.heldId = null, this.hoverId = null, this.startId = null, this.start = 0, this.pct = 0, 
             this.armed = !1, this.relStart = 0, this.relPauseAt = 0, this.relLastOpenAt = 0, 
             this.openStart = 0, this.graspStart = 0, this.graspId = null, this.contactId = null, 
-            this.contactUntil = 0, this.postReleaseOpenStart = 0, this.autoPlaceStart = 0;
+            this.contactUntil = 0, this.postReleaseOpenStart = 0, this.autoPlaceStart = 0, this.arriveId = null, 
+            this.arriveStart = 0, this.arriveArmed = !1;
         },
         poll(items, zones) {
             const ev = {
@@ -11050,13 +11089,16 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             if (!this.heldId) {
                 if (level5PostReleaseOpenLocked(this, now)) return this.hoverId = null, this.startId = null, 
                 this.start = 0, setActionPrompt("已放開", "保持張開手"), ev;
-                let best = nearestItem(items);
-                if (best ? (this.contactId = best.id, this.contactUntil = now + advancedContactGraceMs()) : isGraspStyleMode() && this.contactId && now <= this.contactUntil && (best = items.find(it => it.id === this.contactId && !it.gone) || null), 
-                this.hoverId = best ? best.id : null, updatePublicPatientVoiceGuide({
+                const directContact = nearestItem(items);
+                let best = directContact;
+                best ? (this.contactId = best.id, this.contactUntil = now + advancedContactGraceMs()) : isGraspStyleMode() && this.contactId && now <= this.contactUntil && (best = items.find(it => it.id === this.contactId && !it.gone) || null), 
+                this.hoverId = best ? best.id : null;
+                const arrived = level6ArriveArmPoll(this, best, now, !!directContact && !isGrasping);
+                if (updatePublicPatientVoiceGuide({
                     phase: "contact",
                     item: best,
                     touching: !!best,
-                    openForPickup: !!(best && isGraspStyleMode() && handReleasedOrOpen())
+                    openForPickup: !(!best || !isGraspStyleMode() || !handReleasedOrOpen() && !arrived)
                 }), !best) return this.startId = null, this.graspStart = 0, this.graspId = null, 
                 now > this.contactUntil && (this.contactId = null, this.contactUntil = 0), isGraspStyleMode() && handReleasedOrOpen() && (this.openStart || (this.openStart = now), 
                 now - this.openStart >= advancedGraspArmMs() && (this.armed = !0)), isGraspStyleMode() && !this.armed && isLevel6Chopsticks() && setActionPrompt("先張開筷子", "穩定張開後再合埋夾起"), 
@@ -11065,17 +11107,20 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                     if (handReleasedOrOpen()) {
                         this.graspStart = 0, this.graspId = null, this.openStart || (this.openStart = now);
                         const armMs = advancedGraspArmMs();
-                        return this.pct = Math.min(1, (now - this.openStart) / armMs), now - this.openStart >= armMs && (this.armed = !0), 
-                        ev;
+                        return this.pct = Math.min(1, (now - this.openStart) / armMs), now - this.openStart >= armMs && (this.armed = !0, 
+                        this.arriveArmed = !1), ev;
                     }
                     if (this.openStart = 0, !this.armed) return isLevel6Chopsticks() && setActionPrompt("先張開筷子", "穩定張開後再合埋夾起"), 
+                    ev;
+                    if (this.arriveArmed && !isGrasping) return this.graspStart = 0, this.graspId = null, 
                     ev;
                     this.graspId !== best.id && (this.graspId = best.id, this.graspStart = now);
                     const holdMs = advancedGraspHoldMs();
                     return this.pct = Math.min(1, (now - this.graspStart) / holdMs), now - this.graspStart >= holdMs && (this.armed = !1, 
                     this.heldId = best.id, this.relStart = 0, this.relPauseAt = 0, this.relLastOpenAt = 0, 
                     this.graspStart = 0, this.graspId = null, this.contactId = null, this.contactUntil = 0, 
-                    this.pct = 0, ev.grab = best.id, updatePublicPatientVoiceGuide({
+                    this.pct = 0, ev.grab = best.id, this.arriveId = null, this.arriveStart = 0, this.arriveArmed = !1, 
+                    updatePublicPatientVoiceGuide({
                         phase: "pickup",
                         item: best,
                         zones: zones
@@ -12683,7 +12728,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
 <script src="level4-three-games-module.js"></script>
 <script>
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
-  const LEVEL_APP_BUILD = "v135-20261119-digiflex-calib-optional";
+  const LEVEL_APP_BUILD = "v136-20261120-cashier-arrive-arm";
   const levelAppHadController = Boolean(navigator.serviceWorker.controller);
   let levelAppReloading = false;
 
