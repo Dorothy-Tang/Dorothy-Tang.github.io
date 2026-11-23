@@ -1767,6 +1767,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         <div class="r-item"><div class="r-label" id="resultAccuracyLabel">準確率</div><div class="r-value" id="resAccuracy">0%</div></div>
       </div>
       <p id="shoulderResultSummary" hidden style="margin:10px 0;padding:10px 12px;border-radius:12px;background:#edf7f3;font-weight:750;line-height:1.45;"></p>
+      <p id="dealResultSummary" hidden style="margin:10px 0;padding:10px 12px;border-radius:12px;background:#fff6dc;border:2px solid #e6c15a;font-weight:800;font-size:19px;line-height:1.45;"></p>
       <button class="btn-primary" id="btnRetry">再玩一次</button>
       <button class="btn-secondary" id="btnHome">返回主頁</button>
     </div>
@@ -2468,6 +2469,368 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             drawShopImgFit(ctx, shopItemImg(id), g.cartX - .2 * g.cartW + col * s * .95, g.cartY - .22 * g.cartW - row * s * .55, s, s, alphaItems);
         }), n;
     }
+    const CARD_DEAL_TYPES = [ {
+        id: "pair",
+        zh: "一對",
+        en: "One pair",
+        subZh: "有兩張一樣",
+        subEn: "Two of a kind",
+        w: 30,
+        tier: 0
+    }, {
+        id: "twopair",
+        zh: "兩對",
+        en: "Two pairs",
+        subZh: "兩組一樣",
+        subEn: "Two pairs of matching cards",
+        w: 22,
+        tier: 0
+    }, {
+        id: "trips",
+        zh: "三條",
+        en: "Three of a kind",
+        subZh: "有三張一樣",
+        subEn: "Three matching cards",
+        w: 15,
+        tier: 1
+    }, {
+        id: "straight",
+        zh: "順子",
+        en: "Straight",
+        subZh: "五張連號",
+        subEn: "Five cards in a row",
+        w: 12,
+        tier: 1
+    }, {
+        id: "flush",
+        zh: "同花",
+        en: "Flush",
+        subZh: "五張同一花色",
+        subEn: "Five cards of one suit",
+        w: 10,
+        tier: 1
+    }, {
+        id: "fullhouse",
+        zh: "葫蘆",
+        en: "Full house",
+        subZh: "三條加一對",
+        subEn: "Three of a kind plus a pair",
+        w: 7,
+        tier: 2
+    }, {
+        id: "quads",
+        zh: "四條",
+        en: "Four of a kind",
+        subZh: "有四張一樣",
+        subEn: "Four matching cards",
+        w: 3,
+        tier: 2
+    }, {
+        id: "straightflush",
+        zh: "同花順",
+        en: "Straight flush",
+        subZh: "同花色兼連號",
+        subEn: "One suit, five in a row",
+        w: 1,
+        tier: 2
+    } ], MJ_DEAL_FAN_EN = {
+        "字一色": "All honours",
+        "清一色": "Full flush",
+        "混一色": "Half flush",
+        "大三元": "Big three dragons",
+        "小三元": "Small three dragons",
+        "大四喜": "Big four winds",
+        "小四喜": "Small four winds",
+        "對對糊": "All triplets",
+        "平糊": "All sequences",
+        "雞糊": "Basic win"
+    }, dealTable = {
+        kind: "",
+        roundNo: 0,
+        wins: 0,
+        slots: [],
+        order: [],
+        drawn: 0,
+        groups: [],
+        result: null,
+        best: null,
+        anim: {
+            phase: "idle",
+            startedMs: 0,
+            slot: -1,
+            group: -1,
+            handDone: !1,
+            stage: 0
+        }
+    };
+    function isDealTableTheme() {
+        return isShoulderFlexionLevel() && ("mahjong" === state.theme || "cards" === state.theme);
+    }
+    function dealText(zh, en) {
+        return window.YCHLanguage ? window.YCHLanguage.text(zh, en) : zh;
+    }
+    function resetDealTableAnim() {
+        const a = dealTable.anim;
+        a.phase = "idle", a.startedMs = 0, a.slot = -1, a.group = -1, a.handDone = !1, a.stage = 0;
+    }
+    function resetDealTable() {
+        dealTable.kind = "", dealTable.roundNo = 0, dealTable.wins = 0, dealTable.slots = [], 
+        dealTable.order = [], dealTable.drawn = 0, dealTable.groups = [], dealTable.result = null, 
+        dealTable.best = null, resetDealTableAnim();
+    }
+    function cardDealClassify(cards) {
+        const ranks = cards.map(c => c.r).sort((a, b) => a - b), counts = {};
+        ranks.forEach(v => {
+            counts[v] = (counts[v] || 0) + 1;
+        });
+        const groups = Object.keys(counts).map(k => counts[k]).sort((a, b) => b - a), flush = cards.every(c => c.s === cards[0].s), straight = 5 === groups.length && (ranks[4] - ranks[0] === 4 || 0 === ranks[0] && 9 === ranks[1] && 12 === ranks[4]);
+        return straight && flush ? "straightflush" : 4 === groups[0] ? "quads" : 3 === groups[0] && 2 === groups[1] ? "fullhouse" : flush ? "flush" : straight ? "straight" : 3 === groups[0] ? "trips" : 2 === groups[0] && 2 === groups[1] ? "twopair" : 2 === groups[0] ? "pair" : "high";
+    }
+    function beginDealTableRound() {
+        const kind = "cards" === state.theme ? "cards" : "mahjong";
+        dealTable.kind !== kind && (resetDealTable(), dealTable.kind = kind), dealTable.roundNo++, 
+        dealTable.drawn = 0, resetDealTableAnim();
+        const slots = [], groups = [];
+        if ("mahjong" === kind) {
+            const hand = function() {
+                const r = Math.random, pick = a => a[Math.min(a.length - 1, Math.floor(r() * a.length))], suits = [ "p", "s", "w" ], winds = [ "E", "S", "W", "N" ], dragons = [ "C", "F", "B" ], honors = winds.concat(dragons);
+                for (let attempt = 0; attempt < 200; attempt++) {
+                    const roll = r(), pattern = roll < .3 ? "mixed" : roll < .54 ? "chows" : roll < .7 ? "pungs" : roll < .84 ? "halfflush" : roll < .94 ? "flush" : "dragons", bigThree = "dragons" === pattern && r() < .3, oneSuit = pick(suits), counts = {}, fits = tiles => {
+                        const add = {};
+                        return tiles.forEach(t => {
+                            add[t] = (add[t] || 0) + 1;
+                        }), Object.keys(add).every(t => (counts[t] || 0) + add[t] <= 4);
+                    }, take = tiles => tiles.forEach(t => {
+                        counts[t] = (counts[t] || 0) + 1;
+                    }), suitNow = () => "halfflush" === pattern || "flush" === pattern ? oneSuit : pick(suits), chow = () => {
+                        const s = suitNow(), n = 1 + Math.floor(7 * r());
+                        return {
+                            kind: "chow",
+                            t: s + n,
+                            tiles: [ s + n, s + (n + 1), s + (n + 2) ]
+                        };
+                    }, pungOf = t => ({
+                        kind: "pung",
+                        t: t,
+                        tiles: [ t, t, t ]
+                    }), suitPung = () => pungOf(suitNow() + (1 + Math.floor(9 * r()))), sets = [];
+                    for (let i = 0; i < 4; i++) {
+                        let set = null;
+                        for (let tries = 0; tries < 30 && !set; tries++) {
+                            let c;
+                            c = "chows" === pattern ? chow() : "pungs" === pattern ? r() < .3 ? pungOf(pick(honors)) : suitPung() : "halfflush" === pattern ? 0 === i ? pungOf(pick(honors)) : r() < .65 ? chow() : suitPung() : "flush" === pattern ? r() < .7 ? chow() : suitPung() : "dragons" === pattern ? i < 2 ? pungOf(dragons[i]) : 2 === i && bigThree ? pungOf(dragons[2]) : chow() : r() < .6 ? chow() : suitPung(), 
+                            fits(c.tiles) && (set = c);
+                        }
+                        if (!set) break;
+                        take(set.tiles), sets.push(set);
+                    }
+                    if (4 !== sets.length) continue;
+                    let pair = null;
+                    for (let tries = 0; tries < 30 && !pair; tries++) {
+                        let t;
+                        t = "dragons" !== pattern || bigThree ? "flush" === pattern ? oneSuit + (1 + Math.floor(9 * r())) : "halfflush" === pattern ? r() < .5 ? pick(honors) : oneSuit + (1 + Math.floor(9 * r())) : r() < .2 ? pick(winds) : pick(suits) + (1 + Math.floor(9 * r())) : dragons[2], 
+                        fits([ t, t ]) && (pair = t);
+                    }
+                    if (pair) return {
+                        sets: sets,
+                        pair: pair,
+                        result: mjScoreCombo(sets, pair)
+                    };
+                }
+                const sets = [ [ "p1", "p2", "p3" ], [ "p4", "p5", "p6" ], [ "s2", "s3", "s4" ], [ "w6", "w7", "w8" ] ].map(tiles => ({
+                    kind: "chow",
+                    t: tiles[0],
+                    tiles: tiles
+                }));
+                return {
+                    sets: sets,
+                    pair: "E",
+                    result: mjScoreCombo(sets, "E")
+                };
+            }();
+            hand.sets.forEach((set, i) => {
+                groups.push({
+                    start: slots.length,
+                    len: 3,
+                    kind: set.kind
+                }), set.tiles.forEach(code => slots.push({
+                    code: code,
+                    group: i,
+                    shown: i < 2
+                }));
+            }), groups.push({
+                start: slots.length,
+                len: 2,
+                kind: "pair"
+            }), slots.push({
+                code: hand.pair,
+                group: 4,
+                shown: !1
+            }, {
+                code: hand.pair,
+                group: 4,
+                shown: !1
+            }), dealTable.order = slots.map((s, i) => i).filter(i => !slots[i].shown), dealTable.result = hand.result;
+        } else {
+            const hand = function() {
+                const r = Math.random, shuffle = list => {
+                    const a = list.slice();
+                    for (let i = a.length - 1; i > 0; i--) {
+                        const j = Math.min(i, Math.floor(r() * (i + 1))), t = a[i];
+                        a[i] = a[j], a[j] = t;
+                    }
+                    return a;
+                }, allSuits = [ "S", "H", "D", "C" ], total = CARD_DEAL_TYPES.reduce((sum, t) => sum + t.w, 0);
+                for (let attempt = 0; attempt < 200; attempt++) {
+                    let roll = r() * total, type = CARD_DEAL_TYPES[0];
+                    for (const t of CARD_DEAL_TYPES) {
+                        if (roll < t.w) {
+                            type = t;
+                            break;
+                        }
+                        roll -= t.w;
+                    }
+                    const rp = shuffle([ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 ]), same = (rank, n) => shuffle(allSuits).slice(0, n).map(s => ({
+                        s: s,
+                        r: rank
+                    })), singles = ranks => ranks.map(rank => ({
+                        s: shuffle(allSuits)[0],
+                        r: rank
+                    })), oneSuit = shuffle(allSuits)[0], start = Math.min(9, Math.floor(10 * r())), run = [ 0, 1, 2, 3, 4 ].map(i => (start + i) % 13);
+                    let cards;
+                    if (cards = "pair" === type.id ? same(rp[0], 2).concat(singles(rp.slice(1, 4))) : "twopair" === type.id ? same(rp[0], 2).concat(same(rp[1], 2), singles([ rp[2] ])) : "trips" === type.id ? same(rp[0], 3).concat(singles(rp.slice(1, 3))) : "fullhouse" === type.id ? same(rp[0], 3).concat(same(rp[1], 2)) : "quads" === type.id ? same(rp[0], 4).concat(singles([ rp[1] ])) : "straight" === type.id ? singles(run) : "flush" === type.id ? rp.slice(0, 5).sort((a, b) => a - b).map(rank => ({
+                        s: oneSuit,
+                        r: rank
+                    })) : run.map(rank => ({
+                        s: oneSuit,
+                        r: rank
+                    })), cardDealClassify(cards) === type.id) return {
+                        cards: cards,
+                        type: type
+                    };
+                }
+                return {
+                    cards: [ {
+                        s: "S",
+                        r: 0
+                    }, {
+                        s: "H",
+                        r: 0
+                    }, {
+                        s: "D",
+                        r: 6
+                    }, {
+                        s: "C",
+                        r: 9
+                    }, {
+                        s: "S",
+                        r: 11
+                    } ],
+                    type: CARD_DEAL_TYPES[0]
+                };
+            }();
+            groups.push({
+                start: 0,
+                len: hand.cards.length,
+                kind: "hand"
+            }), hand.cards.forEach(card => slots.push({
+                card: card,
+                group: 0,
+                shown: !1
+            }));
+            const order = slots.map((s, i) => i);
+            for (let i = order.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1)), t = order[i];
+                order[i] = order[j], order[j] = t;
+            }
+            dealTable.order = order, dealTable.result = hand.type;
+        }
+        dealTable.slots = slots, dealTable.groups = groups;
+    }
+    function ensureDealTableRound() {
+        const kind = "cards" === state.theme ? "cards" : "mahjong";
+        dealTable.kind === kind && dealTable.slots.length || beginDealTableRound();
+    }
+    function dealMahjongFanText(result) {
+        if (!result || !Array.isArray(result.names)) return "";
+        const english = !(!window.YCHLanguage || !window.YCHLanguage.isEnglish());
+        return result.names.map(name => {
+            const m = /^(\S+)\s+(\d+)番$/.exec(name);
+            return m ? english ? (MJ_DEAL_FAN_EN[m[1]] || "Win") + " " + m[2] + " fan" : m[1] + " " + m[2] + " 番" : name;
+        }).join(english ? " + " : "＋");
+    }
+    function dealTileName(code) {
+        return window.YCHLanguage && window.YCHLanguage.isEnglish() ? {
+            E: "East wind",
+            S: "South wind",
+            W: "West wind",
+            N: "North wind",
+            C: "Red dragon",
+            F: "Green dragon",
+            B: "White dragon"
+        }[code] || code.slice(1) + " " + {
+            p: "Dots",
+            s: "Bamboo",
+            w: "Characters"
+        }[code[0]] : mjLabel(code);
+    }
+    function playDealClack() {
+        try {
+            const actx = getAudioCtx(), t0 = actx.currentTime, dur = .07, len = Math.max(1, Math.floor(actx.sampleRate * dur)), buf = actx.createBuffer(1, len, actx.sampleRate), data = buf.getChannelData(0);
+            for (let s = 0; s < len; s++) data[s] = (2 * Math.random() - 1) * Math.pow(1 - s / len, 3);
+            const src = actx.createBufferSource();
+            src.buffer = buf;
+            const bp = actx.createBiquadFilter();
+            bp.type = "bandpass", bp.frequency.value = 1500, bp.Q.value = 1.4;
+            const g = actx.createGain();
+            g.gain.value = .55, src.connect(bp), bp.connect(g), g.connect(actx.destination), 
+            src.start(t0), src.stop(t0 + dur + .02);
+        } catch (e) {}
+    }
+    function playDealChime(big) {
+        try {
+            const actx = getAudioCtx();
+            (big ? [ 523.25, 659.25, 783.99, 1046.5 ] : [ 659.25, 880 ]).forEach((freq, i) => {
+                const o = actx.createOscillator(), g = actx.createGain();
+                o.connect(g), g.connect(actx.destination), o.type = "triangle", o.frequency.value = freq;
+                const when = actx.currentTime + .11 * i, dur = big ? .26 : .18;
+                g.gain.setValueAtTime(.28, when), g.gain.exponentialRampToValueAtTime(.001, when + dur), 
+                o.start(when), o.stop(when + dur + .05);
+            });
+        } catch (e) {}
+    }
+    function drawDealFace(ctx, slot, x, y, w) {
+        slot.card ? drawCard2(ctx, slot.card.s, CARD_RANKS[slot.card.r], x, y, w) : drawTile(ctx, slot.code, x, y, w);
+    }
+    function drawDealBack(ctx, g, x, y, w) {
+        const h = w * g.aspect;
+        ctx.save(), ctx.fillStyle = "rgba(0,0,0,0.22)", rrPath(ctx, x - w / 2 + 3, y - h / 2 + 6, w, h, .12 * w), 
+        ctx.fill(), g.mj ? (ctx.fillStyle = "#F7F3E6", rrPath(ctx, x - w / 2, y - h / 2, w, h, .12 * w), 
+        ctx.fill(), ctx.fillStyle = "#1E8A5F", rrPath(ctx, x - w / 2 + .05 * w, y - h / 2 + .05 * w, .9 * w, h - .1 * w, .09 * w), 
+        ctx.fill(), ctx.strokeStyle = "rgba(255,255,255,0.35)", ctx.lineWidth = Math.max(2, .03 * w), 
+        rrPath(ctx, x - .3 * w, y - .32 * h, .6 * w, .64 * h, .06 * w), ctx.stroke()) : (ctx.fillStyle = "#FFFFFF", 
+        rrPath(ctx, x - w / 2, y - h / 2, w, h, .1 * w), ctx.fill(), ctx.fillStyle = "#B3262B", 
+        rrPath(ctx, x - w / 2 + .07 * w, y - h / 2 + .07 * w, .86 * w, h - .14 * w, .07 * w), 
+        ctx.fill(), ctx.strokeStyle = "rgba(255,255,255,0.55)", ctx.lineWidth = Math.max(2, .025 * w), 
+        rrPath(ctx, x - .3 * w, y - .34 * h, .6 * w, .68 * h, .05 * w), ctx.stroke(), ctx.beginPath(), 
+        ctx.moveTo(x, y - .2 * h), ctx.lineTo(x + .16 * w, y), ctx.lineTo(x, y + .2 * h), 
+        ctx.lineTo(x - .16 * w, y), ctx.closePath(), ctx.stroke()), ctx.restore();
+    }
+    function drawDealBanner(ctx, cw, y, font, main, sub, color) {
+        ctx.save(), ctx.textAlign = "center", ctx.textBaseline = "middle", ctx.font = "900 " + font + 'px "PingFang TC","Noto Sans TC",sans-serif';
+        let mw = ctx.measureText(main).width;
+        const subFont = Math.round(.52 * font);
+        let sw = 0;
+        sub && (ctx.font = "800 " + subFont + 'px "PingFang TC","Noto Sans TC",sans-serif', 
+        sw = ctx.measureText(sub).width);
+        const bw = Math.min(.94 * cw, Math.max(mw, sw) + 1.4 * font), bh = font * (sub ? 2.35 : 1.6), bx = cw / 2 - bw / 2, by = y - bh / 2;
+        ctx.fillStyle = "rgba(0,0,0,0.28)", rrPath(ctx, bx + 4, by + 8, bw, bh, 22), ctx.fill(), 
+        ctx.fillStyle = "#FFF8E1", rrPath(ctx, bx, by, bw, bh, 22), ctx.fill(), ctx.lineWidth = 6, 
+        ctx.strokeStyle = color, rrPath(ctx, bx, by, bw, bh, 22), ctx.stroke(), ctx.fillStyle = color, 
+        ctx.font = "900 " + font + 'px "PingFang TC","Noto Sans TC",sans-serif', ctx.fillText(main, cw / 2, by + .82 * font, bw - .6 * font), 
+        sub && (ctx.fillStyle = "#5A3B12", ctx.font = "800 " + subFont + 'px "PingFang TC","Noto Sans TC",sans-serif', 
+        ctx.fillText(sub, cw / 2, by + 1.72 * font, bw - .6 * font)), ctx.restore();
+    }
     function pointInsideZone(x, y, zone) {
         return !!zone && x >= zone.x - zone.w / 2 && x <= zone.x + zone.w / 2 && y >= zone.y - zone.h / 2 && y <= zone.y + zone.h / 2;
     }
@@ -3147,10 +3510,12 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         }().forEach(id => {
             const th = THEMES[id], btn = document.createElement("button");
             btn.className = "activity-card", btn.dataset.theme = id, btn.innerHTML = '<div class="ac-copy"><h3></h3><p class="ac-goal"></p></div><div class="ac-visual"><img loading="eager" decoding="async"></div>', 
-            btn.querySelector("h3").textContent = th.title, btn.querySelector(".ac-goal").textContent = th.goal;
+            btn.querySelector("h3").textContent = th.title;
+            const goalText = isShoulderFlexionLevel() && th.shoulderGoal || th.goal;
+            btn.querySelector(".ac-goal").textContent = goalText;
             const img = btn.querySelector(".ac-visual img");
             if (img.src = th.thumbnail, img.alt = th.thumbnailAlt, img.addEventListener("error", () => btn.querySelector(".ac-visual").remove()), 
-            btn.setAttribute("aria-label", th.title + "：" + th.goal), btn.addEventListener("click", () => function(themeId) {
+            btn.setAttribute("aria-label", th.title + "：" + goalText), btn.addEventListener("click", () => function(themeId) {
                 if (!themeAvailableForLevel(themeId)) return state.theme = "2" === state.level ? "bilateral" : "dimsum", 
                 renderActivityLibrary(), void showScreen("library");
                 if (state.theme = themeId, "67" === state.level && !function(themeId) {
@@ -3880,8 +4245,8 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                 shoulderFlexionCycleAwarded = !1, shoulderRewardCycle.reset(), shoulderHoldSpokenSecond = null, 
                 shoulderHoldInterruptedSpoken = !1, hideTargetHoldCountdown(), lastLevelShown = -1, 
                 heldItem = null, foods = [], targets = [], resetBowlingStrike(), resetBasketballShot(), 
-                resetTeahouseServe(), resetSupermarketStory(), dimsumOrderBannerRect = null, dimsumOrder = null, 
-                dimsumPlateContents = [], dimsumOrdersCompleted = 0, dimsumOrderCelebrateUntil = 0, 
+                resetTeahouseServe(), resetSupermarketStory(), resetDealTable(), dimsumOrderBannerRect = null, 
+                dimsumOrder = null, dimsumPlateContents = [], dimsumOrdersCompleted = 0, dimsumOrderCelebrateUntil = 0, 
                 dimsumOrderTimerId && (clearTimeout(dimsumOrderTimerId), dimsumOrderTimerId = null), 
                 laundryOrderBannerRect = null, laundryOrder = null, laundryRackContents = [], laundryOrdersCompleted = 0, 
                 laundryBatchesCompleted = 0, laundryOrderCelebrateUntil = 0, laundryLitRack = -1, 
@@ -5652,6 +6017,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             id: "mahjong",
             title: "麻雀",
             goal: "選一組牌食糊",
+            shoulderGoal: "每舉一下摸一隻牌，摸齊就食糊",
             itemWord: "麻雀牌",
             difficulty: "中等",
             targetStyle: "panel",
@@ -5683,6 +6049,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             id: "cards",
             title: "啤牌",
             goal: "收集相同花色的啤牌",
+            shoulderGoal: "每舉一下揭一張牌，五張睇牌型",
             itemWord: "啤牌",
             difficulty: "容易至中等",
             targetStyle: "panel",
@@ -6666,9 +7033,32 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     };
     function startShoulderRewardCycle() {
         if (shoulderRewardCycle.active) return;
+        isDealTableTheme() && function() {
+            if (!isDealTableTheme()) return;
+            ensureDealTableRound();
+            const a = dealTable.anim;
+            if ("idle" !== a.phase || dealTable.drawn >= dealTable.order.length) return;
+            const slotIndex = dealTable.order[dealTable.drawn];
+            dealTable.drawn++;
+            const slot = dealTable.slots[slotIndex];
+            slot.shown = !0, a.phase = "reveal", a.startedMs = nowMs(), a.slot = slotIndex, 
+            a.stage = 0, a.handDone = dealTable.drawn >= dealTable.order.length;
+            const grp = dealTable.groups[slot.group];
+            if (a.group = "mahjong" === dealTable.kind && !a.handDone && grp && dealTable.slots.slice(grp.start, grp.start + grp.len).every(s => s.shown) ? slot.group : -1, 
+            a.handDone) {
+                dealTable.wins++;
+                const res = dealTable.result, value = "mahjong" === dealTable.kind ? res && res.fan || 0 : CARD_DEAL_TYPES.indexOf(res);
+                (!dealTable.best || value > dealTable.best.value) && (dealTable.best = {
+                    value: value,
+                    result: res
+                });
+            }
+        }();
         const started = nowMs();
-        shoulderRewardCycle.active = !0, shoulderRewardCycle.startedMs = started, shoulderRewardCycle.finishAtMs = started + ("bowlinglane" === state.theme ? Math.max(SHOULDER_REWARD_MIN_MS, 2700) : "basketball" === state.theme ? Math.max(SHOULDER_REWARD_MIN_MS, 2220) : "supermarket" === state.theme ? Math.max(SHOULDER_REWARD_MIN_MS, shopStory.rewardMs) : isTeahouseDimsumMode() ? Math.max(SHOULDER_REWARD_MIN_MS, 2520) : "tsuenwan" === state.theme ? SHOULDER_PHOTO_REWARD_MS : SHOULDER_REWARD_MIN_MS), 
-        shoulderRewardCycle.repetitionReady = !1;
+        shoulderRewardCycle.active = !0, shoulderRewardCycle.startedMs = started, shoulderRewardCycle.finishAtMs = started + ("bowlinglane" === state.theme ? Math.max(SHOULDER_REWARD_MIN_MS, 2700) : "basketball" === state.theme ? Math.max(SHOULDER_REWARD_MIN_MS, 2220) : "supermarket" === state.theme ? Math.max(SHOULDER_REWARD_MIN_MS, shopStory.rewardMs) : isTeahouseDimsumMode() ? Math.max(SHOULDER_REWARD_MIN_MS, 2520) : "tsuenwan" === state.theme ? SHOULDER_PHOTO_REWARD_MS : isDealTableTheme() ? Math.max(SHOULDER_REWARD_MIN_MS, function() {
+            const a = dealTable.anim;
+            return "idle" === a.phase ? 0 : 1500 + (a.handDone ? 3200 : a.group >= 0 ? 1100 : 300);
+        }()) : SHOULDER_REWARD_MIN_MS), shoulderRewardCycle.repetitionReady = !1;
     }
     function shoulderRewardVisualFinished() {
         return shoulderRewardCycle.active && nowMs() >= shoulderRewardCycle.finishAtMs;
@@ -6805,7 +7195,8 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         }, 800);
     }
     function triggerFeedback(correct) {
-        correct ? (playCorrectSound(), showFeedback(!0)) : (playWrongSound(), showFeedback(!1));
+        correct ? (playCorrectSound(), isDealTableTheme() || showFeedback(!0)) : (playWrongSound(), 
+        showFeedback(!1));
     }
     const SHOULDER_HOLD_COUNT_CANTONESE = {
         1: "一",
@@ -6960,6 +7351,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             } ]);
         }
         if (isShoulderFlexionLevel()) {
+            if (isDealTableTheme()) return void (targets = []);
             if ("bowlinglane" === state.theme || "basketball" === state.theme || "supermarket" === state.theme || isTeahouseDimsumMode()) return void (targets = []);
             const photoLarge = "tsuenwan" === state.theme && !0, tw = photoLarge ? Math.min(.9 * cw, 1080) : Math.min(.38 * cw, 320), th = photoLarge ? Math.min(.43 * ch, .62 * tw) : tw * ("steamer" === style ? .74 : .62), category = cats[0], laneX = photoLarge ? .5 * cw : cw * (portrait ? .68 : .58);
             return void (targets = [ {
@@ -8769,19 +9161,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                             isPatientVisualCueMode() || (ctx.save(), ctx.fillStyle = "#12564a", ctx.font = 'bold 15px "PingFang TC","Noto Sans TC",sans-serif', 
                             ctx.textAlign = "center", ctx.textBaseline = "bottom", ctx.fillText("花瓶", L.vase.x, L.vase.y + .62 * L.vase.h), 
                             ctx.restore()), advDrawCursor(ctx, carrier.pct), advDrawHeldReleasePrompt(ctx, carrier.heldId);
-                        }(ctx), function(ctx) {
-                            for (const p of fxParticles) p.x += p.vx, p.y += p.vy, p.vy += .22, p.vx *= .99, 
-                            p.rot += p.vr, p.life -= p.decay;
-                            fxParticles = fxParticles.filter(p => p.life > 0);
-                            for (const p of fxParticles) ctx.save(), ctx.globalAlpha = Math.max(0, Math.min(1, p.life)), 
-                            ctx.translate(p.x, p.y), ctx.rotate(p.rot), ctx.fillStyle = p.col, ctx.fillRect(-p.size / 2, -p.size / 3, p.size, .66 * p.size), 
-                            ctx.restore();
-                            for (const r of fxRings) r.r += 6, r.life -= .05;
-                            fxRings = fxRings.filter(r => r.life > 0);
-                            for (const r of fxRings) ctx.save(), ctx.globalAlpha = .8 * Math.max(0, r.life), 
-                            ctx.strokeStyle = "#2E9E7E", ctx.lineWidth = 6, ctx.beginPath(), ctx.arc(r.x, r.y, r.r, 0, 2 * Math.PI), 
-                            ctx.stroke(), ctx.restore();
-                        }(ctx);
+                        }(ctx), fxUpdateDraw(ctx);
                     }()) : (function() {
                         if (isLevel3Tabletop() && !level3Lateral.calibrated) return dwellTarget = null, 
                         void setActionPrompt("患手置中", "準備向外滑");
@@ -8823,7 +9203,12 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                     }
                                     shoulderRewardCycle.active && shoulderRewardCycle.repetitionReady && shoulderRewardVisualFinished() && (advanceLevel3RoundVariant(), 
                                     resetBowlingStrike(), resetBasketballShot(), resetTeahouseServe(), foods = [], spawnInitialFoods(), 
-                                    shoulderFlexionCycleAwarded = !1, shoulderRewardCycle.reset());
+                                    function() {
+                                        const a = dealTable.anim;
+                                        if ("idle" === a.phase) return;
+                                        const won = a.handDone;
+                                        resetDealTableAnim(), won && isDealTableTheme() && beginDealTableRound();
+                                    }(), shoulderFlexionCycleAwarded = !1, shoulderRewardCycle.reset());
                                     let item = foods.find(food => !food.removed);
                                     item || (spawnInitialFoods(), item = foods.find(food => !food.removed)), Math.max(1, Number(shoulderFlexionState.selectedTargetDeg) || 1);
                                     const estimated = Math.max(0, Number(shoulderFlexionState.estimatedAngle) || 0), visualProgress = shoulderRewardCycle.active ? 1 : clamp01(Number(shoulderFlexionState.progress) || 0), cw = gameCanvas.width, ch = gameCanvas.height;
@@ -9016,6 +9401,162 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                         if (isLevel4BusPayGame()) return void renderLevel4BusPay(ctx, cw, ch);
                         drawLevel4MidlineGuide(ctx), function(ctx, cw, ch) {
                             if (!isShoulderFlexionLevel()) return;
+                            if (isDealTableTheme()) return void function(ctx, cw, ch) {
+                                ensureDealTableRound();
+                                const g = function(cw, ch) {
+                                    const portrait = ch > cw, cssScale = cw / Math.max(1, gameCanvas.clientWidth || cw), mj = "cards" !== dealTable.kind, aspect = mj ? MJ_ATLAS.ch / MJ_ATLAS.cw : CARD_ATLAS.ch / CARD_ATLAS.cw, top = (portrait ? 168 : 132) * cssScale, rows = mj ? portrait ? [ [ 0, 1 ], [ 2, 3, 4 ] ] : [ [ 0, 1, 2, 3, 4 ] ] : [ [ 0 ] ], rowUnits = rows.map(list => {
+                                        let n = 0;
+                                        return list.forEach(gi => {
+                                            n += dealTable.groups[gi] ? dealTable.groups[gi].len : 0;
+                                        }), 1.07 * n - .07 + .42 * (list.length - 1);
+                                    }), maxUnits = Math.max(1, Math.max.apply(null, rowUnits)), maxTileH = ch * (mj ? portrait ? .105 : .16 : portrait ? .17 : .225), tileW = Math.min(cw * (portrait ? .94 : .92) / maxUnits, maxTileH / aspect), tileH = tileW * aspect, rowGap = .14 * tileW, rects = [];
+                                    rows.forEach((list, ri) => {
+                                        let x = cw / 2 - rowUnits[ri] * tileW / 2;
+                                        const y = top + ri * (tileH + rowGap) + tileH / 2;
+                                        list.forEach((gi, k) => {
+                                            const grp = dealTable.groups[gi];
+                                            if (grp) {
+                                                k > 0 && (x += .42 * tileW);
+                                                for (let i = 0; i < grp.len; i++) rects[grp.start + i] = {
+                                                    x: x + tileW / 2,
+                                                    y: y,
+                                                    w: tileW,
+                                                    h: tileH
+                                                }, x += tileW * (i < grp.len - 1 ? 1.07 : 1);
+                                            }
+                                        });
+                                    });
+                                    const rackBottom = top + rows.length * tileH + (rows.length - 1) * rowGap, infoFont = Math.round(Math.min(cw, ch) * (portrait ? .042 : .05)), drawW = Math.min(cw, ch) * (portrait ? .21 : mj ? .15 : .165), drawH = drawW * aspect, infoY = rackBottom + .95 * infoFont;
+                                    return {
+                                        portrait: portrait,
+                                        cssScale: cssScale,
+                                        mj: mj,
+                                        aspect: aspect,
+                                        top: top,
+                                        tileW: tileW,
+                                        tileH: tileH,
+                                        rects: rects,
+                                        rackBottom: rackBottom,
+                                        infoFont: infoFont,
+                                        infoY: infoY,
+                                        drawW: drawW,
+                                        drawH: drawH,
+                                        laneX: .5 * cw,
+                                        laneTop: (portrait ? infoY + .75 * infoFont : rackBottom) + drawH / 2 + 14 * cssScale,
+                                        laneBottom: ch - drawH / 2 - 18 * cssScale
+                                    };
+                                }(cw, ch), a = dealTable.anim, t = "idle" === a.phase ? 0 : nowMs() - a.startedMs;
+                                !function(g, cw, ch) {
+                                    const a = dealTable.anim;
+                                    if ("idle" === a.phase) return;
+                                    const t = nowMs() - a.startedMs;
+                                    if (a.stage < 1 && t >= 210 && (a.stage = 1, playDealClack()), a.stage < 2 && t >= 1500) {
+                                        a.stage = 2;
+                                        const rect = g.rects[a.slot];
+                                        playDealClack(), a.handDone ? (playDealChime(!0), playApplauseSound(), speakCantonese("mahjong" === dealTable.kind ? dealText("自摸！食糊！", "Self-drawn win!") : dealText(dealTable.result.zh + "！", dealTable.result.en + "!")), 
+                                        fxBurst(.5 * cw, .45 * ch, {
+                                            count: 46,
+                                            speed: 6.5
+                                        })) : a.group >= 0 && (playDealChime(!1), rect && fxBurst(rect.x, rect.y, {
+                                            count: 18
+                                        }));
+                                    }
+                                    a.handDone && a.stage < 3 && t >= 2200 && (a.stage = 3, fxBurst(.28 * cw, .4 * ch, {
+                                        count: 34,
+                                        speed: 5.5
+                                    })), a.handDone && a.stage < 4 && t >= 2900 && (a.stage = 4, fxBurst(.72 * cw, .4 * ch, {
+                                        count: 34,
+                                        speed: 5.5
+                                    }));
+                                }(g, cw, ch), ctx.save(), ctx.beginPath(), ctx.rect(0, 0, cw, ch), ctx.clip();
+                                const felt = ctx.createRadialGradient(cw / 2, .55 * ch, .1 * Math.min(cw, ch), cw / 2, .55 * ch, .75 * Math.max(cw, ch));
+                                felt.addColorStop(0, g.mj ? "#2F9A72" : "#2B6CA3"), felt.addColorStop(1, g.mj ? "#17543E" : "#153B60"), 
+                                ctx.fillStyle = felt, ctx.fillRect(0, 0, cw, ch);
+                                const rim = Math.max(10, .018 * Math.min(cw, ch));
+                                ctx.strokeStyle = "#7A4A22", ctx.lineWidth = rim, ctx.strokeRect(rim / 2, rim / 2, cw - rim, ch - rim), 
+                                ctx.strokeStyle = "rgba(255,255,255,0.18)", ctx.lineWidth = 2, ctx.strokeRect(rim + 3, rim + 3, cw - 2 * rim - 6, ch - 2 * rim - 6);
+                                const nextSlot = "idle" === a.phase && dealTable.drawn < dealTable.order.length ? dealTable.order[dealTable.drawn] : -1, winning = a.handDone && t >= 1500;
+                                dealTable.slots.forEach((slot, i) => {
+                                    const rc = g.rects[i];
+                                    if (!rc) return;
+                                    const flying = "idle" !== a.phase && a.slot === i && t < 1500;
+                                    if (slot.shown && !flying) {
+                                        const bounce = winning ? Math.abs(Math.sin((t - 1500) / 190 + .55 * i)) * rc.h * .08 : 0;
+                                        if (a.group >= 0 && slot.group === a.group && t >= 1500) {
+                                            const pulse = .5 + .5 * Math.sin((t - 1500) / 110);
+                                            ctx.fillStyle = "rgba(255,226,122," + (.35 + .4 * pulse).toFixed(3) + ")", rrPath(ctx, rc.x - .58 * rc.w, rc.y - .56 * rc.h, 1.16 * rc.w, 1.12 * rc.h, .16 * rc.w), 
+                                            ctx.fill();
+                                        }
+                                        drawDealFace(ctx, slot, rc.x, rc.y + bounce, rc.w);
+                                    } else {
+                                        ctx.save();
+                                        const isNext = i === nextSlot || flying;
+                                        ctx.setLineDash([ Math.max(6, .12 * rc.w), Math.max(5, .09 * rc.w) ]), ctx.lineWidth = isNext ? Math.max(4, .06 * rc.w) : Math.max(2, .035 * rc.w), 
+                                        ctx.strokeStyle = isNext ? "rgba(255,226,122," + (.6 + .4 * Math.sin(nowMs() / 180)).toFixed(3) + ")" : "rgba(255,255,255,0.38)", 
+                                        rrPath(ctx, rc.x - rc.w / 2, rc.y - rc.h / 2, rc.w, rc.h, .12 * rc.w), ctx.stroke(), 
+                                        ctx.restore();
+                                    }
+                                });
+                                const left = Math.max(0, dealTable.order.length - dealTable.drawn), line1 = g.mj ? dealText("第 " + dealTable.roundNo + " 鋪", "Hand " + dealTable.roundNo) : dealText("第 " + dealTable.roundNo + " 手牌", "Hand " + dealTable.roundNo), line2 = 0 === left ? g.mj ? dealText("食糊！", "Win!") : dealText("揭齊喇！", "All revealed!") : g.mj ? 1 === left ? dealText("聽牌！仲差 1 隻", "Ready! 1 tile to go") : dealText("仲差 " + left + " 隻食糊", left + " tiles to win") : dealText("仲有 " + left + " 張未揭", left + " cards to reveal"), line3 = dealTable.wins > 0 ? g.mj ? dealText("已食糊 " + dealTable.wins + " 鋪", "Wins: " + dealTable.wins) : dealText("已揭齊 " + dealTable.wins + " 手", "Hands done: " + dealTable.wins) : "";
+                                if (ctx.save(), ctx.textBaseline = "middle", ctx.shadowColor = "rgba(0,0,0,0.45)", 
+                                ctx.shadowBlur = 6, g.portrait) ctx.textAlign = "center", ctx.font = "800 " + g.infoFont + 'px "PingFang TC","Noto Sans TC",sans-serif', 
+                                ctx.fillStyle = "#FFE27A", ctx.fillText(line1 + " · " + line2 + (line3 ? " · " + line3 : ""), cw / 2, g.infoY, .94 * cw); else if (!winning) {
+                                    const midY = (g.rackBottom + ch) / 2, sideW = .5 * cw - .5 * g.drawW - .07 * cw;
+                                    ctx.textAlign = "center", ctx.fillStyle = "#FFFFFF", ctx.font = "800 " + Math.round(.9 * g.infoFont) + 'px "PingFang TC","Noto Sans TC",sans-serif', 
+                                    ctx.fillText(line1, .2 * cw, midY - .8 * g.infoFont, sideW), ctx.fillStyle = "#FFE27A", 
+                                    ctx.font = "900 " + Math.round(1.15 * g.infoFont) + 'px "PingFang TC","Noto Sans TC",sans-serif', 
+                                    ctx.fillText(line2, .2 * cw, midY + .55 * g.infoFont, sideW), line3 && (ctx.fillStyle = "#FFFFFF", 
+                                    ctx.font = "800 " + Math.round(.9 * g.infoFont) + 'px "PingFang TC","Noto Sans TC",sans-serif', 
+                                    ctx.fillText(line3, .8 * cw, midY, sideW));
+                                }
+                                ctx.restore(), ctx.save(), ctx.setLineDash([ 14, 12 ]), ctx.lineWidth = 5, ctx.strokeStyle = "rgba(255,255,255,0.40)", 
+                                ctx.beginPath(), ctx.moveTo(g.laneX, g.laneBottom), ctx.lineTo(g.laneX, g.laneTop), 
+                                ctx.stroke(), ctx.setLineDash([ 10, 8 ]), ctx.lineWidth = 4, ctx.strokeStyle = "rgba(255,226,122," + (.55 + .35 * Math.sin(nowMs() / 200)).toFixed(3) + ")", 
+                                rrPath(ctx, g.laneX - .56 * g.drawW, g.laneTop - .55 * g.drawH, 1.12 * g.drawW, 1.1 * g.drawH, .14 * g.drawW), 
+                                ctx.stroke(), ctx.restore();
+                                const wallW = .62 * g.drawW;
+                                [ -2.35, -1.65, 1.65, 2.35 ].forEach(k => drawDealBack(ctx, g, g.laneX + k * wallW * 1.08, ch - wallW * g.aspect * .36, wallW));
+                                const slotNow = a.slot >= 0 ? dealTable.slots[a.slot] : null;
+                                if ("idle" === a.phase) {
+                                    if (dealTable.drawn < dealTable.order.length && !shoulderRewardCycle.active) {
+                                        const p = clamp01(Number(shoulderFlexionState.progress) || 0);
+                                        drawDealBack(ctx, g, g.laneX, g.laneBottom - (g.laneBottom - g.laneTop) * p, g.drawW * (.92 + .08 * p));
+                                    }
+                                } else if (slotNow && t < 1500) if (t < 420) {
+                                    const q = t / 420, sx = Math.max(.04, Math.abs(Math.cos(q * Math.PI)));
+                                    ctx.save(), ctx.translate(g.laneX, g.laneTop), ctx.scale(sx, 1), ctx.translate(-g.laneX, -g.laneTop), 
+                                    q < .5 ? drawDealBack(ctx, g, g.laneX, g.laneTop, g.drawW) : drawDealFace(ctx, slotNow, g.laneX, g.laneTop, g.drawW), 
+                                    ctx.restore();
+                                } else if (t < 980) {
+                                    const q = (t - 420) / 560, pop = 1 + .1 * Math.sin(Math.min(1, 1.6 * q) * Math.PI);
+                                    if (ctx.fillStyle = "rgba(255,226,122,0.45)", ctx.beginPath(), ctx.arc(g.laneX, g.laneTop, .72 * g.drawH, 0, 2 * Math.PI), 
+                                    ctx.fill(), drawDealFace(ctx, slotNow, g.laneX, g.laneTop, g.drawW * pop), slotNow.code) {
+                                        ctx.save(), ctx.textAlign = "center", ctx.textBaseline = "middle", ctx.font = "900 " + Math.round(1.05 * g.infoFont) + 'px "PingFang TC","Noto Sans TC",sans-serif', 
+                                        ctx.lineWidth = Math.max(5, .22 * g.infoFont), ctx.strokeStyle = "rgba(0,0,0,0.55)", 
+                                        ctx.fillStyle = "#FFFFFF";
+                                        const ny = g.laneTop + .5 * g.drawH + .95 * g.infoFont;
+                                        ctx.strokeText(dealTileName(slotNow.code), g.laneX, ny), ctx.fillText(dealTileName(slotNow.code), g.laneX, ny), 
+                                        ctx.restore();
+                                    }
+                                } else {
+                                    const q = clamp01((t - 420 - 560) / 520), e = 1 - Math.pow(1 - q, 2.4), rc = g.rects[a.slot];
+                                    if (rc) {
+                                        const x = g.laneX + (rc.x - g.laneX) * e, y = g.laneTop + (rc.y - g.laneTop) * e - Math.sin(q * Math.PI) * g.drawH * .18;
+                                        drawDealFace(ctx, slotNow, x, y, g.drawW + (rc.w - g.drawW) * e);
+                                    }
+                                }
+                                if ("idle" !== a.phase && t >= 1500) {
+                                    const bannerY = (g.laneTop + g.laneBottom) / 2;
+                                    if (a.handDone) {
+                                        const font = Math.round(Math.min(cw, ch) * (g.portrait ? .095 : .115));
+                                        g.mj ? drawDealBanner(ctx, cw, bannerY, font, dealText("自摸！食糊！", "Self-drawn win!"), dealMahjongFanText(dealTable.result), "#B3262B") : drawDealBanner(ctx, cw, bannerY, font, dealText(dealTable.result.zh + "！", dealTable.result.en + "!"), dealText(dealTable.result.subZh, dealTable.result.subEn), "#B3262B");
+                                    } else if (a.group >= 0 && t < 2600) {
+                                        const grp = dealTable.groups[a.group], font = Math.round(Math.min(cw, ch) * (g.portrait ? .07 : .085));
+                                        drawDealBanner(ctx, cw, bannerY, font, grp && "pung" === grp.kind ? dealText("一副刻子！", "A triplet!") : dealText("一副順子！", "A sequence!"), "", "#1A6B5A");
+                                    }
+                                }
+                                fxUpdateDraw(ctx), ctx.restore();
+                            }(ctx, cw, ch);
                             if ("bowlinglane" === state.theme) return void function(ctx, cw, ch) {
                                 const g = bowlingLaneGeometry(cw, ch);
                                 (function() {
@@ -9539,6 +10080,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                             if (isBowlingLaneTheme() && "idle" !== bowlingStrike.phase) continue;
                             if (isBasketballTheme() && "idle" !== basketballShot.phase) continue;
                             if (isSupermarketTheme()) continue;
+                            if (isDealTableTheme()) continue;
                             if (isTeahouseDimsumMode() && "idle" !== teahouseServe.phase) continue;
                             ctx.save();
                             const visualR = f.visualR || f.r, visualPoint = publicLevel6HeldDisplayPoint(f.x, f.y, visualR, f.held), drawX = visualPoint.x, drawY = visualPoint.y;
@@ -9646,7 +10188,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                         el.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:99998;pointer-events:none;background:rgba(10,20,18,.82);color:#e8fff6;font:12px/1.4 -apple-system,"PingFang TC",sans-serif;padding:6px 9px;border-radius:10px;white-space:pre;', 
                         document.body.appendChild(el), framePerf.overlayEl = el);
                         const p = framePerfSnapshot();
-                        el.textContent = `perf v137  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}\n左右手檢查 ${"off" === p.hand.check ? "關" : "開"}  鎖定手形 ${p.hand.lockSize || "-"}  大小拒絕 ${p.hand.sizeRejected}  遠處拒絕 ${p.hand.farRejected}` + (p.tool ? `\n衣夾 近指 ${p.tool.near} 放手≥${p.tool.nearExit} 張開≥${p.tool.nearOpen}  遠指 ${p.tool.far} 放手≥${p.tool.farExit} 張開≥${p.tool.farOpen}  門檻 ${p.tool.source}\n衣夾 合併 ${p.tool.combo} 拎起≤${p.tool.enter} 放手閘≥${p.tool.gate}\n衣夾 相對 基線 近${p.tool.relBaseNear} 遠${p.tool.relBaseFar} 合併${p.tool.relBaseCombo} 相對放手 ${p.tool.relOpen}` : ""), 
+                        el.textContent = `perf v138  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}\n左右手檢查 ${"off" === p.hand.check ? "關" : "開"}  鎖定手形 ${p.hand.lockSize || "-"}  大小拒絕 ${p.hand.sizeRejected}  遠處拒絕 ${p.hand.farRejected}` + (p.tool ? `\n衣夾 近指 ${p.tool.near} 放手≥${p.tool.nearExit} 張開≥${p.tool.nearOpen}  遠指 ${p.tool.far} 放手≥${p.tool.farExit} 張開≥${p.tool.farOpen}  門檻 ${p.tool.source}\n衣夾 合併 ${p.tool.combo} 拎起≤${p.tool.enter} 放手閘≥${p.tool.gate}\n衣夾 相對 基線 近${p.tool.relBaseNear} 遠${p.tool.relBaseFar} 合併${p.tool.relBaseCombo} 相對放手 ${p.tool.relOpen}` : ""), 
                         el.style.display = state.running ? "block" : "none";
                     }(perfT2);
                 } catch (e) {
@@ -10573,6 +11115,20 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             const s = shoulderFlexionState;
             shoulderSummary.textContent = resultEnglish ? "Camera-estimated training record: start " + s.selectedStartDeg + "° · target " + s.selectedTargetDeg + "° · camera zero " + (Number.isFinite(s.baseline) ? s.baseline.toFixed(1) + "°" : "—") + " · peak estimate " + (Number.isFinite(s.peakEstimatedAngle) ? s.peakEstimatedAngle.toFixed(1) + "°" : "—") + " · repetitions " + (s.repetitions || 0) + ". Not goniometric ROM or automatic FTHUE grading." : "相機估算訓練紀錄：起點 " + s.selectedStartDeg + "° · 目標 " + s.selectedTargetDeg + "° · 相機零點 " + (Number.isFinite(s.baseline) ? s.baseline.toFixed(1) + "°" : "—") + " · 最高估算 " + (Number.isFinite(s.peakEstimatedAngle) ? s.peakEstimatedAngle.toFixed(1) + "°" : "—") + " · 重複 " + (s.repetitions || 0) + "。不是量角器 ROM 或 FTHUE 自動分級。";
         }
+        const dealSummary = document.getElementById("dealResultSummary");
+        if (dealSummary) {
+            const dealLine = isDealTableTheme() ? function() {
+                if (!dealTable.kind) return "";
+                const left = Math.max(0, dealTable.order.length - dealTable.drawn);
+                if ("mahjong" === dealTable.kind) return dealTable.wins > 0 ? dealText("麻雀：今次食糊 " + dealTable.wins + " 鋪（最大：" + dealMahjongFanText(dealTable.best && dealTable.best.result) + "）。", "Mahjong: " + dealTable.wins + " winning hand(s) today (best: " + dealMahjongFanText(dealTable.best && dealTable.best.result) + ").") : dealText("麻雀：今鋪仲差 " + left + " 隻就食糊，下次繼續。", "Mahjong: " + left + " more tile(s) to win this hand. Carry on next time.");
+                if (dealTable.wins > 0) {
+                    const best = dealTable.best && dealTable.best.result;
+                    return dealText("啤牌：今次揭齊 " + dealTable.wins + " 手牌（最好：" + (best ? best.zh : "") + "）。", "Cards: " + dealTable.wins + " hand(s) revealed today (best: " + (best ? best.en : "") + ").");
+                }
+                return dealText("啤牌：今手仲有 " + left + " 張未揭，下次繼續。", "Cards: " + left + " more card(s) to reveal in this hand. Carry on next time.");
+            }() : "";
+            dealSummary.hidden = !dealLine, dealSummary.textContent = dealLine;
+        }
         showScreen("result");
     }
     const ADV_THEMES = [ "mahjong", "cards", "cooking", "flowers", "laundry" ], LEVEL6_SHARED_LEVEL5_THEMES = [ "flowers", "cards", "mahjong" ];
@@ -10799,7 +11355,21 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         }
         fxParticles.length > 400 && (fxParticles = fxParticles.slice(-400));
     }
-    let fxRings = [], lastRewardLog = [];
+    let fxRings = [];
+    function fxUpdateDraw(ctx) {
+        for (const p of fxParticles) p.x += p.vx, p.y += p.vy, p.vy += .22, p.vx *= .99, 
+        p.rot += p.vr, p.life -= p.decay;
+        fxParticles = fxParticles.filter(p => p.life > 0);
+        for (const p of fxParticles) ctx.save(), ctx.globalAlpha = Math.max(0, Math.min(1, p.life)), 
+        ctx.translate(p.x, p.y), ctx.rotate(p.rot), ctx.fillStyle = p.col, ctx.fillRect(-p.size / 2, -p.size / 3, p.size, .66 * p.size), 
+        ctx.restore();
+        for (const r of fxRings) r.r += 6, r.life -= .05;
+        fxRings = fxRings.filter(r => r.life > 0);
+        for (const r of fxRings) ctx.save(), ctx.globalAlpha = .8 * Math.max(0, r.life), 
+        ctx.strokeStyle = "#2E9E7E", ctx.lineWidth = 6, ctx.beginPath(), ctx.arc(r.x, r.y, r.r, 0, 2 * Math.PI), 
+        ctx.stroke(), ctx.restore();
+    }
+    let lastRewardLog = [];
     function rewardSmall(o) {
         const t = buildAdvDom().toast;
         var x, y;
@@ -12724,7 +13294,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
 <script src="level4-three-games-module.js"></script>
 <script>
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
-  const LEVEL_APP_BUILD = "v137-20261120-shoulder-rearm-drop10";
+  const LEVEL_APP_BUILD = "v138-20261123-mahjong-cards-deal";
   const levelAppHadController = Boolean(navigator.serviceWorker.controller);
   let levelAppReloading = false;
 
