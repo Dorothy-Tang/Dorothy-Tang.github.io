@@ -2281,8 +2281,13 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         },
         rewardMs: 2600,
         spokenIdx: -1,
-        ended: !1
+        ended: !1,
+        rounds: 0,
+        repsDone: 0
     };
+    function storyRoundCanRepeat() {
+        return !!state.running && timeLeft >= 8;
+    }
     function isSupermarketTheme() {
         return isShoulderFlexionLevel() && "supermarket" === state.theme;
     }
@@ -2297,12 +2302,19 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             got: 0
         }));
     }
-    function buildShopSteps(list) {
-        const steps = [];
-        return steps.push({
+    function buildShopSteps(list, round) {
+        const steps = [], r = Math.max(1, round || 1);
+        return steps.push(r > 1 ? {
+            kind: "scene",
+            scene: "entrance",
+            text: "再去超市買餸",
+            sub: "第 " + r + " 轉",
+            ms: 2200
+        } : {
             kind: "scene",
             scene: "entrance",
             text: "行入超市",
+            sub: "今日要買餸",
             ms: 2200
         }), steps.push({
             kind: "scene",
@@ -2409,7 +2421,18 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             startedMs: 0,
             step: null
         }, shopStory.rewardMs = 2600, shopStory.spokenIdx = -1, shopStory.ended = !1, shopStory.hasCart = !1, 
-        shopStory.bagGiven = !1, shopStory.bagTaken = !1;
+        shopStory.bagGiven = !1, shopStory.bagTaken = !1, shopStory.rounds = 0, shopStory.repsDone = 0;
+    }
+    function beginSupermarketStory(roundsDone) {
+        resetSupermarketStory(), shopStory.rounds = Math.max(0, roundsDone || 0), shopStory.listSize = shopListSizeKey(), 
+        shopStory.list = buildShopList(shopStory.listSize), shopStory.steps = buildShopSteps(shopStory.list, shopStory.rounds + 1), 
+        shopStory.active = !0, shopStory.stepStartedMs = nowMs();
+    }
+    function restartSupermarketRound() {
+        beginSupermarketStory(shopStory.rounds);
+        try {
+            speakCantonese("做得好，再嚟一轉。");
+        } catch (e) {}
     }
     function shopCurrentStep() {
         return shopStory.steps[shopStory.idx] || null;
@@ -2642,8 +2665,8 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     function buildLaundryList(sizeKey) {
         return LAUNDRY_STORY_POOL.slice(0, LAUNDRY_LOAD_SIZES[sizeKey] || 4);
     }
-    function buildLaundrySteps(list) {
-        const steps = [], n = list.length, rep = (scene, action, stage, item, k, text, en) => steps.push({
+    function buildLaundrySteps(list, round) {
+        const steps = [], n = list.length, r = Math.max(1, round || 1), rep = (scene, action, stage, item, k, text, en) => steps.push({
             kind: "rep",
             scene: scene,
             action: action,
@@ -2654,7 +2677,17 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             text: text,
             en: en
         });
-        return steps.push({
+        return steps.push(r > 1 ? {
+            kind: "scene",
+            scene: "wash",
+            cut: "intro",
+            stage: 0,
+            ms: 2200,
+            text: "又有一籃污糟衫",
+            en: "Another basket of laundry",
+            sub: "第 " + r + " 轉 · 逐件放入洗衣機",
+            subEn: "Round " + r + ": put the clothes into the washer one by one"
+        } : {
             kind: "scene",
             scene: "wash",
             cut: "intro",
@@ -2735,7 +2768,21 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             step: null,
             fromP: 0
         }, laundryStory.rewardMs = 2600, laundryStory.spokenKey = "", laundryStory.ended = !1, 
-        laundryStory.completed = !1, laundryStory.repsDone = 0, laundryStory.stage = 0;
+        laundryStory.completed = !1, laundryStory.repsDone = 0, laundryStory.stage = 0, 
+        laundryStory.rounds = 0;
+    }
+    function beginLaundryStory(roundsDone) {
+        resetLaundryStory(), laundryStory.rounds = Math.max(0, roundsDone || 0), laundryStory.loadSize = laundryLoadSizeKey(), 
+        laundryStory.list = buildLaundryList(laundryStory.loadSize), laundryStory.steps = buildLaundrySteps(laundryStory.list, laundryStory.rounds + 1), 
+        laundryStory.basket = laundryStory.list.slice(), laundryStory.pole = laundryStory.list.map(() => null), 
+        laundryStory.shelf = laundryStory.list.map(() => null), laundryStory.active = !0, 
+        laundryStory.stepStartedMs = nowMs();
+    }
+    function restartLaundryRound() {
+        beginLaundryStory(laundryStory.rounds);
+        try {
+            speakCantonese("做得好，再嚟一轉。");
+        } catch (e) {}
     }
     function laundryCurrentStep() {
         return laundryStory.steps[laundryStory.idx] || null;
@@ -4702,9 +4749,10 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                     const statusBar = document.getElementById("statusBar");
                     if (statusBar.textContent = "", delete statusBar.dataset.actionRenderKey, "cooking" === advCurrent) {
                         if (!themeAvailableForLevel("cooking")) return state.theme = "dimsum", void (advCurrent = "dimsum");
-                        cook.active = !0, cook.reset(), cook.layout = cookLayout(), cook.poseOn = !1, isLevel6DigiflexTask() ? (cook.introUntil = nowMs() + 3200, 
-                        cook.readyAt = cook.introUntil + 400, advSetNote(""), cookRenderPanel(), speakCantonese("買完餸返到屋企，而家煮蛋炒飯。"), 
-                        cook.announceAt = cook.introUntil - 400, setActionPrompt("揸實", "")) : (advSetNote(poseFailed ? "姿勢追蹤（肩／肘）未能載入，已轉為手部動作練習：追蹤有限，可用「跳過此步」繼續。" : "正在載入姿勢追蹤（肩／肘）…期間可先用手部動作練習。前臂旋前／旋後為螢幕估算回饋，並非醫學量度。"), 
+                        cook.active = !0, cook.rounds = 0, cook.reset(), cook.layout = cookLayout(), cook.poseOn = !1, 
+                        isLevel6DigiflexTask() ? (cook.introUntil = nowMs() + 3200, cook.readyAt = cook.introUntil + 400, 
+                        advSetNote(""), cookRenderPanel(), speakCantonese("買完餸返到屋企，而家煮蛋炒飯。"), cook.announceAt = cook.introUntil - 400, 
+                        setActionPrompt("揸實", "")) : (advSetNote(poseFailed ? "姿勢追蹤（肩／肘）未能載入，已轉為手部動作練習：追蹤有限，可用「跳過此步」繼續。" : "正在載入姿勢追蹤（肩／肘）…期間可先用手部動作練習。前臂旋前／旋後為螢幕估算回饋，並非醫學量度。"), 
                         state.qaMode || ensurePoseLandmarker().then(p => {
                             cook.poseOn = !!p, advSetNote(p ? "姿勢追蹤已啟用。前臂旋前／旋後為螢幕估算回饋，並非醫學量度。" : "姿勢追蹤（肩／肘）未能載入，已轉為手部動作練習：追蹤有限，可用「跳過此步」繼續。"), 
                             cookRenderPanel();
@@ -9324,22 +9372,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                         shadow: !0
                                     });
                                 }
-                                now < cook.introUntil && function(ctx, cw, g, text, sub) {
-                                    const font = g.bannerFont;
-                                    ctx.save(), ctx.font = "800 " + font + 'px "PingFang TC","Noto Sans TC",sans-serif';
-                                    const maxW = cw - 28;
-                                    let tw = ctx.measureText(text).width;
-                                    if (tw + 1.2 * font > maxW) {
-                                        const f2 = Math.max(18, Math.floor(font * (maxW - 1.2 * font) / tw));
-                                        ctx.font = "800 " + f2 + 'px "PingFang TC","Noto Sans TC",sans-serif', tw = ctx.measureText(text).width;
-                                    }
-                                    const bw = Math.min(maxW, tw + 1.6 * font), bh = font * (sub ? 2.55 : 1.75), bx = cw / 2 - bw / 2, by = g.bannerY;
-                                    rrPath(ctx, bx, by, bw, bh, 18), ctx.fillStyle = "rgba(255,255,255,0.94)", ctx.fill(), 
-                                    ctx.lineWidth = 4, ctx.strokeStyle = "#1A6B5A", ctx.stroke(), ctx.fillStyle = "#17463d", 
-                                    ctx.textAlign = "center", ctx.textBaseline = "middle", ctx.fillText(text, cw / 2, by + .95 * font), 
-                                    sub && (ctx.font = "700 " + Math.round(.62 * font) + 'px "PingFang TC","Noto Sans TC",sans-serif', 
-                                    ctx.fillStyle = "#8a5a12", ctx.fillText(sub, cw / 2, by + 1.95 * font)), ctx.restore();
-                                }(ctx, cw, g, "買完餸返到屋企，而家煮蛋炒飯！", "揸住握力器：揸實 → 放鬆 ＝ 1 下");
+                                now < cook.introUntil && (cook.rounds > 0 ? drawCookDigiflexBanner(ctx, cw, g, "再煮多一碟蛋炒飯！", "第 " + (cook.rounds + 1) + " 碟 · 揸實 → 放鬆 ＝ 1 下") : drawCookDigiflexBanner(ctx, cw, g, "買完餸返到屋企，而家煮蛋炒飯！", "揸住握力器：揸實 → 放鬆 ＝ 1 下"));
                                 {
                                     const f = g.titleFont;
                                     ctx.save(), ctx.font = "900 " + f + 'px "PingFang TC","Noto Sans TC",sans-serif';
@@ -10119,9 +10152,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                 ctx.restore();
                             }(ctx, cw, ch);
                             if ("supermarket" === state.theme) return void function(ctx, cw, ch) {
-                                !shopStory.active && state.running && (resetSupermarketStory(), shopStory.listSize = shopListSizeKey(), 
-                                shopStory.list = buildShopList(shopStory.listSize), shopStory.steps = buildShopSteps(shopStory.list), 
-                                shopStory.active = !0, shopStory.stepStartedMs = nowMs()), function() {
+                                !shopStory.active && state.running && beginSupermarketStory(), function() {
                                     if ("fly" === shopStory.anim.phase && nowMs() - shopStory.anim.startedMs >= 850) {
                                         const s = shopStory.anim.step;
                                         !function(s) {
@@ -10136,13 +10167,14 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                                 const i = shopStory.bagged.indexOf(s.item);
                                                 i >= 0 && shopStory.bagged.splice(i, 1), shopStory.shelved.push(s.item);
                                             } else "cart" === s.action && (shopStory.hasCart = !0);
-                                        }(s), shopStory.anim = {
+                                        }(s), shopStory.repsDone++, shopStory.anim = {
                                             phase: "idle",
                                             startedMs: 0,
                                             step: null
                                         }, shopStory.idx === shopStory.steps.indexOf(s) && shopGoToStep(shopStory.idx + 1);
                                         const nxt = shopCurrentStep();
-                                        nxt && "scene" === nxt.kind && nxt.end && (playApplauseSound(), playHaoboCheer());
+                                        nxt && "scene" === nxt.kind && nxt.end && (shopStory.rounds++, shopStory.repsDone = 0, 
+                                        playApplauseSound(), playHaoboCheer());
                                     }
                                 }(), function() {
                                     if (!shopStory.active || shopStory.ended) return;
@@ -10151,7 +10183,8 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                         const s = shopCurrentStep();
                                         if (!s || "scene" !== s.kind) break;
                                         if (nowMs() - shopStory.stepStartedMs < s.ms) break;
-                                        if (s.end) return shopStory.ended = !0, void (state.running && endGame());
+                                        if (s.end) return storyRoundCanRepeat() ? void restartSupermarketRound() : (shopStory.ended = !0, 
+                                        void (state.running && endGame()));
                                         shopGoToStep(shopStory.idx + 1);
                                     }
                                     const cur = shopCurrentStep();
@@ -10165,7 +10198,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                 const g = shopGeometry(cw, ch), step = shopStory.anim.step || shopCurrentStep(), scene = step ? step.scene : "entrance", anim = shopStory.anim, animP = "fly" === anim.phase ? clamp01((nowMs() - anim.startedMs) / 850) : 0, progress = "fly" === anim.phase ? 1 : clamp01(Number(shoulderFlexionState.progress) || 0);
                                 if (ctx.save(), ctx.rect(0, 0, cw, ch), ctx.clip(), drawShopBgCover(ctx, "cashier" === scene ? imgShopCashierBg : "home" === scene || "done" === scene ? imgShopHomeBg : imgShopAisleBg, cw, ch, "#e8e3d6", "cashier" === scene), 
                                 step && step.kind, "entrance" !== scene && "list" !== scene && "walk_cashier" !== scene && "leave" !== scene && "done" !== scene || (ctx.fillStyle = "rgba(0,0,0,0.28)", 
-                                ctx.fillRect(0, 0, cw, ch)), "entrance" === scene) drawShopBanner(ctx, cw, g, "行入超市", "今日要買餸"); else if ("list" === scene) drawShopBanner(ctx, cw, g, step.text), 
+                                ctx.fillRect(0, 0, cw, ch)), "entrance" === scene) drawShopBanner(ctx, cw, g, step ? step.text : "行入超市", step ? step.sub : "今日要買餸"); else if ("list" === scene) drawShopBanner(ctx, cw, g, step.text), 
                                 function(ctx, cw, ch, g) {
                                     const font = Math.round(Math.min(cw, ch) * (g.portrait ? .05 : .056)), lines = shopStory.list, bw = Math.min(.78 * cw, 13 * font), bh = font * (2.2 + 1.45 * lines.length), bx = cw / 2 - bw / 2, by = Math.max(g.bannerY + 2.4 * font, ch / 2 - bh / 2);
                                     ctx.save(), rrPath(ctx, bx, by, bw, bh, 22), ctx.fillStyle = "rgba(255,252,240,0.97)", 
@@ -10365,11 +10398,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                 ctx.restore();
                             }(ctx, cw, ch);
                             if (isLaundryStoryTheme()) return void function(ctx, cw, ch) {
-                                !laundryStory.active && state.running && (resetLaundryStory(), laundryStory.loadSize = laundryLoadSizeKey(), 
-                                laundryStory.list = buildLaundryList(laundryStory.loadSize), laundryStory.steps = buildLaundrySteps(laundryStory.list), 
-                                laundryStory.basket = laundryStory.list.slice(), laundryStory.pole = laundryStory.list.map(() => null), 
-                                laundryStory.shelf = laundryStory.list.map(() => null), laundryStory.active = !0, 
-                                laundryStory.stepStartedMs = nowMs()), function() {
+                                !laundryStory.active && state.running && beginLaundryStory(), function() {
                                     if ("fly" === laundryStory.anim.phase && nowMs() - laundryStory.anim.startedMs >= 850) {
                                         const s = laundryStory.anim.step;
                                         !function(s) {
@@ -10386,8 +10415,8 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                             fromP: 0
                                         }, laundryStory.idx === laundryStory.steps.indexOf(s) && laundryGoToStep(laundryStory.idx + 1);
                                         const nxt = laundryCurrentStep();
-                                        nxt && "scene" === nxt.kind && nxt.end && (laundryStory.completed = !0, playApplauseSound(), 
-                                        playHaoboCheer());
+                                        nxt && "scene" === nxt.kind && nxt.end && (laundryStory.completed = !0, laundryStory.rounds++, 
+                                        playApplauseSound(), playHaoboCheer());
                                     }
                                 }(), function() {
                                     if (!laundryStory.active || laundryStory.ended) return;
@@ -10396,7 +10425,8 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                         const s = laundryCurrentStep();
                                         if (!s || "scene" !== s.kind) break;
                                         if (nowMs() - laundryStory.stepStartedMs < s.ms) break;
-                                        if (s.end) return laundryStory.ended = !0, void (state.running && endGame());
+                                        if (s.end) return storyRoundCanRepeat() ? void restartLaundryRound() : (laundryStory.ended = !0, 
+                                        void (state.running && endGame()));
                                         laundryGoToStep(laundryStory.idx + 1);
                                     }
                                     const cur = laundryCurrentStep();
@@ -10978,7 +11008,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                         el.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:99998;pointer-events:none;background:rgba(10,20,18,.82);color:#e8fff6;font:12px/1.4 -apple-system,"PingFang TC",sans-serif;padding:6px 9px;border-radius:10px;white-space:pre;', 
                         document.body.appendChild(el), framePerf.overlayEl = el);
                         const p = framePerfSnapshot();
-                        el.textContent = `perf v140  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}\n左右手檢查 ${"off" === p.hand.check ? "關" : "開"}  鎖定手形 ${p.hand.lockSize || "-"}  大小拒絕 ${p.hand.sizeRejected}  遠處拒絕 ${p.hand.farRejected}` + (p.tool ? `\n衣夾 近指 ${p.tool.near} 放手≥${p.tool.nearExit} 張開≥${p.tool.nearOpen}  遠指 ${p.tool.far} 放手≥${p.tool.farExit} 張開≥${p.tool.farOpen}  門檻 ${p.tool.source}\n衣夾 合併 ${p.tool.combo} 拎起≤${p.tool.enter} 放手閘≥${p.tool.gate}\n衣夾 相對 基線 近${p.tool.relBaseNear} 遠${p.tool.relBaseFar} 合併${p.tool.relBaseCombo} 相對放手 ${p.tool.relOpen}` : ""), 
+                        el.textContent = `perf v141  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}\n左右手檢查 ${"off" === p.hand.check ? "關" : "開"}  鎖定手形 ${p.hand.lockSize || "-"}  大小拒絕 ${p.hand.sizeRejected}  遠處拒絕 ${p.hand.farRejected}` + (p.tool ? `\n衣夾 近指 ${p.tool.near} 放手≥${p.tool.nearExit} 張開≥${p.tool.nearOpen}  遠指 ${p.tool.far} 放手≥${p.tool.farExit} 張開≥${p.tool.farOpen}  門檻 ${p.tool.source}\n衣夾 合併 ${p.tool.combo} 拎起≤${p.tool.enter} 放手閘≥${p.tool.gate}\n衣夾 相對 基線 近${p.tool.relBaseNear} 遠${p.tool.relBaseFar} 合併${p.tool.relBaseCombo} 相對放手 ${p.tool.relOpen}` : ""), 
                         el.style.display = state.running ? "block" : "none";
                     }(perfT2);
                 } catch (e) {
@@ -11920,11 +11950,17 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             }() : "";
             dealSummary.hidden = !dealLine, dealSummary.textContent = dealLine;
             const laundryLine = isLaundryStoryTheme() ? function() {
-                if (!laundryStory.list.length || laundryStory.repsDone <= 0) return "";
-                const n = laundryStory.list.length;
-                return laundryStory.completed ? dealText("洗衫晾衫：今次 " + n + " 件衫由洗衫、晾衫、摺衫到放入衣櫃，全部做齊。", "Laundry: all " + n + " garments were washed, dried, folded and put away today.") : dealText("洗衫晾衫：今次做到「" + LAUNDRY_STAGES[Math.min(6, laundryStory.stage)].zh + "」呢一步，下次繼續。", 'Laundry: reached the "' + LAUNDRY_STAGES[Math.min(6, laundryStory.stage)].en + '" step today. Carry on next time.');
+                if (!laundryStory.list.length || laundryStory.repsDone <= 0 && laundryStory.rounds <= 0) return "";
+                const n = laundryStory.list.length, r = laundryStory.rounds;
+                return r >= 1 && !laundryStory.completed && laundryStory.repsDone > 0 ? dealText("洗衫晾衫：今次做齊 " + r + " 轉（每轉 " + n + " 件衫，由洗衫到入衣櫃），第 " + (r + 1) + " 轉做到「" + LAUNDRY_STAGES[Math.min(6, laundryStory.stage)].zh + "」呢一步。", "Laundry: " + r + " full round(s) today (" + n + " garments each, from washing to the wardrobe); round " + (r + 1) + ' reached the "' + LAUNDRY_STAGES[Math.min(6, laundryStory.stage)].en + '" step.') : r >= 2 ? dealText("洗衫晾衫：今次做齊 " + r + " 轉，每轉 " + n + " 件衫由洗衫、晾衫、摺衫到放入衣櫃。", "Laundry: " + r + " full rounds today, " + n + " garments each, washed, dried, folded and put away.") : laundryStory.completed || r >= 1 ? dealText("洗衫晾衫：今次 " + n + " 件衫由洗衫、晾衫、摺衫到放入衣櫃，全部做齊。", "Laundry: all " + n + " garments were washed, dried, folded and put away today.") : dealText("洗衫晾衫：今次做到「" + LAUNDRY_STAGES[Math.min(6, laundryStory.stage)].zh + "」呢一步，下次繼續。", 'Laundry: reached the "' + LAUNDRY_STAGES[Math.min(6, laundryStory.stage)].en + '" step today. Carry on next time.');
             }() : "";
             laundryLine && (dealSummary.hidden = !1, dealSummary.textContent = laundryLine);
+            const roundLine = isSupermarketTheme() ? shopStory.rounds <= 0 ? "" : "去超市買餸：今次完成咗 " + shopStory.rounds + " 轉（由入超市買餸到返屋企收好）" + (shopStory.repsDone > 0 ? "，第 " + (shopStory.rounds + 1) + " 轉做到一半，下次繼續。" : "。") : isLevel6DigiflexTask() ? function() {
+                if (cook.rounds <= 0) return "";
+                const started = !cook.done && (cook.idx > 0 || cook.reps > 0);
+                return "煮蛋炒飯：今次煮好 " + cook.rounds + " 碟" + (started ? "，第 " + (cook.rounds + 1) + " 碟做到第 " + (cook.idx + 1) + " 步，下次繼續。" : "。");
+            }() : "";
+            roundLine && (dealSummary.hidden = !1, dealSummary.textContent = roundLine);
         }
         showScreen("result");
     }
@@ -12787,6 +12823,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         return isLevel6DigiflexTask() ? "揸實握力器再放鬆，" + cookStepNeed(st) + " 下" : st.goal;
     }
     const DIGIFLEX_RELATIVE_RISE = .25, DIGIFLEX_MIN_RISE = .03, DIGIFLEX_MAX_RISE = .08, DIGIFLEX_DEFAULT_GAP = .16, DIGIFLEX_OFF_FRACTION = .4, DIGIFLEX_OFF_FRACTION_LATE = .2, DIGIFLEX_LATE_MS = 2e3, DIGIFLEX_BASELINE_WINDOW_MS = 2500, DIGIFLEX_RESEED_MS = 3e3, DIGIFLEX_STUCK_MS = 4e3, DIGIFLEX_MIN_SQUEEZE_MS = 80, DIGIFLEX_ANIM_MS = 520, cook = {
+        rounds: 0,
         idx: 0,
         reps: 0,
         holdStart: 0,
@@ -12924,28 +12961,33 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         earned && (score += 10, correctCount++, grabCount++, updateHUD());
         const isLast = cook.idx >= total - 1, nextIdx = cook.idx + 1, finishedIdx = cook.idx;
         if (earned && (cook.outcomeIdx = finishedIdx, cook.outcomeUntil = nowMs() + (isLast ? 0 : 2800)), 
-        isLast) return cook.done = !0, cook.idx = total - 1, cookRenderPanel(), void rewardBig({
-            tier: "完成整道菜",
-            title: "蛋炒飯完成！",
-            sub: "12 / 12 步全部完成 · 成就：一人一鍋蛋炒飯",
-            detail: "你完成了所有 12 個步驟，包括握放、手腕畫圈、前臂旋轉估算、手肘屈伸、伸手及舀取轉移。<br><small>本活動為虛擬煮食訓練，動作回饋屬估算，並非臨床運動學量度。</small>",
-            progressLabel: "進度：12 / 12 步",
-            progressPct: 1,
-            canvasH: 280,
-            draw: (c, w, h) => function(c, w, h) {
-                c.fillStyle = "#2F7A4F", c.fillRect(0, 0, w, h), c.fillStyle = "rgba(255,255,255,0.10)", 
-                rrPath(c, 14, 14, w - 28, h - 28, 14), c.fill();
-                const cw = (w - 40) / 6, chh = (h - 40) / 2;
-                COOK_STEPS.forEach((st, i) => {
-                    const cx = 20 + i % 6 * cw + cw / 2, cy = 20 + Math.floor(i / 6) * chh + chh / 2 - 8;
-                    drawSprite(c, advImg(st.prop), cx, cy, .66 * Math.min(cw, chh)), c.fillStyle = "#fff", 
-                    c.font = 'bold 12px "PingFang TC",sans-serif', c.textAlign = "center", c.textBaseline = "top", 
-                    c.fillText(i + 1 + ". " + st.text.slice(0, 6), cx, cy + .32 * chh);
-                });
-            }(c, w, h),
-            tts: "恭喜，蛋炒飯完成。十二個步驟全部做完，做得非常好。",
-            autoMs: 6500
-        });
+        isLast) {
+            cook.done = !0, cook.idx = total - 1, cook.rounds++, cookRenderPanel();
+            const again = !!state.running && timeLeft >= COOK_REPEAT_MIN_LEFT_S;
+            return void rewardBig({
+                tier: "完成整道菜",
+                title: "蛋炒飯完成！",
+                sub: (cook.rounds > 1 ? "第 " + cook.rounds + " 碟 · " : "") + "12 / 12 步全部完成 · 成就：一人一鍋蛋炒飯",
+                detail: "你完成了所有 12 個步驟，包括握放、手腕畫圈、前臂旋轉估算、手肘屈伸、伸手及舀取轉移。<br><small>本活動為虛擬煮食訓練，動作回饋屬估算，並非臨床運動學量度。</small>",
+                progressLabel: "進度：12 / 12 步",
+                progressPct: 1,
+                canvasH: 280,
+                draw: (c, w, h) => function(c, w, h) {
+                    c.fillStyle = "#2F7A4F", c.fillRect(0, 0, w, h), c.fillStyle = "rgba(255,255,255,0.10)", 
+                    rrPath(c, 14, 14, w - 28, h - 28, 14), c.fill();
+                    const cw = (w - 40) / 6, chh = (h - 40) / 2;
+                    COOK_STEPS.forEach((st, i) => {
+                        const cx = 20 + i % 6 * cw + cw / 2, cy = 20 + Math.floor(i / 6) * chh + chh / 2 - 8;
+                        drawSprite(c, advImg(st.prop), cx, cy, .66 * Math.min(cw, chh)), c.fillStyle = "#fff", 
+                        c.font = 'bold 12px "PingFang TC",sans-serif', c.textAlign = "center", c.textBaseline = "top", 
+                        c.fillText(i + 1 + ". " + st.text.slice(0, 6), cx, cy + .32 * chh);
+                    });
+                }(c, w, h),
+                tts: "恭喜，蛋炒飯完成。十二個步驟全部做完，做得非常好。",
+                autoMs: 6500,
+                onContinue: again ? cookStartNextRound : null
+            });
+        }
         cook.idx = nextIdx, cook.reps = 0, cook.holdStart = 0, cook.ring = [], cook.angAccum = 0, 
         cook.rollSign = 0, cook.chopPhase = 0, cook.chopAnchor = 0, cook.shakeDir = 0, cook.shakeAnchor = 0, 
         cook.elbowPhase = 0, cook.tiltPhase = 0, cook.pinchPrev = !1, cook.scoopZone = "", 
@@ -12963,6 +13005,15 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         }), speakCantonese("完成。" + COOK_OUTCOME_LABELS[finishedIdx] + "。"), cook.announceAt = cook.outcomeUntil + 250) : (cook.outcomeUntil = 0, 
         cook.readyAt = nowMs() + 1e3, cookAnnounce());
     }
+    const COOK_REPEAT_MIN_LEFT_S = 15;
+    function cookStartNextRound() {
+        if ("cooking" !== advCurrent || !state.running || !cook.done) return;
+        const digi = cook.digi;
+        cook.reset(), cook.digi = digi, cook.digi.squeezing = !1, cook.digi.hist = [], cook.digi.peak = 0, 
+        cook.digi.animAt = 0, cook.layout = cookLayout(), isLevel6DigiflexTask() ? (cook.introUntil = nowMs() + 2600, 
+        cook.readyAt = cook.introUntil + 400, cookRenderPanel(), speakCantonese("做得好，再煮多一碟蛋炒飯。"), 
+        cook.announceAt = cook.introUntil - 400, setActionPrompt("揸實", "")) : cookAnnounce();
+    }
     function cookAnnounce() {
         const st = cook.step();
         cookRenderPanel(), speakCantonese(function(st) {
@@ -12975,7 +13026,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         motionGif.alt = cookStepGoal(st), motionGuide.classList.add("show"), motionGuide.setAttribute("aria-hidden", "false"));
         const total = COOK_STEPS.length, need = cookStepNeed(st), stepGoal = isLevel4Tabletop() && "pinchDrop" === st.kind ? "沿中線向前滑，在鍋上停住" : cookStepGoal(st);
         advSetPanel({
-            stepNo: "步驟 " + (cook.idx + 1) + " / " + total + (cook.done ? " · 已完成" : ""),
+            stepNo: (cook.rounds > 0 && !cook.done ? "第 " + (cook.rounds + 1) + " 碟 · " : "") + "步驟 " + (cook.idx + 1) + " / " + total + (cook.done ? " · 已完成" : ""),
             text: st.text,
             goal: "目標動作：" + stepGoal + "　（" + cook.reps + " / " + need + "）",
             metric: cook.metric + (cook.poseOn || digiflex ? "" : "<br>姿勢追蹤（肩／肘）未啟用：以手部動作估算，追蹤有限。"),
@@ -13126,6 +13177,22 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         u: .423,
         v: .228
     }, COOK_SINK_BASIN_V = .72, COOK_SINK_ASPECT = 530 / 900, imgCookSink = new Image;
+    function drawCookDigiflexBanner(ctx, cw, g, text, sub) {
+        const font = g.bannerFont;
+        ctx.save(), ctx.font = "800 " + font + 'px "PingFang TC","Noto Sans TC",sans-serif';
+        const maxW = cw - 28;
+        let tw = ctx.measureText(text).width;
+        if (tw + 1.2 * font > maxW) {
+            const f2 = Math.max(18, Math.floor(font * (maxW - 1.2 * font) / tw));
+            ctx.font = "800 " + f2 + 'px "PingFang TC","Noto Sans TC",sans-serif', tw = ctx.measureText(text).width;
+        }
+        const bw = Math.min(maxW, tw + 1.6 * font), bh = font * (sub ? 2.55 : 1.75), bx = cw / 2 - bw / 2, by = g.bannerY;
+        rrPath(ctx, bx, by, bw, bh, 18), ctx.fillStyle = "rgba(255,255,255,0.94)", ctx.fill(), 
+        ctx.lineWidth = 4, ctx.strokeStyle = "#1A6B5A", ctx.stroke(), ctx.fillStyle = "#17463d", 
+        ctx.textAlign = "center", ctx.textBaseline = "middle", ctx.fillText(text, cw / 2, by + .95 * font), 
+        sub && (ctx.font = "700 " + Math.round(.62 * font) + 'px "PingFang TC","Noto Sans TC",sans-serif', 
+        ctx.fillStyle = "#8a5a12", ctx.fillText(sub, cw / 2, by + 1.95 * font)), ctx.restore();
+    }
     imgCookSink.src = "img/cook_sink.png";
     const MJ_WINDS = [ "E", "S", "W", "N" ], MJ_DRAGONS = [ "C", "F", "B" ];
     function mjSuit(t) {
@@ -14138,7 +14205,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
 <script src="level4-three-games-module.js"></script>
 <script>
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
-  const LEVEL_APP_BUILD = "v140-20261125-cursor-stays";
+  const LEVEL_APP_BUILD = "v141-20261125-story-repeat";
   const levelAppHadController = Boolean(navigator.serviceWorker.controller);
   let levelAppReloading = false;
 
