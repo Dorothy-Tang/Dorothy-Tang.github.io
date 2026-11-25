@@ -4694,9 +4694,10 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                 }
                 isLevel4StandaloneGame() ? advCurrent && advTeardown() : usesAdvancedThemeModule() ? function() {
                     buildAdvDom(), ADV_ASSETS.forEach(advImg), advCurrent = state.theme, advLastW = gameCanvas.width, 
-                    advLastH = gameCanvas.height, picker.reset(), carrier.reset(), heldPromptKey = "", 
-                    fxParticles = [], fxRings = [], advDom.reward.classList.remove("show"), advDom.keep && advDom.keep.classList.remove("show"), 
-                    clearTimeout(rewardAutoTimer), rewardOnContinue = null, advSetNote(""), cook.active = cards.active = laundry.active = flowers.active = mj.active = !1, 
+                    advLastH = gameCanvas.height, picker.reset(), carrier.reset(), level6LastSeenCursor = null, 
+                    heldPromptKey = "", fxParticles = [], fxRings = [], advDom.reward.classList.remove("show"), 
+                    advDom.keep && advDom.keep.classList.remove("show"), clearTimeout(rewardAutoTimer), 
+                    rewardOnContinue = null, advSetNote(""), cook.active = cards.active = laundry.active = flowers.active = mj.active = !1, 
                     promptRulesEnabled = !1, setPromptSlot("none");
                     const statusBar = document.getElementById("statusBar");
                     if (statusBar.textContent = "", delete statusBar.dataset.actionRenderKey, "cooking" === advCurrent) {
@@ -5592,13 +5593,23 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     function level6AnyItemHeld() {
         return !!(heldItem || void 0 !== carrier && carrier && carrier.heldId || void 0 !== picker && picker && picker.heldId);
     }
-    const LEVEL6_ARRIVE_ARM_MS = 700;
+    const LEVEL6_ARRIVE_ARM_MS = 700, LEVEL6_QUICK_READY_THEMES = [ "cards", "mahjong" ];
+    function level6QuickReadyEnabled() {
+        return level6AutoPlaceEnabled() && LEVEL6_QUICK_READY_THEMES.includes(state.theme);
+    }
     function level6ArriveArmEnabled() {
         return isLevel6() && isGraspStyleMode() && (level6AutoPlaceEnabled() || isLevel6RealToolTask()) && !level6AnyItemHeld();
     }
+    function level6SqueezedPickPoll(ctl, best, now, onItem) {
+        if (!(best && onItem && isGrasping && level6QuickReadyEnabled())) return ctl.sqId = null, 
+        ctl.sqStart = 0, !1;
+        ctl.sqId !== best.id && (ctl.sqId = best.id, ctl.sqStart = now);
+        const rested = now - ctl.sqStart;
+        return rested >= 900 || rested >= 300 && isStill(now);
+    }
     function level6ArriveArmPoll(ctl, best, now, canArm) {
         return best && !best.placed && level6ArriveArmEnabled() ? (ctl.arriveId !== best.id && (ctl.arriveId = best.id, 
-        ctl.arriveStart = now), !1 !== canArm && !ctl.armed && now - ctl.arriveStart >= LEVEL6_ARRIVE_ARM_MS && (ctl.armed = !0, 
+        ctl.arriveStart = now), !1 !== canArm && !ctl.armed && now - ctl.arriveStart >= (level6QuickReadyEnabled() ? 300 : LEVEL6_ARRIVE_ARM_MS) && (ctl.armed = !0, 
         ctl.arriveArmed = !0), !(!ctl.armed || !ctl.arriveArmed)) : (ctl.arriveId = null, 
         ctl.arriveStart = 0, ctl.arriveArmed && (ctl.arriveArmed = !1, ctl.armed = !1), 
         !1);
@@ -7513,9 +7524,9 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         const radius = Math.max(12, Number(r) || 36);
         return clampInteractionPoint(x + ("right" === activeAffectedSide() ? -1 : 1) * Math.min(62, .78 * radius), y, gameCanvas.width, gameCanvas.height, radius);
     }
-    function drawPublicLevel6ClosedPinchCursor(ctx, x, y, alpha = .82) {
+    function drawPublicLevel6ClosedPinchCursor(ctx, x, y, alpha = .82, graspingShown = isGrasping) {
         if (!isLevel6()) return !1;
-        const open = !isGrasping, geometry = function(x, y, open = !1) {
+        const open = !graspingShown, geometry = function(x, y, open = !1) {
             const side = "left" === activeAffectedSide() ? "left" : "right", minSide = Math.max(1, Math.min(gameCanvas.width, gameCanvas.height)), width = Math.max(230, Math.min(330, .35 * minSide)), height = width * (open ? 150 / 191 : 133 / 191), anchorX = "right" === side ? .035 : .965, anchorY = open ? .447 : .505;
             return {
                 side: side,
@@ -8463,7 +8474,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                             const advancedHeld = !(!carrier.heldId && !picker.heldId), advancedHover = !(!carrier.hoverId && !picker.hoverId);
                             if (advancedHeld) setActionPrompt(level6AutoPlaceEnabled() ? "移到目標停住" : isGrasping ? "保持揸住" : "張開手放低", ""); else if (advancedHover) {
                                 const advancedArmed = !(!carrier.armed && !picker.armed);
-                                setActionPrompt(isGrasping ? level6AutoPlaceEnabled() && !advancedArmed ? "先張開手" : "揸實" : "揸實拿起", "");
+                                setActionPrompt(isGrasping ? !level6AutoPlaceEnabled() || advancedArmed || level6QuickReadyEnabled() ? "揸實" : "先張開手" : "揸實拿起", "");
                             } else setActionPrompt("張開手", "");
                         } else setActionPrompt("患手入鏡", "");
                         advDom && advDom.reward.classList.contains("show") || advDom && advDom.keep && advDom.keep.classList.contains("show") || ("cooking" === advCurrent ? (cook.announceAt && nowMs() >= cook.announceAt && (cook.announceAt = 0, 
@@ -9445,7 +9456,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                             ctx.restore());
                             const hover = picker.hoverId, heldGroup = picker.heldId;
                             drawAffectedSelectionZone(ctx, "放牌區"), L.groups.forEach((g, gi) => {
-                                const gone = g.ref.gone, held = heldGroup === g.id && !gone, gx = held && cursorX >= 0 ? cursorX : g.x, gy = held && cursorY >= 0 ? cursorY : g.y;
+                                const gone = g.ref.gone, held = heldGroup === g.id && !gone, heldAt = held ? level6HeldDrawPoint() : null, gx = heldAt ? heldAt.x : g.x, gy = heldAt ? heldAt.y : g.y;
                                 ctx.save(), ctx.globalAlpha = gone ? .28 : 1, held && (ctx.shadowColor = "rgba(255,209,102,0.85)", 
                                 ctx.shadowBlur = 18), ctx.fillStyle = "rgba(255,255,255,0.94)", rrPath(ctx, gx - g.w / 2, gy - g.h / 2, g.w, g.h, 16), 
                                 ctx.fill(), ctx.shadowBlur = 0, ctx.lineWidth = held ? 10 : hover !== g.id || gone ? 4 : 8, 
@@ -9482,7 +9493,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                             drawAffectedSelectionZone(ctx, "收牌區");
                             for (const c of cards.field) {
                                 if (c.gone) continue;
-                                const drawX = held === c.id && cursorX >= 0 ? cursorX : c.x, drawY = held === c.id && cursorY >= 0 ? cursorY : c.y;
+                                const heldAt = held === c.id ? level6HeldDrawPoint() : null, drawX = heldAt ? heldAt.x : c.x, drawY = heldAt ? heldAt.y : c.y;
                                 hover !== c.id && held !== c.id || (ctx.save(), ctx.fillStyle = held === c.id ? "rgba(255,209,102,0.55)" : "rgba(224,123,57,0.35)", 
                                 ctx.beginPath(), ctx.arc(drawX, drawY, 1.35 * c.r, 0, 2 * Math.PI), ctx.fill(), 
                                 ctx.restore()), drawCard2(ctx, c.suit, c.rank, drawX, drawY, c.w * (held === c.id ? 1.06 : 1), {
@@ -10967,7 +10978,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                         el.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:99998;pointer-events:none;background:rgba(10,20,18,.82);color:#e8fff6;font:12px/1.4 -apple-system,"PingFang TC",sans-serif;padding:6px 9px;border-radius:10px;white-space:pre;', 
                         document.body.appendChild(el), framePerf.overlayEl = el);
                         const p = framePerfSnapshot();
-                        el.textContent = `perf v139  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}\n左右手檢查 ${"off" === p.hand.check ? "關" : "開"}  鎖定手形 ${p.hand.lockSize || "-"}  大小拒絕 ${p.hand.sizeRejected}  遠處拒絕 ${p.hand.farRejected}` + (p.tool ? `\n衣夾 近指 ${p.tool.near} 放手≥${p.tool.nearExit} 張開≥${p.tool.nearOpen}  遠指 ${p.tool.far} 放手≥${p.tool.farExit} 張開≥${p.tool.farOpen}  門檻 ${p.tool.source}\n衣夾 合併 ${p.tool.combo} 拎起≤${p.tool.enter} 放手閘≥${p.tool.gate}\n衣夾 相對 基線 近${p.tool.relBaseNear} 遠${p.tool.relBaseFar} 合併${p.tool.relBaseCombo} 相對放手 ${p.tool.relOpen}` : ""), 
+                        el.textContent = `perf v140  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}\n左右手檢查 ${"off" === p.hand.check ? "關" : "開"}  鎖定手形 ${p.hand.lockSize || "-"}  大小拒絕 ${p.hand.sizeRejected}  遠處拒絕 ${p.hand.farRejected}` + (p.tool ? `\n衣夾 近指 ${p.tool.near} 放手≥${p.tool.nearExit} 張開≥${p.tool.nearOpen}  遠指 ${p.tool.far} 放手≥${p.tool.farExit} 張開≥${p.tool.farOpen}  門檻 ${p.tool.source}\n衣夾 合併 ${p.tool.combo} 拎起≤${p.tool.enter} 放手閘≥${p.tool.gate}\n衣夾 相對 基線 近${p.tool.relBaseNear} 遠${p.tool.relBaseFar} 合併${p.tool.relBaseCombo} 相對放手 ${p.tool.relOpen}` : ""), 
                         el.style.display = state.running ? "block" : "none";
                     }(perfT2);
                 } catch (e) {
@@ -11389,7 +11400,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     function updatePublicPatientVoiceGuide(spec) {
         if (!isPatientVisualCueMode() || !state.running || state.paused) return "";
         const s = spec || {}, item = s.item || null, itemId = s.itemId || item?.id || item?.label || "item";
-        if ("contact" === s.phase) return s.touching && s.openForPickup ? publicPatientVoiceSay("contact", itemId, !!s.silent) : s.touching && isGrasping && level6AutoPlaceEnabled() ? publicPatientVoiceSay("reopen", itemId, !!s.silent) : "";
+        if ("contact" === s.phase) return s.touching && s.openForPickup ? publicPatientVoiceSay("contact", itemId, !!s.silent) : s.touching && isGrasping && level6AutoPlaceEnabled() && !level6QuickReadyEnabled() ? publicPatientVoiceSay("reopen", itemId, !!s.silent) : "";
         if ("pickup" === s.phase) {
             const target = function(item, zones) {
                 const list = Array.isArray(zones) ? zones.filter(Boolean) : [];
@@ -12244,10 +12255,12 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     }
     let heldPromptKey = "";
     function advDrawHeldReleasePrompt(ctx, held) {
-        if (!isGraspStyleMode() || !held || cursorX < 0) return;
+        if (!isGraspStyleMode() || !held) return;
+        const labelAt = level6HeldDrawPoint();
+        if (!labelAt) return;
         const text = isLevel6RealToolTask() ? "已夾住 · " + level6ToolWords().open + level6ToolWords().noun + "放下" : level6AutoPlaceEnabled() ? "mahjong" === advCurrent || "cards" === advCurrent ? "已拿住 · 移到放牌區，停住自動放低" : "已拿住 · 移到花盤，停住自動放低" : "mahjong" === advCurrent || "cards" === advCurrent ? "已拿住 · 移到放牌區" : isLevel67BareMode() ? "已捏住 · 請張開三指放下" : isPegMode() ? "已夾住 · 請放鬆夾仔" : "已拿住 · 請張開手放下";
         ctx.save(), ctx.font = 'bold 18px "PingFang TC","Noto Sans TC",sans-serif';
-        const w = Math.min(360, ctx.measureText(text).width + 30), x = Math.max(w / 2 + 8, Math.min(gameCanvas.width - w / 2 - 8, cursorX)), y = Math.max(46, cursorY - 66);
+        const w = Math.min(360, ctx.measureText(text).width + 30), x = Math.max(w / 2 + 8, Math.min(gameCanvas.width - w / 2 - 8, labelAt.x)), y = Math.max(46, labelAt.y - 66);
         ctx.fillStyle = "rgba(18,86,74,0.96)", rrPath(ctx, x - w / 2, y - 21, w, 42, 12), 
         ctx.fill(), ctx.fillStyle = "#fff", ctx.textAlign = "center", ctx.textBaseline = "middle", 
         ctx.fillText(text, x, y), ctx.restore();
@@ -12282,23 +12295,26 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         arriveId: null,
         arriveStart: 0,
         arriveArmed: !1,
+        sqId: null,
+        sqStart: 0,
         reset() {
             this.hoverId = null, this.start = 0, this.pct = 0, this.armed = !1, this.lock = null, 
             this.startId = null, this.openStart = 0, this.graspStart = 0, this.graspId = null, 
             this.heldId = null, this.relStart = 0, this.relPauseAt = 0, this.relLastOpenAt = 0, 
             this.contactId = null, this.contactUntil = 0, this.postReleaseOpenStart = 0, this.autoPlaceStart = 0, 
-            this.arriveId = null, this.arriveStart = 0, this.arriveArmed = !1;
+            this.arriveId = null, this.arriveStart = 0, this.arriveArmed = !1, this.sqId = null, 
+            this.sqStart = 0;
         },
         poll(items, releaseZone) {
             if (this.pct = 0, cursorX < 0 || !handDetected) return this.hoverId = null, this.openStart = 0, 
-            this.graspStart = 0, this.graspId = null, this.armed = !1, this.postReleaseOpenStart && (this.postReleaseOpenStart = nowMs()), 
-            null;
+            this.graspStart = 0, this.graspId = null, this.armed = !1, this.sqId = null, this.sqStart = 0, 
+            this.postReleaseOpenStart && (this.postReleaseOpenStart = nowMs()), null;
             const now = nowMs();
             if (detectionHeldGrace) return this.hoverId = this.heldId || null, this.start = 0, 
             this.startId = null, this.pct = 0, this.armed = !1, this.openStart = 0, this.graspStart = 0, 
             this.graspId = null, this.relStart = 0, this.relPauseAt = 0, this.relLastOpenAt = 0, 
-            this.contactId = null, this.contactUntil = 0, this.postReleaseOpenStart && (this.postReleaseOpenStart = now), 
-            null;
+            this.contactId = null, this.contactUntil = 0, this.sqId = null, this.sqStart = 0, 
+            this.postReleaseOpenStart && (this.postReleaseOpenStart = now), null;
             if (this.heldId && isGraspStyleMode()) {
                 this.hoverId = this.heldId;
                 const held = items.find(it => it.id === this.heldId) || null;
@@ -12357,32 +12373,35 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             !best) return this.hoverId = null, this.start = 0, this.lock = null, this.graspStart = 0, 
             this.graspId = null, this.contactId = null, this.contactUntil = 0, level6ArriveArmPoll(this, null, now), 
             isGraspStyleMode() && handReleasedOrOpen() && (this.openStart || (this.openStart = now), 
-            now - this.openStart >= advancedGraspArmMs() && (this.armed = !0)), isGraspStyleMode() && !this.armed && isLevel6Chopsticks() && setActionPrompt("先張開筷子", "穩定張開後再合埋夾起"), 
+            now - this.openStart >= advancedGraspArmMs() && (this.armed = !0)), level6SqueezedPickPoll(this, null, now, !1), 
+            isGraspStyleMode() && !this.armed && isLevel6Chopsticks() && setActionPrompt("先張開筷子", "穩定張開後再合埋夾起"), 
             null;
             this.hoverId = best.id;
             const arrived = level6ArriveArmPoll(this, best, now, !!directContact && !isGrasping);
-            if (updatePublicPatientVoiceGuide({
+            updatePublicPatientVoiceGuide({
                 phase: "contact",
                 item: best,
                 touching: !0,
                 openForPickup: !(!isGraspStyleMode() || !handReleasedOrOpen() && !arrived)
-            }), isGraspStyleMode()) {
+            });
+            const squeezedPick = isGraspStyleMode() && level6SqueezedPickPoll(this, best, now, !!directContact);
+            if (isGraspStyleMode()) {
                 if (handReleasedOrOpen()) {
                     this.graspStart = 0, this.graspId = null, this.openStart || (this.openStart = now);
                     const armMs = advancedGraspArmMs();
                     return this.pct = Math.min(1, (now - this.openStart) / armMs), now - this.openStart >= armMs && (this.armed = !0, 
                     this.arriveArmed = !1), null;
                 }
-                if (this.openStart = 0, !this.armed) return isLevel6Chopsticks() && setActionPrompt("先張開筷子", "穩定張開後再合埋夾起"), 
+                if (this.openStart = 0, !this.armed && !squeezedPick) return isLevel6Chopsticks() && setActionPrompt("先張開筷子", "穩定張開後再合埋夾起"), 
                 null;
                 if (this.arriveArmed && !isGrasping) return this.graspStart = 0, this.graspId = null, 
                 null;
                 this.graspId !== best.id && (this.graspId = best.id, this.graspStart = now);
                 const holdMs = advancedGraspHoldMs();
-                return this.pct = Math.min(1, (now - this.graspStart) / holdMs), now - this.graspStart >= holdMs && (this.heldId = best.id, 
+                return this.pct = Math.min(1, (now - this.graspStart) / holdMs), (squeezedPick || now - this.graspStart >= holdMs) && (this.heldId = best.id, 
                 this.armed = !1, this.relStart = 0, this.relPauseAt = 0, this.relLastOpenAt = 0, 
                 this.pct = 0, isLevel6() && grabCount++, this.arriveId = null, this.arriveStart = 0, 
-                this.arriveArmed = !1, updatePublicPatientVoiceGuide({
+                this.arriveArmed = !1, this.sqId = null, this.sqStart = 0, updatePublicPatientVoiceGuide({
                     phase: "pickup",
                     item: best,
                     zones: releaseZone ? [ releaseZone ] : []
@@ -13909,33 +13928,72 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         run() {
             playApplause(), speakCantonese("作品完成，非常好！" + nextEncourage()), endGame();
         }
+    }, LEVEL6_LAST_SEEN_CURSOR_ALPHA = {
+        pinch: .62,
+        relaxed: .54
     };
+    let level6LastSeenCursor = null;
+    function level6CursorAlwaysShown() {
+        return isLevel6() && isGraspStyleMode() && ("cards" === advCurrent || "mahjong" === advCurrent);
+    }
+    function level6CursorLive() {
+        return cursorX >= 0 && cursorY >= 0 && handDetected;
+    }
+    function level6LastSeenCursorPoint() {
+        if (!level6CursorAlwaysShown() || level6CursorLive()) return null;
+        const cw = gameCanvas.width, ch = gameCanvas.height, last = level6LastSeenCursor;
+        return {
+            x: last ? Math.max(0, Math.min(cw, last.x)) : .5 * cw,
+            y: last ? Math.max(0, Math.min(ch, last.y)) : .62 * ch,
+            grasping: !!picker.heldId || !(!last || !last.grasping)
+        };
+    }
+    function level6HeldDrawPoint() {
+        if (cursorX >= 0 && cursorY >= 0) return {
+            x: cursorX,
+            y: cursorY
+        };
+        const last = level6LastSeenCursorPoint();
+        return last && level6LastSeenCursor ? {
+            x: last.x,
+            y: last.y
+        } : null;
+    }
     function advDrawCursor(ctx, pct) {
-        if (!(cursorX < 0 || cursorY < 0) && handDetected) {
-            if (ctx.save(), isGraspStyleMode()) {
-                if (isPatientVisualCueMode()) {
-                    const handEmoji = isGrasping ? "✊🏻" : "✋🏻", closedHandSize = isLevel6() ? Math.max(210, Math.min(280, .27 * Math.min(gameCanvas.width, gameCanvas.height))) : Math.max(104, Math.min(124, .16 * Math.min(gameCanvas.width, gameCanvas.height))), handSize = isGrasping ? closedHandSize : 1.5 * closedHandSize;
-                    isLevel6() ? drawPublicLevel6ClosedPinchCursor(ctx, cursorX, cursorY, isGrasping ? .84 : .72) : (ctx.globalAlpha = isGrasping ? .98 : .88, 
-                    ctx.font = `${Math.round(handSize)}px "Apple Color Emoji","Segoe UI Emoji",sans-serif`, 
-                    ctx.textAlign = "center", ctx.textBaseline = "middle", ctx.fillText(handEmoji, cursorX, cursorY + .03 * handSize));
-                } else ctx.beginPath(), ctx.arc(cursorX, cursorY, isGrasping ? 28 : 30, 0, 2 * Math.PI), 
-                ctx.fillStyle = isGrasping ? "rgba(224,123,57,0.85)" : "rgba(255,255,255,0.30)", 
-                ctx.fill(), ctx.lineWidth = 3, ctx.strokeStyle = "#fff", ctx.stroke(), isGrasping && (ctx.fillStyle = "#fff", 
-                ctx.font = 'bold 22px -apple-system,"PingFang TC",sans-serif', ctx.textAlign = "center", 
-                ctx.textBaseline = "middle", ctx.fillText(isPinchMode() ? "捏" : "✊", cursorX, cursorY));
-                if (pct > 0) {
-                    ctx.beginPath();
-                    const progressRadius = isPatientVisualCueMode() ? .62 * Math.max(64, Math.min(94, .105 * Math.min(gameCanvas.width, gameCanvas.height))) : 36;
-                    ctx.arc(cursorX, cursorY, progressRadius, -Math.PI / 2, -Math.PI / 2 + pct * Math.PI * 2), 
-                    ctx.strokeStyle = "#C0392B", ctx.lineWidth = 5, ctx.stroke();
-                }
-            } else ctx.beginPath(), ctx.arc(cursorX, cursorY, 22, 0, 2 * Math.PI), ctx.fillStyle = "rgba(255,255,255,0.55)", 
-            ctx.fill(), ctx.beginPath(), ctx.arc(cursorX, cursorY, 18, 0, 2 * Math.PI), ctx.fillStyle = pct > 0 ? "#2E7D52" : "#E07B39", 
-            ctx.fill(), ctx.lineWidth = 2, ctx.strokeStyle = "#fff", ctx.stroke(), pct > 0 && (ctx.beginPath(), 
-            ctx.arc(cursorX, cursorY, 27, -Math.PI / 2, -Math.PI / 2 + pct * Math.PI * 2), ctx.strokeStyle = "#2E7D52", 
-            ctx.lineWidth = 4, ctx.stroke());
-            ctx.restore();
+        if (!level6CursorLive()) {
+            const last = level6LastSeenCursorPoint();
+            return void (last && drawPublicLevel6ClosedPinchCursor(ctx, last.x, last.y, last.grasping ? LEVEL6_LAST_SEEN_CURSOR_ALPHA.pinch : LEVEL6_LAST_SEEN_CURSOR_ALPHA.relaxed, last.grasping));
         }
+        if (level6CursorAlwaysShown() && level6CursorLive() && (level6LastSeenCursor = {
+            x: cursorX,
+            y: cursorY,
+            grasping: !!isGrasping
+        }), level6QuickReadyEnabled() && level6CursorLive() && !picker.heldId && (pct = 1), 
+        ctx.save(), isGraspStyleMode()) {
+            if (isPatientVisualCueMode()) {
+                const handEmoji = isGrasping ? "✊🏻" : "✋🏻", closedHandSize = isLevel6() ? Math.max(210, Math.min(280, .27 * Math.min(gameCanvas.width, gameCanvas.height))) : Math.max(104, Math.min(124, .16 * Math.min(gameCanvas.width, gameCanvas.height))), handSize = isGrasping ? closedHandSize : 1.5 * closedHandSize;
+                isLevel6() ? drawPublicLevel6ClosedPinchCursor(ctx, cursorX, cursorY, isGrasping ? .84 : .72) : (ctx.globalAlpha = isGrasping ? .98 : .88, 
+                ctx.font = `${Math.round(handSize)}px "Apple Color Emoji","Segoe UI Emoji",sans-serif`, 
+                ctx.textAlign = "center", ctx.textBaseline = "middle", ctx.fillText(handEmoji, cursorX, cursorY + .03 * handSize));
+            } else ctx.beginPath(), ctx.arc(cursorX, cursorY, isGrasping ? 28 : 30, 0, 2 * Math.PI), 
+            ctx.fillStyle = isGrasping ? "rgba(224,123,57,0.85)" : "rgba(255,255,255,0.30)", 
+            ctx.fill(), ctx.lineWidth = 3, ctx.strokeStyle = "#fff", ctx.stroke(), isGrasping && (ctx.fillStyle = "#fff", 
+            ctx.font = 'bold 22px -apple-system,"PingFang TC",sans-serif', ctx.textAlign = "center", 
+            ctx.textBaseline = "middle", ctx.fillText(isPinchMode() ? "捏" : "✊", cursorX, cursorY));
+            if (pct > 0) {
+                ctx.beginPath();
+                const progressRadius = isPatientVisualCueMode() ? .62 * Math.max(64, Math.min(94, .105 * Math.min(gameCanvas.width, gameCanvas.height))) : 36;
+                ctx.arc(cursorX, cursorY, progressRadius, -Math.PI / 2, -Math.PI / 2 + pct * Math.PI * 2), 
+                level6QuickReadyEnabled() ? (ctx.strokeStyle = "rgba(255,255,255,.92)", ctx.lineWidth = 11, 
+                ctx.stroke(), ctx.strokeStyle = "#C0392B", ctx.lineWidth = 7, ctx.stroke()) : (ctx.strokeStyle = "#C0392B", 
+                ctx.lineWidth = 5, ctx.stroke());
+            }
+        } else ctx.beginPath(), ctx.arc(cursorX, cursorY, 22, 0, 2 * Math.PI), ctx.fillStyle = "rgba(255,255,255,0.55)", 
+        ctx.fill(), ctx.beginPath(), ctx.arc(cursorX, cursorY, 18, 0, 2 * Math.PI), ctx.fillStyle = pct > 0 ? "#2E7D52" : "#E07B39", 
+        ctx.fill(), ctx.lineWidth = 2, ctx.strokeStyle = "#fff", ctx.stroke(), pct > 0 && (ctx.beginPath(), 
+        ctx.arc(cursorX, cursorY, 27, -Math.PI / 2, -Math.PI / 2 + pct * Math.PI * 2), ctx.strokeStyle = "#2E7D52", 
+        ctx.lineWidth = 4, ctx.stroke());
+        ctx.restore();
     }
     let advCurrent = null, advLastW = 0, advLastH = 0, advPoseFrame = 0;
     function advTeardown() {
@@ -13944,7 +14002,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         d.keep && d.keep.classList.remove("show"), cook.active = cards.active = laundry.active = flowers.active = mj.active = !1;
         const motionGuide = document.getElementById("cookMotionGuide");
         motionGuide && (motionGuide.classList.remove("show"), motionGuide.setAttribute("aria-hidden", "true")), 
-        advCurrent = null, promptRulesEnabled = !0, setPromptSlot("rules");
+        advCurrent = null, level6LastSeenCursor = null, promptRulesEnabled = !0, setPromptSlot("rules");
     }
     function dimsumReward() {
         const nextTier = correctCount < 5 ? 5 : correctCount < 10 ? 10 : correctCount < 15 ? 15 : correctCount < 20 ? 20 : null;
@@ -14080,7 +14138,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
 <script src="level4-three-games-module.js"></script>
 <script>
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
-  const LEVEL_APP_BUILD = "v139-20261124-laundry-story";
+  const LEVEL_APP_BUILD = "v140-20261125-cursor-stays";
   const levelAppHadController = Boolean(navigator.serviceWorker.controller);
   let levelAppReloading = false;
 
