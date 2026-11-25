@@ -2263,7 +2263,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         short: "短單（2 樣）",
         medium: "中單（4 樣）",
         long: "長單（6 樣）"
-    }, SHOP_LIST_POOL = [ "apple", "soysauce", "orange", "milk", "choysum", "eggs" ], shopStory = {
+    }, SHOP_LIST_POOL = [ "apple", "soysauce", "orange", "milk", "choysum", "eggs" ], SHOP_LIST_ROTATION = [ "apple", "soysauce", "orange", "milk", "choysum", "eggs", "rice", "toiletpaper" ], shopStory = {
         active: !1,
         steps: [],
         idx: 0,
@@ -2294,9 +2294,17 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     function shopListSizeKey() {
         return SHOP_LIST_SIZES[state.shopListSize] ? state.shopListSize : "medium";
     }
-    function buildShopList(sizeKey) {
+    function storyRoundPick(pool, n, round) {
+        const L = pool.length, r = Math.max(1, Math.floor(round || 1)), m = Math.max(0, Math.min(n, L));
+        if (!L || !m) return [];
+        const off = (r - 1) * (m < L ? m : Math.max(1, Math.floor(L / 2))) % L;
+        return Array.from({
+            length: m
+        }, (_, i) => pool[(off + i) % L]);
+    }
+    function buildShopList(sizeKey, round) {
         const n = SHOP_LIST_SIZES[sizeKey] || 4;
-        return SHOP_LIST_POOL.slice(0, n).map(id => ({
+        return (Math.max(1, round || 1) > 1 ? storyRoundPick(SHOP_LIST_ROTATION, n, round) : SHOP_LIST_POOL.slice(0, n)).map(id => ({
             id: id,
             need: "apple" === id || "orange" === id ? 2 : 1,
             got: 0
@@ -2308,7 +2316,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             kind: "scene",
             scene: "entrance",
             text: "再去超市買餸",
-            sub: "第 " + r + " 轉",
+            sub: "第 " + r + " 轉 · 換咗新購物單",
             ms: 2200
         } : {
             kind: "scene",
@@ -2425,7 +2433,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     }
     function beginSupermarketStory(roundsDone) {
         resetSupermarketStory(), shopStory.rounds = Math.max(0, roundsDone || 0), shopStory.listSize = shopListSizeKey(), 
-        shopStory.list = buildShopList(shopStory.listSize), shopStory.steps = buildShopSteps(shopStory.list, shopStory.rounds + 1), 
+        shopStory.list = buildShopList(shopStory.listSize, shopStory.rounds + 1), shopStory.steps = buildShopSteps(shopStory.list, shopStory.rounds + 1), 
         shopStory.active = !0, shopStory.stepStartedMs = nowMs();
     }
     function restartSupermarketRound() {
@@ -2509,6 +2517,57 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             fridgeY: Math.max(ch * (portrait ? .42 : .44), contentTop + .8 * itemSize),
             fridgeW: cw * (portrait ? .36 : .24)
         };
+    }
+    const SHOP_HOME_CABINET = {
+        u0: .212,
+        u1: .508,
+        rows: [ {
+            base: .386,
+            top: .247
+        }, {
+            base: .236,
+            top: .075
+        } ],
+        labelU: .355,
+        labelV: .428,
+        counter: {
+            u0: .315,
+            u1: .47,
+            base: .745
+        }
+    }, SHOP_HOME_FRIDGE = {
+        u0: .63,
+        u1: .835,
+        rows: [ {
+            base: .378,
+            top: .235
+        }, {
+            base: .492,
+            top: .385
+        }, {
+            base: .612,
+            top: .5
+        }, {
+            base: .716,
+            top: .62
+        } ],
+        labelU: .73,
+        labelV: .79
+    };
+    function drawShopImgSink(ctx, img, cx, cy, maxW, maxH, sink, shadow) {
+        if (!img || !img.complete || !img.naturalWidth) return;
+        const s = Math.min(maxW / img.naturalWidth, maxH / img.naturalHeight), w = img.naturalWidth * s, h = img.naturalHeight * s, top = cy - h / 2 + (maxH - h) / 2 * clamp01(sink) + .03 * h * clamp01(sink);
+        ctx.save(), shadow && (ctx.fillStyle = "rgba(60,40,10,0.24)", ctx.beginPath(), ctx.ellipse(cx, top + h - .02 * h, .44 * w, Math.max(2, .045 * h), 0, 0, 2 * Math.PI), 
+        ctx.fill()), ctx.drawImage(img, cx - w / 2, top, w, h), ctx.restore();
+    }
+    function drawShopHomeLabel(ctx, text, x, y, slotS) {
+        const font = Math.round(.36 * slotS);
+        ctx.save(), ctx.font = "800 " + font + 'px "PingFang TC","Noto Sans TC",sans-serif';
+        const w = ctx.measureText(text).width + 1.1 * font, h = 1.55 * font;
+        rrPath(ctx, x - w / 2, y - h / 2, w, h, h / 2), ctx.fillStyle = "rgba(255,255,255,0.90)", 
+        ctx.fill(), ctx.lineWidth = 2, ctx.strokeStyle = "rgba(58,42,16,0.55)", ctx.stroke(), 
+        ctx.fillStyle = "#3a2a10", ctx.textAlign = "center", ctx.textBaseline = "middle", 
+        ctx.fillText(text, x, y + .04 * font), ctx.restore();
     }
     function drawShopBanner(ctx, cw, g, text, sub) {
         const font = g.bannerFont;
@@ -2662,8 +2721,9 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     function laundryLoadSizeKey() {
         return LAUNDRY_LOAD_SIZES[state.laundryLoadSize] ? state.laundryLoadSize : "medium";
     }
-    function buildLaundryList(sizeKey) {
-        return LAUNDRY_STORY_POOL.slice(0, LAUNDRY_LOAD_SIZES[sizeKey] || 4);
+    function buildLaundryList(sizeKey, round) {
+        const n = LAUNDRY_LOAD_SIZES[sizeKey] || 4;
+        return Math.max(1, round || 1) > 1 ? storyRoundPick(LAUNDRY_STORY_POOL, n, round) : LAUNDRY_STORY_POOL.slice(0, n);
     }
     function buildLaundrySteps(list, round) {
         const steps = [], n = list.length, r = Math.max(1, round || 1), rep = (scene, action, stage, item, k, text, en) => steps.push({
@@ -2773,7 +2833,8 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     }
     function beginLaundryStory(roundsDone) {
         resetLaundryStory(), laundryStory.rounds = Math.max(0, roundsDone || 0), laundryStory.loadSize = laundryLoadSizeKey(), 
-        laundryStory.list = buildLaundryList(laundryStory.loadSize), laundryStory.steps = buildLaundrySteps(laundryStory.list, laundryStory.rounds + 1), 
+        laundryStory.list = buildLaundryList(laundryStory.loadSize, laundryStory.rounds + 1), 
+        laundryStory.steps = buildLaundrySteps(laundryStory.list, laundryStory.rounds + 1), 
         laundryStory.basket = laundryStory.list.slice(), laundryStory.pole = laundryStory.list.map(() => null), 
         laundryStory.shelf = laundryStory.list.map(() => null), laundryStory.active = !0, 
         laundryStory.stepStartedMs = nowMs();
@@ -2827,16 +2888,42 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         ctx.strokeStyle = "rgba(20,24,40,0.22)", ctx.beginPath(), ctx.moveTo(cx - w / 2 + r, cy + .16 * h), 
         ctx.lineTo(cx + w / 2 - r, cy + .16 * h), ctx.stroke(), ctx.restore();
     }
+    const LAUNDRY_BASKET_SHAPE = {
+        w: 520,
+        h: 322,
+        rimSide: 93,
+        rimMid: 101,
+        mouthL: 40,
+        mouthR: 480,
+        bodyTopY: 112,
+        bodyTopL: 20,
+        bodyTopR: 500,
+        bodyBotY: 314,
+        bodyBotL: 60,
+        bodyBotR: 460
+    };
     function drawLaundryBasket(ctx, b, ids) {
         const n = ids.length;
-        ids.forEach((id, i) => {
+        if (!(imgLaundryBasket && imgLaundryBasket.complete && imgLaundryBasket.naturalWidth > 0)) return ids.forEach((id, i) => {
             const off = i - (n - 1) / 2;
-            drawLaundryGarment(ctx, id, b.x + off * b.w * .14, b.y - .4 * b.h - i % 2 * b.h * .06, .62 * b.w, .62 * b.w, 1, .16 * off);
-        }), imgLaundryBasket && imgLaundryBasket.complete && imgLaundryBasket.naturalWidth > 0 ? drawShopImgFit(ctx, imgLaundryBasket, b.x, b.y, b.w, b.h) : (ctx.save(), 
-        ctx.fillStyle = "#5896d6", ctx.strokeStyle = "#28568c", ctx.lineWidth = 3, ctx.beginPath(), 
-        ctx.moveTo(b.x - b.w / 2, b.y - .4 * b.h), ctx.lineTo(b.x + b.w / 2, b.y - .4 * b.h), 
+            drawLaundryGarment(ctx, id, b.x + off * b.w * .14, b.y - .3 * b.h, .56 * b.w, .56 * b.w, 1, .2 * off);
+        }), ctx.save(), ctx.fillStyle = "#5896d6", ctx.strokeStyle = "#28568c", ctx.lineWidth = 3, 
+        ctx.beginPath(), ctx.moveTo(b.x - b.w / 2, b.y - .2 * b.h), ctx.lineTo(b.x + b.w / 2, b.y - .2 * b.h), 
         ctx.lineTo(b.x + .4 * b.w, b.y + b.h / 2), ctx.lineTo(b.x - .4 * b.w, b.y + b.h / 2), 
-        ctx.closePath(), ctx.fill(), ctx.stroke(), ctx.restore());
+        ctx.closePath(), ctx.fill(), ctx.stroke(), void ctx.restore();
+        const S = LAUNDRY_BASKET_SHAPE, k = b.w / S.w, L = b.x - b.w / 2, T = b.y - b.h / 2, X = u => L + u * k, Y = v => T + v * k;
+        drawShopImgFit(ctx, imgLaundryBasket, b.x, b.y, b.w, b.h), n && (ctx.save(), ctx.beginPath(), 
+        ctx.moveTo(X(S.mouthL - S.w), Y(3 * -S.h)), ctx.lineTo(X(S.mouthR + S.w), Y(3 * -S.h)), 
+        ctx.lineTo(X(S.mouthR), Y(S.rimSide)), ctx.lineTo(X(S.bodyTopR), Y(S.bodyTopY)), 
+        ctx.lineTo(X(S.bodyBotR), Y(S.bodyBotY)), ctx.lineTo(X(S.bodyBotL), Y(S.bodyBotY)), 
+        ctx.lineTo(X(S.bodyTopL), Y(S.bodyTopY)), ctx.lineTo(X(S.mouthL), Y(S.rimSide)), 
+        ctx.closePath(), ctx.clip(), ids.forEach((id, i) => {
+            const off = i - (n - 1) / 2, tilt = .3 * off + (i % 2 ? .1 : -.1);
+            drawLaundryGarment(ctx, id, b.x + off * b.w * .115, b.y - .17 * b.h - i % 2 * b.h * .07, .54 * b.w, .54 * b.w, 1, tilt);
+        }), ctx.restore(), ctx.save(), ctx.beginPath(), ctx.moveTo(X(-4), Y(S.rimSide)), 
+        ctx.quadraticCurveTo(X(S.w / 2), Y(2 * S.rimMid - S.rimSide), X(S.w + 4), Y(S.rimSide)), 
+        ctx.lineTo(X(S.w + 4), Y(S.h + 4)), ctx.lineTo(X(-4), Y(S.h + 4)), ctx.closePath(), 
+        ctx.clip(), drawShopImgFit(ctx, imgLaundryBasket, b.x, b.y, b.w, b.h), ctx.restore());
     }
     function drawLaundryPeg(ctx, x, y, s) {
         ctx.save(), rrPath(ctx, x - .5 * s, y - 1.5 * s, s, 2.6 * s, .3 * s), ctx.fillStyle = "#e2a054", 
@@ -2877,6 +2964,34 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             }
             ctx.restore();
         }
+    }
+    function drawLaundryBanner(ctx, cw, g, text, sub, region) {
+        const maxW = region ? Math.max(120, region.x1 - region.x0) : g.portrait ? cw - 24 : cw - 2 * g.panelRight - 24, cx = region ? (region.x0 + region.x1) / 2 : cw / 2;
+        let font = g.bannerFont, subFont = Math.round(.62 * font), lines = [ text ];
+        const fam = 'px "PingFang TC","Noto Sans TC",sans-serif';
+        ctx.save();
+        const measure = () => {
+            ctx.font = "800 " + font + fam;
+            const tw = Math.max(...lines.map(t => ctx.measureText(t).width));
+            ctx.font = "700 " + subFont + fam;
+            const sw = sub ? ctx.measureText(sub).width : 0;
+            return Math.max(tw, sw);
+        };
+        let wide = measure();
+        if (wide + 1.2 * font > maxW) {
+            const cut = text.indexOf("，") > 0 ? text.indexOf("，") + 1 : text.indexOf(": ") > 0 ? text.indexOf(": ") + 1 : 0;
+            cut > 0 && cut < text.length - 1 && (lines = [ text.slice(0, cut).trim(), text.slice(cut).trim() ], 
+            region || (font = Math.floor(.7 * font), subFont = Math.round(.62 * font)), wide = measure());
+        }
+        wide + 1.2 * font > maxW && (font = Math.max(18, Math.floor(font * (maxW - 1.2 * font) / wide)), 
+        subFont = Math.round(.62 * font), wide = measure());
+        const extra = 1.12 * font * (lines.length - 1), bw = Math.min(maxW, wide + 1.6 * font), bh = font * (sub ? 2.55 : 1.75) + extra, bx = cx - bw / 2, by = g.bannerY;
+        return rrPath(ctx, bx, by, bw, bh, 18), ctx.fillStyle = "rgba(255,255,255,0.94)", 
+        ctx.fill(), ctx.lineWidth = 4, ctx.strokeStyle = "#1A6B5A", ctx.stroke(), ctx.fillStyle = "#17463d", 
+        ctx.textAlign = "center", ctx.textBaseline = "middle", ctx.font = "800 " + font + fam, 
+        lines.forEach((t, i) => ctx.fillText(t, cx, by + font * (.95 + 1.12 * i), bw - .5 * font)), 
+        sub && (ctx.font = "700 " + subFont + fam, ctx.fillStyle = "#8a5a12", ctx.fillText(sub, cx, by + 1.95 * font + extra, bw - .5 * font)), 
+        ctx.restore(), by + bh;
     }
     function laundryPathPos(from, to, p, arc) {
         const e = clamp01(p);
@@ -10174,7 +10289,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                         }, shopStory.idx === shopStory.steps.indexOf(s) && shopGoToStep(shopStory.idx + 1);
                                         const nxt = shopCurrentStep();
                                         nxt && "scene" === nxt.kind && nxt.end && (shopStory.rounds++, shopStory.repsDone = 0, 
-                                        playApplauseSound(), playHaoboCheer());
+                                        playApplauseSound());
                                     }
                                 }(), function() {
                                     if (!shopStory.active || shopStory.ended) return;
@@ -10194,7 +10309,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                             speakCantonese(cur.text);
                                         } catch (e) {}
                                     }
-                                }(), preloadHaoboCheer();
+                                }();
                                 const g = shopGeometry(cw, ch), step = shopStory.anim.step || shopCurrentStep(), scene = step ? step.scene : "entrance", anim = shopStory.anim, animP = "fly" === anim.phase ? clamp01((nowMs() - anim.startedMs) / 850) : 0, progress = "fly" === anim.phase ? 1 : clamp01(Number(shoulderFlexionState.progress) || 0);
                                 if (ctx.save(), ctx.rect(0, 0, cw, ch), ctx.clip(), drawShopBgCover(ctx, "cashier" === scene ? imgShopCashierBg : "home" === scene || "done" === scene ? imgShopHomeBg : imgShopAisleBg, cw, ch, "#e8e3d6", "cashier" === scene), 
                                 step && step.kind, "entrance" !== scene && "list" !== scene && "walk_cashier" !== scene && "leave" !== scene && "done" !== scene || (ctx.fillStyle = "rgba(0,0,0,0.28)", 
@@ -10365,35 +10480,101 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                         }
                                     }
                                 } else if ("leave" === scene) drawShopBanner(ctx, cw, g, step.text), drawShopImgFit(ctx, imgShopEcobag, g.laneX, .7 * ch, 1.2 * g.bagW, 1.3 * g.bagW); else if ("home" === scene || "done" === scene) {
-                                    const slotS = .62 * g.itemSize, cabPos = i => ({
-                                        x: g.cabinetX - g.cabinetW / 2 + .6 * slotS + i % 4 * slotS * .95,
-                                        y: g.cabinetY + Math.floor(i / 4) * slotS * 1.05
-                                    }), frPos = i => ({
-                                        x: g.fridgeX - g.fridgeW / 2 + .6 * slotS + i % 3 * slotS * .95,
-                                        y: g.fridgeY + Math.floor(i / 3) * slotS * 1.05
+                                    const nDry = shopStory.list.reduce((t, l) => t + (SHOP_ITEMS[l.id].cold ? 0 : l.need), 0), nCold = shopStory.list.reduce((t, l) => t + (SHOP_ITEMS[l.id].cold ? l.need : 0), 0), H = function(cw, ch, g, nDry, nCold) {
+                                        const r = function(cw, ch) {
+                                            const im = imgShopHomeBg, ok = im && im.complete && im.naturalWidth > 0, iw = ok ? im.naturalWidth : 1280, ih = ok ? im.naturalHeight : 960, s = Math.max(cw / iw, ch / ih), w = iw * s, h = ih * s;
+                                            return {
+                                                x: (cw - w) / 2,
+                                                y: (ch - h) / 2,
+                                                w: w,
+                                                h: h
+                                            };
+                                        }(cw, ch), cs = g.cssScale, slotS = .62 * g.itemSize, banner = g.portrait ? cw - 12 * cs - g.panelRight >= 380 * cs ? {
+                                            x0: g.panelRight,
+                                            x1: cw - 12 * cs,
+                                            y: 156 * cs
+                                        } : {
+                                            x0: 12 * cs,
+                                            x1: cw - 12 * cs,
+                                            y: g.bannerY
+                                        } : {
+                                            x0: Math.max(g.panelRight, r.x + .585 * r.w + 12 * cs),
+                                            x1: cw - 60 * cs,
+                                            y: g.bannerY
+                                        }, bannerBottom = banner.y + g.bannerH + 6 * cs, place = (def, n, clearTop) => {
+                                            const x0 = Math.max(.45 * slotS, r.x + r.w * def.u0), x1 = Math.min(cw - 8 * cs, r.x + r.w * def.u1), innerW = Math.max(slotS, x1 - x0), rows = def.rows.map(row => {
+                                                const base = r.y + r.h * row.base, top = r.y + r.h * row.top, room = base - Math.max(top, clearTop);
+                                                return {
+                                                    base: base,
+                                                    room: room,
+                                                    size: Math.min(slotS, .94 * room),
+                                                    ok: clearTop <= top + .25 * (base - top) && base <= ch - 8 * cs
+                                                };
+                                            });
+                                            let use = rows.filter(o => o.ok);
+                                            if (!use.length) {
+                                                const best = rows.slice().sort((a, b) => b.room - a.room)[0];
+                                                if (def.counter && .94 * best.room < .75 * slotS) {
+                                                    const c = def.counter, size = .8 * slotS, a = Math.max(4 * cs, r.x + r.w * c.u0), w = Math.max(size, r.x + r.w * c.u1 - a), stepX = Math.min(1.02 * size, w / Math.max(1, n));
+                                                    return Array.from({
+                                                        length: Math.max(1, n)
+                                                    }, (_, i) => ({
+                                                        x: a + stepX * (i + .5),
+                                                        base: Math.min(ch - 8 * cs, r.y + r.h * c.base),
+                                                        size: size
+                                                    }));
+                                                }
+                                                best.size = Math.max(.5 * slotS, Math.min(slotS, .94 * best.room)), use = [ best ];
+                                            }
+                                            const cap = o => Math.max(1, Math.floor(innerW / (.92 * o.size))), total = use.reduce((t, o) => t + cap(o), 0), squeeze = n > total ? n / total : 1, out = [];
+                                            return use.forEach(o => {
+                                                const c = Math.ceil(cap(o) * squeeze), stepX = Math.min(1.02 * o.size, innerW / c);
+                                                for (let i = 0; i < c; i++) out.push({
+                                                    x: x0 + stepX * (i + .5),
+                                                    base: o.base,
+                                                    size: o.size
+                                                });
+                                            }), out;
+                                        }, midX = def => Math.min(cw - .62 * slotS - 8 * cs, Math.max(.62 * slotS + 8 * cs, r.x + r.w * def.labelU)), labelH = .62 * slotS, labelY = def => Math.min(ch - .5 * labelH - 6 * cs, r.y + r.h * def.labelV);
+                                        return {
+                                            slotS: slotS,
+                                            banner: banner,
+                                            rect: r,
+                                            cab: place(SHOP_HOME_CABINET, nDry, g.portrait ? bannerBottom : g.hudTop + 4 * cs),
+                                            fr: place(SHOP_HOME_FRIDGE, nCold, bannerBottom),
+                                            cabLabel: {
+                                                x: midX(SHOP_HOME_CABINET),
+                                                y: labelY(SHOP_HOME_CABINET)
+                                            },
+                                            frLabel: {
+                                                x: midX(SHOP_HOME_FRIDGE),
+                                                y: labelY(SHOP_HOME_FRIDGE)
+                                            }
+                                        };
+                                    }(cw, ch, g, nDry, nCold), slotAt = (arr, i) => arr[Math.min(i, arr.length - 1)], hb = Object.assign({}, g, {
+                                        bannerY: H.banner.y
                                     });
-                                    ctx.save(), ctx.fillStyle = "rgba(255,255,255,0.20)", rrPath(ctx, g.cabinetX - g.cabinetW / 2 - 8, g.cabinetY - .6 * slotS, g.cabinetW + 16, 2.3 * slotS, 14), 
-                                    ctx.fill(), rrPath(ctx, g.fridgeX - g.fridgeW / 2 - 8, g.fridgeY - .6 * slotS, g.fridgeW + 16, 2.3 * slotS, 14), 
-                                    ctx.fill(), ctx.fillStyle = "#3a2a10", ctx.font = "800 " + Math.round(.42 * slotS) + 'px "PingFang TC","Noto Sans TC",sans-serif', 
-                                    ctx.textAlign = "center", ctx.textBaseline = "bottom", ctx.fillText("廚櫃", g.cabinetX, g.cabinetY - .7 * slotS), 
-                                    ctx.fillText("雪櫃", g.fridgeX, g.fridgeY - .7 * slotS), ctx.restore();
+                                    drawShopHomeLabel(ctx, "廚櫃", H.cabLabel.x, H.cabLabel.y, H.slotS), drawShopHomeLabel(ctx, "雪櫃", H.frLabel.x, H.frLabel.y, H.slotS);
                                     let ci = 0, fi = 0;
                                     if (shopStory.shelved.forEach(id => {
-                                        const p = SHOP_ITEMS[id].cold ? frPos(fi++) : cabPos(ci++);
-                                        drawShopImgFit(ctx, shopItemImg(id), p.x, p.y, slotS, slotS);
+                                        const p = SHOP_ITEMS[id].cold ? slotAt(H.fr, fi++) : slotAt(H.cab, ci++);
+                                        drawShopImgSink(ctx, shopItemImg(id), p.x, p.base - p.size / 2, p.size, p.size, 1, !0);
                                     }), "home" === scene) {
-                                        const a = "fly" === anim.phase ? anim.step : null, cur = step, target = SHOP_ITEMS[cur.item].cold ? frPos(fi) : cabPos(ci);
-                                        if (drawShopBanner(ctx, cw, g, cur.text, "袋入面仲有 " + shopStory.bagged.length + " 件"), 
+                                        const a = "fly" === anim.phase ? anim.step : null, cur = step, slot = SHOP_ITEMS[cur.item].cold ? slotAt(H.fr, fi) : slotAt(H.cab, ci), target = {
+                                            x: slot.x,
+                                            y: slot.base - slot.size / 2
+                                        };
+                                        if (drawLaundryBanner(ctx, cw, hb, cur.text, "袋入面仲有 " + shopStory.bagged.length + " 件", H.banner), 
                                         drawShopImgFit(ctx, imgShopEcobag, g.laneX, ch * (g.portrait ? .82 : .8), 1.1 * g.bagW, 1.2 * g.bagW), 
                                         a) {
                                             const p = shopFlyPos({
                                                 x: g.laneX,
                                                 y: ch * (g.portrait ? .72 : .68)
-                                            }, target, animP);
-                                            drawShopImgFit(ctx, shopItemImg(a.item), p.x, p.y, .8 * g.itemSize - (.8 * g.itemSize - slotS) * animP, .8 * g.itemSize - (.8 * g.itemSize - slotS) * animP);
-                                        } else drawShopGlow(ctx, target.x, target.y, .75 * slotS), drawShopImgFit(ctx, shopItemImg(cur.item), g.laneX, ch * (g.portrait ? .72 : .68), .8 * g.itemSize, .8 * g.itemSize), 
-                                        drawShopArmMarker(ctx, g, target.x, target.y + .6 * slotS, progress);
-                                    } else drawShopBanner(ctx, cw, g, step.text, "買咗 " + shopStory.shelved.length + " 件，全部收好");
+                                            }, target, animP), sz = .8 * g.itemSize - (.8 * g.itemSize - slot.size) * animP;
+                                            drawShopImgSink(ctx, shopItemImg(a.item), p.x, p.y, sz, sz, animP, !1);
+                                        } else drawShopGlow(ctx, target.x, target.y, .75 * slot.size), drawShopImgFit(ctx, shopItemImg(cur.item), g.laneX, ch * (g.portrait ? .72 : .68), .8 * g.itemSize, .8 * g.itemSize), 
+                                        drawShopArmMarker(ctx, g, target.x, target.y + .5 * slot.size, progress);
+                                    } else drawLaundryBanner(ctx, cw, hb, step.text, "買咗 " + shopStory.shelved.length + " 件，全部收好", H.banner);
                                 }
                                 ctx.restore();
                             }(ctx, cw, ch);
@@ -10416,7 +10597,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                         }, laundryStory.idx === laundryStory.steps.indexOf(s) && laundryGoToStep(laundryStory.idx + 1);
                                         const nxt = laundryCurrentStep();
                                         nxt && "scene" === nxt.kind && nxt.end && (laundryStory.completed = !0, laundryStory.rounds++, 
-                                        playApplauseSound(), playHaoboCheer());
+                                        playApplauseSound());
                                     }
                                 }(), function() {
                                     if (!laundryStory.active || laundryStory.ended) return;
@@ -10439,7 +10620,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                             } catch (e) {}
                                         }
                                     }
-                                }(), preloadHaoboCheer();
+                                }();
                                 const L = function(cw, ch) {
                                     const g = shopGeometry(cw, ch), portrait = g.portrait, m = Math.min(cw, ch), stripH = Math.max(24, .058 * m), stripY = ch - stripH - .012 * m, floorY = stripY - .012 * m, gs = m * (portrait ? .28 : .32), basketW = Math.min(m * (portrait ? .42 : .5), cw * (portrait ? .46 : .27)), basketH = 322 * basketW / 520, mkBasket = (x, k) => {
                                         const h = basketH * (k || 1);
@@ -10607,7 +10788,14 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                     drawShopBgCover(ctx, imgLaundryPoleBg, cw, ch, "#9fd0f5");
                                     const b = L.poleBasket, sunCut = "sun" === step.cut, sunRise = sunCut ? 1 - Math.pow(1 - clamp01(sceneT / .45), 2.2) : laundryStory.dry ? 1 : 0;
                                     if (sunRise > 0) {
-                                        const sr = .085 * L.m, sx = cw * (L.portrait ? .86 : .94), syEnd = L.poleY + L.hangH * (L.portrait ? 1.25 : .8), syStart = .86 * ch;
+                                        const sun = function(cw, ch, L) {
+                                            const g = L.g, cs = g.cssScale, poleR = Math.max(7, .016 * L.m), top = (L.portrait ? 150 : 78) * cs, bottom = L.poleY - poleR - 6 * cs, band = L.portrait ? .18 * cw : g.panelRight - 16 * cs, r = Math.max(18 * cs, Math.min(.085 * L.m, (bottom - top) / 2 / 1.58, band / 2 / 1.58));
+                                            return {
+                                                r: r,
+                                                x: cw - (L.portrait ? 8 * cs : g.panelRight / 2) - (L.portrait ? 1.58 * r : 0),
+                                                y: Math.max(top + 1.58 * r, bottom - 1.58 * r)
+                                            };
+                                        }(cw, 0, L), sr = sun.r, sx = sun.x, syEnd = sun.y, syStart = .86 * ch;
                                         sunCut && (ctx.fillStyle = "rgba(255,214,110," + .2 * clamp01(sceneT / .5) + ")", 
                                         ctx.fillRect(0, 0, cw, ch)), function(ctx, x, y, r, alpha) {
                                             const t = nowMs();
@@ -10758,34 +10946,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                         ctx.fillText(label, x + pw / 2, L.stripY + .52 * h, pw - 8);
                                     }
                                     ctx.restore();
-                                }(ctx, cw, L, step.stage), function(ctx, cw, g, text, sub, region) {
-                                    const maxW = region ? Math.max(120, region.x1 - region.x0) : g.portrait ? cw - 24 : cw - 2 * g.panelRight - 24, cx = region ? (region.x0 + region.x1) / 2 : cw / 2;
-                                    let font = g.bannerFont, subFont = Math.round(.62 * font), lines = [ text ];
-                                    const fam = 'px "PingFang TC","Noto Sans TC",sans-serif';
-                                    ctx.save();
-                                    const measure = () => {
-                                        ctx.font = "800 " + font + fam;
-                                        const tw = Math.max(...lines.map(t => ctx.measureText(t).width));
-                                        ctx.font = "700 " + subFont + fam;
-                                        const sw = sub ? ctx.measureText(sub).width : 0;
-                                        return Math.max(tw, sw);
-                                    };
-                                    let wide = measure();
-                                    if (wide + 1.2 * font > maxW) {
-                                        const cut = text.indexOf("，") > 0 ? text.indexOf("，") + 1 : text.indexOf(": ") > 0 ? text.indexOf(": ") + 1 : 0;
-                                        cut > 0 && cut < text.length - 1 && (lines = [ text.slice(0, cut).trim(), text.slice(cut).trim() ], 
-                                        region || (font = Math.floor(.7 * font), subFont = Math.round(.62 * font)), wide = measure());
-                                    }
-                                    wide + 1.2 * font > maxW && (font = Math.max(18, Math.floor(font * (maxW - 1.2 * font) / wide)), 
-                                    subFont = Math.round(.62 * font), wide = measure());
-                                    const extra = 1.12 * font * (lines.length - 1), bw = Math.min(maxW, wide + 1.6 * font), bh = font * (sub ? 2.55 : 1.75) + extra, bx = cx - bw / 2, by = g.bannerY;
-                                    rrPath(ctx, bx, by, bw, bh, 18), ctx.fillStyle = "rgba(255,255,255,0.94)", ctx.fill(), 
-                                    ctx.lineWidth = 4, ctx.strokeStyle = "#1A6B5A", ctx.stroke(), ctx.fillStyle = "#17463d", 
-                                    ctx.textAlign = "center", ctx.textBaseline = "middle", ctx.font = "800 " + font + fam, 
-                                    lines.forEach((t, i) => ctx.fillText(t, cx, by + font * (.95 + 1.12 * i), bw - .5 * font)), 
-                                    sub && (ctx.font = "700 " + subFont + fam, ctx.fillStyle = "#8a5a12", ctx.fillText(sub, cx, by + 1.95 * font + extra, bw - .5 * font)), 
-                                    ctx.restore();
-                                }(ctx, cw, g, main, sub, "wash" === step.scene ? L.washBanner : "room" === step.scene ? L.roomBanner : null), 
+                                }(ctx, cw, L, step.stage), drawLaundryBanner(ctx, cw, g, main, sub, "wash" === step.scene ? L.washBanner : "room" === step.scene ? L.roomBanner : null), 
                                 fxUpdateDraw(ctx), ctx.restore();
                             }(ctx, cw, ch);
                             if (isTeahouseDimsumMode()) return void function(ctx, cw, ch) {
@@ -11008,7 +11169,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                         el.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:99998;pointer-events:none;background:rgba(10,20,18,.82);color:#e8fff6;font:12px/1.4 -apple-system,"PingFang TC",sans-serif;padding:6px 9px;border-radius:10px;white-space:pre;', 
                         document.body.appendChild(el), framePerf.overlayEl = el);
                         const p = framePerfSnapshot();
-                        el.textContent = `perf v141  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}\n左右手檢查 ${"off" === p.hand.check ? "關" : "開"}  鎖定手形 ${p.hand.lockSize || "-"}  大小拒絕 ${p.hand.sizeRejected}  遠處拒絕 ${p.hand.farRejected}` + (p.tool ? `\n衣夾 近指 ${p.tool.near} 放手≥${p.tool.nearExit} 張開≥${p.tool.nearOpen}  遠指 ${p.tool.far} 放手≥${p.tool.farExit} 張開≥${p.tool.farOpen}  門檻 ${p.tool.source}\n衣夾 合併 ${p.tool.combo} 拎起≤${p.tool.enter} 放手閘≥${p.tool.gate}\n衣夾 相對 基線 近${p.tool.relBaseNear} 遠${p.tool.relBaseFar} 合併${p.tool.relBaseCombo} 相對放手 ${p.tool.relOpen}` : ""), 
+                        el.textContent = `perf v142  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}\n左右手檢查 ${"off" === p.hand.check ? "關" : "開"}  鎖定手形 ${p.hand.lockSize || "-"}  大小拒絕 ${p.hand.sizeRejected}  遠處拒絕 ${p.hand.farRejected}` + (p.tool ? `\n衣夾 近指 ${p.tool.near} 放手≥${p.tool.nearExit} 張開≥${p.tool.nearOpen}  遠指 ${p.tool.far} 放手≥${p.tool.farExit} 張開≥${p.tool.farOpen}  門檻 ${p.tool.source}\n衣夾 合併 ${p.tool.combo} 拎起≤${p.tool.enter} 放手閘≥${p.tool.gate}\n衣夾 相對 基線 近${p.tool.relBaseNear} 遠${p.tool.relBaseFar} 合併${p.tool.relBaseCombo} 相對放手 ${p.tool.relOpen}` : ""), 
                         el.style.display = state.running ? "block" : "none";
                     }(perfT2);
                 } catch (e) {
@@ -12968,7 +13129,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                 tier: "完成整道菜",
                 title: "蛋炒飯完成！",
                 sub: (cook.rounds > 1 ? "第 " + cook.rounds + " 碟 · " : "") + "12 / 12 步全部完成 · 成就：一人一鍋蛋炒飯",
-                detail: "你完成了所有 12 個步驟，包括握放、手腕畫圈、前臂旋轉估算、手肘屈伸、伸手及舀取轉移。<br><small>本活動為虛擬煮食訓練，動作回饋屬估算，並非臨床運動學量度。</small>",
+                detail: isLevel6DigiflexTask() ? "你完成咗全部 12 個步驟，每一步都係揸實握力器、再放鬆，一下一下煮出嚟。<br><small>本活動為虛擬煮食訓練；網頁不識別實體工具，亦不量度握力或捏力。</small>" : "你完成了所有 12 個步驟，包括握放、手腕畫圈、前臂旋轉估算、手肘屈伸、伸手及舀取轉移。<br><small>本活動為虛擬煮食訓練，動作回饋屬估算，並非臨床運動學量度。</small>",
                 progressLabel: "進度：12 / 12 步",
                 progressPct: 1,
                 canvasH: 280,
@@ -14205,7 +14366,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
 <script src="level4-three-games-module.js"></script>
 <script>
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
-  const LEVEL_APP_BUILD = "v141-20261125-story-repeat";
+  const LEVEL_APP_BUILD = "v142-20261125-story-rotate";
   const levelAppHadController = Boolean(navigator.serviceWorker.controller);
   let levelAppReloading = false;
 
