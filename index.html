@@ -731,6 +731,15 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
   box-shadow:0 4px 16px rgba(44,24,16,0.1);
 }
 .result-card h2{ font-size:22px; color:var(--teal-dark); margin:0 0 16px; }
+/* v144 完成頁：今次集到嘅香港地標閃咭 */
+.card-album{ display:grid; grid-template-columns:repeat(auto-fill,minmax(104px,1fr)); gap:10px; margin:10px 0 14px; }
+.card-album[hidden]{ display:none; }
+.album-card{ margin:0; padding:5px 5px 6px; border-radius:10px; background:linear-gradient(135deg,#A9C9E4,#EEF6FC 50%,#7FA6C9); box-shadow:0 2px 6px rgba(0,0,0,.18); text-align:center; }
+.album-card.stars-2{ background:linear-gradient(135deg,#F6D365,#FFF3C4 50%,#D9982B); }
+.album-card.stars-3{ background:linear-gradient(135deg,#FF6B9D,#FFC14D 25%,#7EE081 50%,#4DC9FF 75%,#B07CFF); }
+.album-card img{ display:block; width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:6px; background:#dfe9ee; }
+.album-card figcaption{ margin-top:4px; padding:2px 3px 0; border-radius:5px 5px 0 0; background:#FFFBEF; font-size:14px; font-weight:800; line-height:1.25; color:#3A2A12; }
+.album-card .album-stars{ display:block; padding:0 3px 2px; border-radius:0 0 5px 5px; background:#FFFBEF; font-size:13px; line-height:1.2; color:#C98A00; letter-spacing:1px; }
 .result-grid{
   display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:16px 0 20px;
 }
@@ -1319,6 +1328,11 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         （Tsuen Wan downtown，CC0 1.0）；WiNG（Tsuen Wan skyline，CC BY-SA 3.0）；
         Wing1990hk（Tak Wah Park，CC BY 3.0）。完整來源及授權網址：
         <a href="image-sources.json">image-sources.json</a></p>
+        <p>香港地標相片（Level 3／4「香港遊」，共 77 張，全部來自 Wikimedia Commons，
+        授權為 CC0／公有領域／CC BY／CC BY-SA，相片經裁剪及縮細）攝影者：
+        Alexkom000、Mk2010、Diego Delso、LN9267、EditQ、Béria Lima de Rodríguez、Sparktour、Underwaterbuffalo、Wpcpey、Aethelfirth、Smallpei、Rehman Abubakr、Suicasmo、WiNG、Jan Kranendonk、Ank Kumar、姒姓賢寧、Deror_avi、Photo by TonySKTO、MyPlace2015 mm、Wing1990hk、Tusginewko、Katie Chan、Enochlau、Hankt、Kārlis Dambrāns from Latvia、Spielvogel (Spielvogel Archiv)、Bernard Spragg. NZ、Chong Fat、Yumeto、British Hker、Rob Young from United Kingdom、HK Arun、Minghong、Andrew Martin、Rutger van der Maar、Husyewl Lmsiuyu RAUOM、Lord Jaraxxus、xiquinhosilva、SH6188、N509FZ、Masanchuen、Qwer132477、Prosperity Horizons、Benh LIEU SONG (Flickr)、李家宇、User:Ahleong、Baycrest、C J B Scholten at English Wikipedia、FHKE (Flickr)、山民主義、Erc Chw、Krimuk2.0、hkgalbert、MAUOSREEGU DAVMUR。
+        每張相嘅標題、攝影者、授權及來源網址：
+        <a href="image-sources.json">image-sources.json</a></p>
       </details>
     </footer>
   </div>
@@ -1823,6 +1837,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
       </div>
       <p id="shoulderResultSummary" hidden style="margin:10px 0;padding:10px 12px;border-radius:12px;background:#edf7f3;font-weight:750;line-height:1.45;"></p>
       <p id="dealResultSummary" hidden style="margin:10px 0;padding:10px 12px;border-radius:12px;background:#fff6dc;border:2px solid #e6c15a;font-weight:800;font-size:19px;line-height:1.45;"></p>
+      <div id="cardAlbumSummary" class="card-album" hidden></div>
       <button class="btn-primary" id="btnRetry">再玩一次</button>
       <button class="btn-secondary" id="btnHome">返回主頁</button>
     </div>
@@ -3946,6 +3961,193 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         ctx.fillText(sub, cw / 2, by + 1.72 * font + .5 * (subFont - .52 * font), bw - .6 * font)), 
         ctx.restore();
     }
+    const HK_CARDS = [ [ "wishing_tree", "林村許願樹", "大埔", "Lam Tsuen Wishing Tree", "Tai Po", 2 ], [ "ladies_market", "女人街", "旺角", "Ladies Market", "Mong Kok", 2 ], [ "ten_thousand", "萬佛寺", "沙田", "Ten Thousand Buddhas", "Sha Tin", 2 ], [ "hk_park", "香港公園", "金鐘", "Hong Kong Park", "Admiralty", 1 ], [ "shek_o", "石澳", "南區", "Shek O", "Southern", 1 ], [ "tw_skyline", "荃灣天際線", "荃灣", "Tsuen Wan Skyline", "Tsuen Wan", 2 ], [ "bun_festival", "長洲太平清醮", "離島", "Bun Festival", "Outlying Islands", 3 ], [ "cultural_centre", "香港文化中心", "尖沙咀", "Cultural Centre", "Tsim Sha Tsui", 2 ], [ "pagoda", "聚星樓", "元朗", "Tsui Sing Lau Pagoda", "Yuen Long", 1 ], [ "lion_rock", "獅子山", "九龍", "Lion Rock", "Kowloon", 3 ], [ "wetland", "濕地公園", "天水圍", "Wetland Park", "Tin Shui Wai", 1 ], [ "lei_yue_mun", "鯉魚門", "觀塘", "Lei Yue Mun", "Kwun Tong", 1 ], [ "pottinger", "石板街", "中環", "Pottinger Street", "Central", 1 ], [ "mei_ho", "美荷樓", "深水埗", "Mei Ho House", "Sham Shui Po", 1 ], [ "kat_hing_wai", "吉慶圍", "元朗", "Kat Hing Wai", "Yuen Long", 1 ], [ "star_ferry", "天星小輪", "維多利亞港", "Star Ferry", "Victoria Harbour", 3 ], [ "airport", "香港國際機場", "赤鱲角", "Hong Kong Airport", "Chek Lap Kok", 2 ], [ "jumbo", "珍寶海鮮舫", "香港仔", "Jumbo Floating Restaurant", "Aberdeen", 3 ], [ "ngong_ping", "昂坪纜車", "大嶼山", "Ngong Ping 360", "Lantau", 3 ], [ "ting_kau", "汀九橋", "荃灣", "Ting Kau Bridge", "Tsuen Wan", 2 ], [ "sai_kung", "西貢碼頭", "西貢", "Sai Kung", "Sai Kung", 2 ], [ "gold_coast", "黃金海岸", "屯門", "Gold Coast", "Tuen Mun", 1 ], [ "shing_mun", "城門水塘", "荃灣", "Shing Mun Reservoir", "Tsuen Wan", 1 ], [ "che_kung", "車公廟", "沙田", "Che Kung Temple", "Sha Tin", 2 ], [ "tw_market_street", "荃灣街市街", "荃灣", "Tsuen Wan Market Street", "Tsuen Wan", 1 ], [ "clock_tower", "尖沙咀鐘樓", "尖沙咀", "Clock Tower", "Tsim Sha Tsui", 3 ], [ "zoo_garden", "動植物公園", "中環", "Zoological and Botanical Gardens", "Central", 1 ], [ "east_dam", "萬宜水庫東壩", "西貢", "High Island East Dam", "Sai Kung", 1 ], [ "hsbc", "滙豐總行", "中環", "HSBC Main Building", "Central", 2 ], [ "nathan_road", "彌敦道", "九龍", "Nathan Road", "Kowloon", 2 ], [ "peak_tram", "山頂纜車", "太平山", "Peak Tram", "The Peak", 3 ], [ "science_museum", "香港科學館", "尖沙咀東", "Science Museum", "Tsim Sha Tsui East", 1 ], [ "man_mo", "文武廟", "上環", "Man Mo Temple", "Sheung Wan", 1 ], [ "temple_street", "廟街夜市", "油麻地", "Temple Street", "Yau Ma Tei", 3 ], [ "symphony", "幻彩詠香江", "維多利亞港", "Symphony of Lights", "Victoria Harbour", 3 ], [ "ferris_wheel", "中環摩天輪", "中環", "Central Ferris Wheel", "Central", 2 ], [ "hkcec", "會議展覽中心", "灣仔", "Convention Centre", "Wan Chai", 2 ], [ "ocean_park", "海洋公園", "黃竹坑", "Ocean Park", "Wong Chuk Hang", 2 ], [ "nina_tower", "如心廣場", "荃灣", "Nina Tower", "Tsuen Wan", 1 ], [ "palace_museum", "香港故宮", "西九龍", "Palace Museum", "West Kowloon", 2 ], [ "peninsula", "半島酒店", "尖沙咀", "The Peninsula", "Tsim Sha Tsui", 2 ], [ "chi_lin", "志蓮淨苑", "鑽石山", "Chi Lin Nunnery", "Diamond Hill", 2 ], [ "happy_valley", "跑馬地馬場", "跑馬地", "Happy Valley Racecourse", "Happy Valley", 2 ], [ "monster", "怪獸大廈", "鰂魚涌", "Monster Building", "Quarry Bay", 2 ], [ "nan_lian", "南蓮園池", "鑽石山", "Nan Lian Garden", "Diamond Hill", 2 ], [ "boc_tower", "中銀大廈", "中環", "Bank of China Tower", "Central", 2 ], [ "bird_garden", "雀仔街", "旺角", "Bird Garden", "Mong Kok", 1 ], [ "cheung_chau", "長洲", "離島", "Cheung Chau", "Outlying Islands", 2 ], [ "big_buddha", "天壇大佛", "大嶼山", "Tian Tan Buddha", "Lantau", 3 ], [ "tsang_tai_uk", "曾大屋", "沙田", "Tsang Tai Uk", "Sha Tin", 1 ], [ "space_museum", "香港太空館", "尖沙咀", "Space Museum", "Tsim Sha Tsui", 2 ], [ "tai_mo_shan", "大帽山", "荃灣", "Tai Mo Shan", "Tsuen Wan", 1 ], [ "choi_hung", "彩虹邨", "彩虹", "Choi Hung Estate", "Choi Hung", 2 ], [ "mplus", "M+ 博物館", "西九龍", "M+ Museum", "West Kowloon", 2 ], [ "tw_downtown", "荃灣市中心", "荃灣", "Tsuen Wan Town Centre", "Tsuen Wan", 1 ], [ "tram", "叮叮電車", "港島", "Ding Ding Tram", "Hong Kong Island", 3 ], [ "tai_o", "大澳棚屋", "大嶼山", "Tai O", "Lantau", 3 ], [ "tw_plaza", "荃灣廣場", "荃灣", "Tsuen Wan Plaza", "Tsuen Wan", 1 ], [ "legco", "舊立法會大樓", "中環", "Old LegCo Building", "Central", 2 ], [ "nam_sang_wai", "南生圍", "元朗", "Nam Sang Wai", "Yuen Long", 1 ], [ "wong_tai_sin", "黃大仙祠", "黃大仙", "Wong Tai Sin Temple", "Wong Tai Sin", 3 ], [ "stanley", "赤柱美利樓", "赤柱", "Murray House, Stanley", "Stanley", 2 ], [ "victoria_harbour", "維港夜景", "維多利亞港", "Victoria Harbour at Night", "Victoria Harbour", 3 ], [ "blue_house", "藍屋", "灣仔", "Blue House", "Wan Chai", 2 ], [ "repulse_bay", "淺水灣", "南區", "Repulse Bay", "Southern", 2 ], [ "escalator", "半山扶手電梯", "中環", "Mid-Levels Escalator", "Central", 1 ], [ "yuen_yuen", "圓玄學院", "荃灣", "Yuen Yuen Institute", "Tsuen Wan", 1 ], [ "aberdeen", "香港仔避風塘", "香港仔", "Aberdeen Harbour", "Aberdeen", 2 ], [ "yan_chai", "仁濟醫院", "荃灣", "Yan Chai Hospital", "Tsuen Wan", 3 ], [ "coliseum", "紅館", "紅磡", "Hong Kong Coliseum", "Hung Hom", 2 ], [ "bauhinia", "金紫荊廣場", "灣仔", "Golden Bauhinia Square", "Wan Chai", 2 ], [ "hzmb", "港珠澳大橋", "大嶼山", "HK-Zhuhai-Macao Bridge", "Lantau", 2 ], [ "flower_market", "花墟", "旺角", "Flower Market", "Mong Kok", 1 ], [ "tsing_ma", "青馬大橋", "青衣", "Tsing Ma Bridge", "Tsing Yi", 3 ], [ "sam_tung_uk", "三棟屋博物館", "荃灣", "Sam Tung Uk", "Tsuen Wan", 2 ], [ "peak_tower", "凌霄閣", "太平山", "The Peak Tower", "The Peak", 2 ], [ "lui_seng_chun", "雷生春", "太子", "Lui Seng Chun", "Prince Edward", 1 ] ].map((c, i) => ({
+        id: c[0],
+        zh: c[1],
+        dist: c[2],
+        en: c[3],
+        distEn: c[4],
+        stars: c[5],
+        no: i + 1,
+        img: null,
+        blur: null
+    })), photoCards = {
+        order: [],
+        pos: 0,
+        card: null,
+        shown: [ !1, !1, !1, !1 ],
+        pieceOrder: [],
+        revealed: 0,
+        collected: [],
+        stop: 0,
+        previewLift: null,
+        anim: {
+            phase: "idle",
+            startedMs: 0,
+            piece: -1,
+            done: !1,
+            stage: 0
+        }
+    };
+    function isPhotoCardTheme() {
+        return isShoulderFlexionLevel() && "tsuenwan" === state.theme && HK_CARDS.length > 0;
+    }
+    function hkCardImage(card) {
+        return card ? (card.img || (card.img = new Image, card.img.src = "img/cards/" + card.id + ".jpg"), 
+        card.img) : null;
+    }
+    function hkCardImageReady(card) {
+        const im = hkCardImage(card);
+        return !!(im && im.complete && im.naturalWidth);
+    }
+    function hkCardBlur(card) {
+        if (!hkCardImageReady(card)) return null;
+        if (!card.blur) {
+            const c = document.createElement("canvas");
+            c.width = 20, c.height = 15;
+            const x = c.getContext("2d");
+            x.imageSmoothingEnabled = !0, x.drawImage(card.img, 0, 0, c.width, c.height), card.blur = c;
+        }
+        return card.blur;
+    }
+    function hkCardShuffle(n) {
+        const a = [];
+        for (let i = 0; i < n; i++) a.push(i);
+        for (let i = n - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1)), t = a[i];
+            a[i] = a[j], a[j] = t;
+        }
+        return a;
+    }
+    function resetPhotoCardAnim() {
+        const a = photoCards.anim;
+        a.phase = "idle", a.startedMs = 0, a.piece = -1, a.done = !1, a.stage = 0;
+    }
+    function beginPhotoCard() {
+        if (photoCards.pos >= photoCards.order.length) {
+            const last = photoCards.card ? photoCards.card.id : "", o = hkCardShuffle(HK_CARDS.length);
+            o.length > 1 && HK_CARDS[o[0]].id === last && o.push(o.shift()), photoCards.order = o, 
+            photoCards.pos = 0;
+        }
+        photoCards.card = HK_CARDS[photoCards.order[photoCards.pos++]], photoCards.shown = [ !1, !1, !1, !1 ], 
+        photoCards.pieceOrder = hkCardShuffle(4), photoCards.revealed = 0, photoCards.stop++, 
+        resetPhotoCardAnim(), hkCardImage(photoCards.card), photoCards.pos < photoCards.order.length && hkCardImage(HK_CARDS[photoCards.order[photoCards.pos]]);
+    }
+    function ensurePhotoCard() {
+        photoCards.card || beginPhotoCard();
+    }
+    function hkCardName(card) {
+        return card ? dealText(card.zh, card.en) : "";
+    }
+    function photoCardCollectedUnique() {
+        const seen = {}, out = [];
+        return photoCards.collected.forEach(id => {
+            if (!seen[id]) {
+                seen[id] = 1;
+                const c = HK_CARDS.find(x => x.id === id);
+                c && out.push(c);
+            }
+        }), out;
+    }
+    function hkViewPieceRect(g, i) {
+        const pw = g.vw / 2, ph = g.vh / 2;
+        return {
+            x: g.vx + i % 2 * pw,
+            y: g.vy + Math.floor(i / 2) * ph,
+            w: pw,
+            h: ph
+        };
+    }
+    function hkStarPath(ctx, x, y, r) {
+        ctx.beginPath();
+        for (let i = 0; i < 10; i++) {
+            const ang = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? .46 * r : r;
+            0 === i ? ctx.moveTo(x + Math.cos(ang) * rr, y + Math.sin(ang) * rr) : ctx.lineTo(x + Math.cos(ang) * rr, y + Math.sin(ang) * rr);
+        }
+        ctx.closePath();
+    }
+    function hkDrawPhotoCover(ctx, src, sw0, sh0, x, y, w, h) {
+        const tr = w / h;
+        let sx = 0, sy = 0, sw = sw0, sh = sh0;
+        sw0 / sh0 > tr ? (sw = sh * tr, sx = (sw0 - sw) / 2) : (sh = sw / tr, sy = (sh0 - sh) / 2), 
+        ctx.drawImage(src, sx, sy, sw, sh, x, y, w, h);
+    }
+    function drawHkCard(ctx, card, x, y, w, o) {
+        o = o || {};
+        const h = 1.16 * w, left = x - w / 2, topY = y - h / 2, inset = .04 * w, headH = .15 * w, pw = .88 * w, ph = .75 * pw, px = x - pw / 2, py = topY + inset + headH + .015 * w, fy = py + ph + (topY + h - inset - (py + ph)) / 2, stars = card.stars;
+        ctx.save(), ctx.fillStyle = "rgba(0,0,0,0.30)", rrPath(ctx, left + .012 * w, topY + .022 * w, w, h, .055 * w), 
+        ctx.fill();
+        const fr = ctx.createLinearGradient(left, topY, left + w, topY + h);
+        stars >= 3 ? (fr.addColorStop(0, "#FF6B9D"), fr.addColorStop(.25, "#FFC14D"), fr.addColorStop(.5, "#7EE081"), 
+        fr.addColorStop(.75, "#4DC9FF"), fr.addColorStop(1, "#B07CFF")) : 2 === stars ? (fr.addColorStop(0, "#F6D365"), 
+        fr.addColorStop(.5, "#FFF3C4"), fr.addColorStop(1, "#D9982B")) : (fr.addColorStop(0, "#A9C9E4"), 
+        fr.addColorStop(.5, "#EEF6FC"), fr.addColorStop(1, "#7FA6C9")), ctx.fillStyle = fr, 
+        rrPath(ctx, left, topY, w, h, .055 * w), ctx.fill(), ctx.fillStyle = "#FFFBEF", 
+        rrPath(ctx, left + inset, topY + inset, w - 2 * inset, h - 2 * inset, .035 * w), 
+        ctx.fill(), ctx.textAlign = "center", ctx.textBaseline = "middle", ctx.fillStyle = "#3A2A12", 
+        ctx.font = "900 " + Math.round(.098 * w) + 'px "PingFang TC","Noto Sans TC",sans-serif', 
+        ctx.fillText(hkCardName(card), x, topY + inset + .54 * headH, .84 * w), hkCardImageReady(card) ? hkDrawPhotoCover(ctx, card.img, card.img.naturalWidth, card.img.naturalHeight, px, py, pw, ph) : (ctx.fillStyle = "#BFE0F2", 
+        ctx.fillRect(px, py, pw, ph)), ctx.strokeStyle = "rgba(58,42,18,0.55)", ctx.lineWidth = Math.max(1.5, .008 * w), 
+        ctx.strokeRect(px, py, pw, ph);
+        const ff = Math.round(.058 * w);
+        ctx.font = "800 " + ff + 'px "PingFang TC","Noto Sans TC",sans-serif';
+        const dt = function(card) {
+            return card ? dealText(card.dist, card.distEn) : "";
+        }(card), dw = Math.min(.36 * w, ctx.measureText(dt).width + 1.1 * ff);
+        ctx.fillStyle = "#1A6B5A", rrPath(ctx, px, fy - .82 * ff, dw, 1.64 * ff, .82 * ff), 
+        ctx.fill(), ctx.fillStyle = "#FFFFFF", ctx.fillText(dt, px + dw / 2, fy + .04 * ff, dw - .7 * ff), 
+        ctx.textAlign = "right", ctx.fillStyle = "#8A7A5C", ctx.font = "800 " + Math.round(.036 * w) + 'px "PingFang TC","Noto Sans TC",sans-serif', 
+        ctx.fillText("No." + (card.no < 10 ? "0" : "") + card.no, px + pw, fy + .04 * ff);
+        const sr = .05 * w, sgap = 2.2 * sr, sx0 = x + .02 * w, lit = null == o.starsShown ? stars : Math.min(stars, o.starsShown);
+        for (let i = 0; i < 3; i++) hkStarPath(ctx, sx0 + i * sgap, fy, sr), i < lit ? (ctx.fillStyle = "#FFC533", 
+        ctx.fill(), ctx.strokeStyle = "#A56A00", ctx.lineWidth = Math.max(1.5, .007 * w), 
+        ctx.stroke()) : (ctx.fillStyle = "rgba(138,122,92,0.20)", ctx.fill());
+        ctx.restore(), null != o.holoT && function(ctx, x, y, w, h, tms, strength, seed) {
+            ctx.save(), rrPath(ctx, x - w / 2, y - h / 2, w, h, .055 * w), ctx.clip(), ctx.globalCompositeOperation = "lighter";
+            const gx = x - 1.6 * w + tms % 2100 / 2100 * w * 3.2, grad = ctx.createLinearGradient(gx, y - h / 2, gx + .95 * w, y + h / 2), a = strength;
+            grad.addColorStop(0, "rgba(255,255,255,0)"), grad.addColorStop(.28, "rgba(255,90,170," + (.55 * a).toFixed(3) + ")"), 
+            grad.addColorStop(.4, "rgba(255,220,110," + (.7 * a).toFixed(3) + ")"), grad.addColorStop(.5, "rgba(255,255,255," + Math.min(.9, 1.5 * a).toFixed(3) + ")"), 
+            grad.addColorStop(.6, "rgba(110,255,215," + (.7 * a).toFixed(3) + ")"), grad.addColorStop(.72, "rgba(120,160,255," + (.55 * a).toFixed(3) + ")"), 
+            grad.addColorStop(1, "rgba(255,255,255,0)"), ctx.fillStyle = grad, ctx.fillRect(x - w / 2, y - h / 2, w, h);
+            for (let i = 0; i < 14; i++) {
+                const u = Math.abs(Math.sin(12.9898 * (seed + 1) + 78.233 * i)) % 1, v = Math.abs(Math.sin(39.3468 * (seed + 1) + 11.135 * i)) % 1, tw = Math.max(0, Math.sin(tms / 230 + 1.9 * i));
+                if (tw <= .05) continue;
+                const sx = x - w / 2 + w * (.06 + .88 * u), sy = y - h / 2 + h * (.06 + .88 * v), r = .028 * w * tw;
+                ctx.fillStyle = "rgba(255,255,255," + (.85 * tw).toFixed(3) + ")", ctx.beginPath(), 
+                ctx.moveTo(sx, sy - 2.2 * r), ctx.quadraticCurveTo(sx, sy, sx + 2.2 * r, sy), ctx.quadraticCurveTo(sx, sy, sx, sy + 2.2 * r), 
+                ctx.quadraticCurveTo(sx, sy, sx - 2.2 * r, sy), ctx.quadraticCurveTo(sx, sy, sx, sy - 2.2 * r), 
+                ctx.fill();
+            }
+            ctx.restore();
+        }(ctx, x, y, w, h, o.holoT, [ 0, .24, .34, .46 ][stars] || .24, card.no);
+    }
+    function drawHkBinoculars(ctx, x, y, w, alpha) {
+        if (alpha <= .01) return;
+        const bw = .44 * w, bh = .66 * w, gap = .06 * w;
+        ctx.save(), ctx.globalAlpha = alpha, ctx.fillStyle = "rgba(0,0,0,0.28)", ctx.beginPath(), 
+        ctx.ellipse(x, y + .56 * bh, .6 * w, .1 * bh, 0, 0, 2 * Math.PI), ctx.fill(), [ -1, 1 ].forEach(s => {
+            const hx = x + s * (gap / 2 + 1.02 * bw);
+            ctx.fillStyle = "#F2C29B", ctx.strokeStyle = "#C98E63", ctx.lineWidth = Math.max(2, .012 * w), 
+            rrPath(ctx, hx - .24 * bw, y - .16 * bh, .48 * bw, .92 * bh, .22 * bw), ctx.fill(), 
+            ctx.stroke();
+        }), [ -1, 1 ].forEach(s => {
+            const bx = x + s * (gap / 2 + bw / 2), gr = ctx.createLinearGradient(bx - bw / 2, 0, bx + bw / 2, 0);
+            gr.addColorStop(0, "#1E2530"), gr.addColorStop(.5, "#4A5565"), gr.addColorStop(1, "#1E2530"), 
+            ctx.fillStyle = gr, rrPath(ctx, bx - bw / 2, y - bh / 2, bw, bh, .26 * bw), ctx.fill(), 
+            ctx.fillStyle = "#10151C", rrPath(ctx, bx - .56 * bw, y - .56 * bh, 1.12 * bw, .2 * bh, .12 * bw), 
+            ctx.fill(), ctx.fillStyle = "#0C1016", ctx.beginPath(), ctx.ellipse(bx, y + .4 * bh, .34 * bw, .2 * bw, 0, 0, 2 * Math.PI), 
+            ctx.fill(), ctx.fillStyle = "#5E7FA6", ctx.beginPath(), ctx.ellipse(bx, y + .4 * bh, .22 * bw, .12 * bw, 0, 0, 2 * Math.PI), 
+            ctx.fill(), ctx.fillStyle = "#F2C29B", ctx.strokeStyle = "#C98E63", ctx.lineWidth = Math.max(1.5, .008 * w);
+            for (let k = 0; k < 3; k++) rrPath(ctx, bx + s * bw * .1 - (s < 0 ? .46 * bw : 0), y - .2 * bh + k * bh * .19, .46 * bw, .15 * bh, .07 * bh), 
+            ctx.fill(), ctx.stroke();
+        }), ctx.fillStyle = "#2B3340", rrPath(ctx, x - .9 * gap, y - .22 * bh, 1.8 * gap, .3 * bh, .4 * gap), 
+        ctx.fill(), ctx.fillStyle = "#C9A227", ctx.beginPath(), ctx.arc(x, y - .07 * bh, .55 * gap, 0, 2 * Math.PI), 
+        ctx.fill(), ctx.restore();
+    }
+    function hkLensPath(ctx, x, y, r) {
+        ctx.beginPath(), ctx.arc(x - .62 * r, y, r, 0, 2 * Math.PI), ctx.moveTo(x + 1.62 * r, y), 
+        ctx.arc(x + .62 * r, y, r, 0, 2 * Math.PI);
+    }
     function pointInsideZone(x, y, zone) {
         return !!zone && x >= zone.x - zone.w / 2 && x <= zone.x + zone.w / 2 && y >= zone.y - zone.h / 2 && y <= zone.y + zone.h / 2;
     }
@@ -4637,9 +4839,10 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             btn.querySelector("h3").textContent = themeShownTitle(th);
             const goalText = isShoulderFlexionLevel() && th.shoulderGoal || th.goal;
             btn.querySelector(".ac-goal").textContent = goalText;
-            const img = btn.querySelector(".ac-visual img");
-            img.src = th.thumbnail, img.alt = th.thumbnailAlt, img.addEventListener("error", () => btn.querySelector(".ac-visual").remove()), 
-            btn.setAttribute("aria-label", themeShownTitle(th) + "：" + goalText), btn.addEventListener("click", () => function(themeId) {
+            const img = btn.querySelector(".ac-visual img"), shoulderCover = isShoulderFlexionLevel() && th.shoulderThumbnail;
+            img.src = shoulderCover ? th.shoulderThumbnail : th.thumbnail, img.alt = shoulderCover && th.shoulderThumbnailAlt || th.thumbnailAlt, 
+            img.addEventListener("error", () => btn.querySelector(".ac-visual").remove()), btn.setAttribute("aria-label", themeShownTitle(th) + "：" + goalText), 
+            btn.addEventListener("click", () => function(themeId) {
                 if (!themeAvailableForLevel(themeId)) return state.theme = "2" === state.level ? "bilateral" : "dimsum", 
                 renderActivityLibrary(), void showScreen("library");
                 if (state.theme = themeId, "67" === state.level && !function(themeId) {
@@ -5403,7 +5606,10 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                 shoulderFlexionCycleAwarded = !1, shoulderRewardCycle.reset(), shoulderHoldSpokenSecond = null, 
                 shoulderHoldInterruptedSpoken = !1, hideTargetHoldCountdown(), lastLevelShown = -1, 
                 heldItem = null, foods = [], targets = [], resetBowlingStrike(), resetBasketballShot(), 
-                resetTeahouseServe(), resetSupermarketStory(), resetDealTable(), resetLaundryStory(), 
+                resetTeahouseServe(), resetSupermarketStory(), resetDealTable(), photoCards.order = [], 
+                photoCards.pos = 0, photoCards.card = null, photoCards.shown = [ !1, !1, !1, !1 ], 
+                photoCards.pieceOrder = [], photoCards.revealed = 0, photoCards.collected = [], 
+                photoCards.stop = 0, photoCards.previewLift = null, resetPhotoCardAnim(), resetLaundryStory(), 
                 dimsumOrderBannerRect = null, dimsumOrder = null, dimsumPlateContents = [], dimsumOrdersCompleted = 0, 
                 dimsumOrderCelebrateUntil = 0, dimsumOrderTimerId && (clearTimeout(dimsumOrderTimerId), 
                 dimsumOrderTimerId = null), laundryOrderBannerRect = null, laundryOrder = null, 
@@ -6994,6 +7200,10 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             id: "tsuenwan",
             title: "荃灣街景相片",
             goal: "把荃灣街景相片送到同名的大型相片目標",
+            shoulderTitle: "香港遊",
+            shoulderGoal: "到站落車，舉起望遠鏡睇風景，望清楚就影到一張閃咭",
+            shoulderThumbnail: "img/advanced/hk_tour_thumb.jpg",
+            shoulderThumbnailAlt: "望遠鏡同三張香港地標閃咭",
             itemWord: "街景相片",
             difficulty: "容易至中等",
             targetStyle: "panel",
@@ -8244,9 +8454,19 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                     result: res
                 });
             }
+        }(), isPhotoCardTheme() && function() {
+            if (!isPhotoCardTheme()) return;
+            ensurePhotoCard();
+            const a = photoCards.anim;
+            "idle" !== a.phase || photoCards.revealed >= 4 || (a.piece = photoCards.pieceOrder[photoCards.revealed], 
+            photoCards.revealed++, a.phase = "look", a.startedMs = nowMs(), a.stage = 0, a.done = photoCards.revealed >= 4, 
+            a.done && photoCards.collected.push(photoCards.card.id));
         }();
         const started = nowMs();
-        shoulderRewardCycle.active = !0, shoulderRewardCycle.startedMs = started, shoulderRewardCycle.finishAtMs = started + ("bowlinglane" === state.theme ? Math.max(SHOULDER_REWARD_MIN_MS, 2700) : "basketball" === state.theme ? Math.max(SHOULDER_REWARD_MIN_MS, 2220) : "supermarket" === state.theme ? Math.max(SHOULDER_REWARD_MIN_MS, shopStory.rewardMs) : isTeahouseDimsumMode() ? Math.max(SHOULDER_REWARD_MIN_MS, 2520) : "tsuenwan" === state.theme ? SHOULDER_PHOTO_REWARD_MS : isLaundryStoryTheme() ? Math.max(SHOULDER_REWARD_MIN_MS, laundryStory.rewardMs) : isDealTableTheme() ? Math.max(SHOULDER_REWARD_MIN_MS, function() {
+        shoulderRewardCycle.active = !0, shoulderRewardCycle.startedMs = started, shoulderRewardCycle.finishAtMs = started + ("bowlinglane" === state.theme ? Math.max(SHOULDER_REWARD_MIN_MS, 2700) : "basketball" === state.theme ? Math.max(SHOULDER_REWARD_MIN_MS, 2220) : "supermarket" === state.theme ? Math.max(SHOULDER_REWARD_MIN_MS, shopStory.rewardMs) : isTeahouseDimsumMode() ? Math.max(SHOULDER_REWARD_MIN_MS, 2520) : isPhotoCardTheme() ? Math.max(SHOULDER_REWARD_MIN_MS, function() {
+            const a = photoCards.anim;
+            return "idle" === a.phase ? 0 : 950 + (a.done ? 5e3 : 350);
+        }()) : "tsuenwan" === state.theme ? SHOULDER_PHOTO_REWARD_MS : isLaundryStoryTheme() ? Math.max(SHOULDER_REWARD_MIN_MS, laundryStory.rewardMs) : isDealTableTheme() ? Math.max(SHOULDER_REWARD_MIN_MS, function() {
             const a = dealTable.anim;
             return "idle" === a.phase ? 0 : 1500 + (a.handDone ? 3200 : a.group >= 0 ? 1100 : 300);
         }()) : SHOULDER_REWARD_MIN_MS), shoulderRewardCycle.repetitionReady = !1;
@@ -8378,6 +8598,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     }
     function showFeedback(correct) {
         if (correct && (isLaundryStoryTheme() || isLaundryPegStoryGame())) return;
+        if (correct && isPhotoCardTheme()) return;
         const el = document.getElementById("feedbackOverlay");
         el.textContent = correct ? "✓" : "✕", el.classList.toggle("correct-feedback", correct), 
         el.style.opacity = "1", el.style.display = "flex", setTimeout(() => {
@@ -8544,6 +8765,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         }
         if (isShoulderFlexionLevel()) {
             if (isDealTableTheme()) return void (targets = []);
+            if (isPhotoCardTheme()) return void (targets = []);
             if (isLaundryStoryTheme()) return void (targets = []);
             if ("bowlinglane" === state.theme || "basketball" === state.theme || "supermarket" === state.theme || isTeahouseDimsumMode()) return void (targets = []);
             const photoLarge = "tsuenwan" === state.theme && !0, tw = photoLarge ? Math.min(.9 * cw, 1080) : Math.min(.38 * cw, 320), th = photoLarge ? Math.min(.43 * ch, .62 * tw) : tw * ("steamer" === style ? .74 : .62), category = cats[0], laneX = photoLarge ? .5 * cw : cw * (portrait ? .68 : .58);
@@ -10426,6 +10648,11 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                         if ("idle" === a.phase) return;
                                         const won = a.handDone;
                                         resetDealTableAnim(), won && isDealTableTheme() && beginDealTableRound();
+                                    }(), function() {
+                                        const a = photoCards.anim;
+                                        if ("idle" === a.phase) return;
+                                        const done = a.done;
+                                        a.piece >= 0 && (photoCards.shown[a.piece] = !0), resetPhotoCardAnim(), done && isPhotoCardTheme() && beginPhotoCard();
                                     }(), shoulderFlexionCycleAwarded = !1, shoulderRewardCycle.reset());
                                     let item = foods.find(food => !food.removed);
                                     item || (spawnInitialFoods(), item = foods.find(food => !food.removed)), Math.max(1, Number(shoulderFlexionState.selectedTargetDeg) || 1);
@@ -10635,6 +10862,200 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                         if (isLevel4BusPayGame()) return void renderLevel4BusPay(ctx, cw, ch);
                         drawLevel4MidlineGuide(ctx), function(ctx, cw, ch) {
                             if (!isShoulderFlexionLevel()) return;
+                            if (isPhotoCardTheme()) return void function(ctx, cw, ch) {
+                                ensurePhotoCard();
+                                const g = function(cw, ch) {
+                                    const portrait = ch > cw, cssScale = cw / Math.max(1, gameCanvas.clientWidth || cw), top = (portrait ? 262 : 84) * cssScale, pad = 16 * cssScale, font = Math.round(Math.max(15 * cssScale, .042 * Math.min(cw, ch))), stripH = portrait ? Math.min(.16 * ch, 176 * cssScale) : 0, availH = Math.max(60, ch - top - pad - stripH), plateH = 1.9 * font, vw = Math.max(40, Math.min(cw * (portrait ? .94 : .6), 4 * (availH - plateH) / 3)), vh = .75 * vw, cx = cw / 2, vy = top + plateH + (availH - plateH - vh) / 2, vx = cx - vw / 2, cardW = Math.min(.8 * vw, availH / 1.16), cardH = 1.16 * cardW, cy = top + availH / 2, slots = [];
+                                    let textX, textY, textW, countX, countY, countW;
+                                    if (portrait) {
+                                        const stripTop = ch - stripH - .4 * pad, n = 5, gap = .6 * pad, mh = Math.max(20, stripH - 1.5 * font - .4 * pad), mw = Math.min(mh / 1.16, (.94 * cw - gap * (n - 1)) / n), total = mw * n + gap * (n - 1);
+                                        for (let i = 0; i < n; i++) slots.push({
+                                            x: cw / 2 - total / 2 + mw / 2 + i * (mw + gap),
+                                            y: stripTop + 1.5 * font + 1.16 * mw / 2,
+                                            w: mw
+                                        });
+                                        textX = .3 * cw, textY = stripTop + .7 * font, textW = .54 * cw, countX = .8 * cw, 
+                                        countY = textY, countW = .34 * cw;
+                                    } else {
+                                        const sideW = (cw - vw) / 2, colX = cx + vw / 2 + sideW / 2, cols = 2, gap = .6 * pad, mw = Math.max(16, Math.min((sideW - 2 * pad - gap) / cols, .2 * vw)), mh = 1.16 * mw, gridTop = top + 1.7 * font, rows = Math.max(1, Math.min(4, Math.floor((ch - pad - gridTop + gap) / (mh + gap))));
+                                        for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) slots.push({
+                                            x: colX + (c - .5) * (mw + gap),
+                                            y: gridTop + mh / 2 + r * (mh + gap),
+                                            w: mw
+                                        });
+                                        countX = colX, countY = top + .7 * font, countW = sideW - 1.5 * pad, textX = sideW / 2, 
+                                        textY = Math.max(vy + .5 * vh, top + 150 * cssScale), textW = sideW - 1.5 * pad;
+                                    }
+                                    return {
+                                        portrait: portrait,
+                                        cssScale: cssScale,
+                                        top: top,
+                                        pad: pad,
+                                        font: font,
+                                        plateH: plateH,
+                                        vx: vx,
+                                        vy: vy,
+                                        vw: vw,
+                                        vh: vh,
+                                        cx: cx,
+                                        cy: cy,
+                                        cardW: cardW,
+                                        cardH: cardH,
+                                        slots: slots,
+                                        textX: textX,
+                                        textY: textY,
+                                        textW: textW,
+                                        countX: countX,
+                                        countY: countY,
+                                        countW: countW
+                                    };
+                                }(cw, ch), a = photoCards.anim, now = nowMs(), t = "idle" === a.phase ? 0 : now - a.startedMs;
+                                !function(g, cw, ch, t) {
+                                    const a = photoCards.anim;
+                                    if ("idle" !== a.phase) {
+                                        if (a.stage < 1 && (a.stage = 1, playDealClack()), a.stage < 2 && t >= 589 && (a.stage = 2, 
+                                        !a.done)) {
+                                            playDealChime(!1);
+                                            const r = hkViewPieceRect(g, a.piece);
+                                            fxBurst(r.x + r.w / 2, r.y + r.h / 2, {
+                                                count: 16
+                                            });
+                                        }
+                                        a.done && a.stage < 3 && t >= 950 && (a.stage = 3, playDealChime(!0), playApplauseSound(), 
+                                        speakCantonese(hkCardName(photoCards.card) + "！"), fxBurst(g.cx, g.cy, {
+                                            count: 46,
+                                            speed: 6.5
+                                        })), a.done && a.stage < 4 && t >= 1650 && (a.stage = 4, fxBurst(.26 * cw, .42 * ch, {
+                                            count: 30,
+                                            speed: 5.5
+                                        })), a.done && a.stage < 5 && t >= 2350 && (a.stage = 5, fxBurst(.74 * cw, .42 * ch, {
+                                            count: 30,
+                                            speed: 5.5
+                                        })), a.done && a.stage < 6 && t >= 4150 && (a.stage = 6, playDealChime(!1));
+                                    }
+                                }(g, cw, ch, t);
+                                const card = photoCards.card, finale = a.done && "idle" !== a.phase, riding = finale && t >= 4150, uniq = photoCardCollectedUnique(), settled = finale && t < 4150 ? uniq.filter(c => c !== card) : uniq, K = g.slots.length, visible = settled.slice(-K);
+                                if (ctx.save(), ctx.beginPath(), ctx.rect(0, 0, cw, ch), ctx.clip(), riding) !function(ctx, cw, ch, g, rq, now) {
+                                    const top = g.top, hY = top + .46 * (ch - top), moving = rq < 1, sky = ctx.createLinearGradient(0, top, 0, hY);
+                                    sky.addColorStop(0, "#6FB7E9"), sky.addColorStop(1, "#D8EEFA"), ctx.fillStyle = sky, 
+                                    ctx.fillRect(0, 0, cw, hY), ctx.fillStyle = "#7C8FA3";
+                                    for (let i = 0; i < 14; i++) {
+                                        const bwid = cw * (.05 + Math.abs(Math.sin(12.9898 * i + 5.3)) % 1 * .035), bh = (hY - top) * (.28 + 37 * i % 10 * .5 / 10);
+                                        ctx.fillRect(cw * (i / 14) + .004 * cw, hY - bh, bwid, bh);
+                                    }
+                                    ctx.fillStyle = "#8DB58A", ctx.fillRect(0, hY, cw, ch - hY), ctx.fillStyle = "#4B5560", 
+                                    ctx.beginPath(), ctx.moveTo(.46 * cw, hY), ctx.lineTo(.54 * cw, hY), ctx.lineTo(.98 * cw, ch), 
+                                    ctx.lineTo(.02 * cw, ch), ctx.closePath(), ctx.fill();
+                                    const off = moving ? now / 420 % 1 : .35;
+                                    ctx.fillStyle = "#F4E9A6";
+                                    for (let k = 0; k < 7; k++) {
+                                        const z0 = (k + off) / 7, z1 = Math.min(1, z0 + .07), y0 = hY + (ch - hY) * z0 * z0, y1 = hY + (ch - hY) * z1 * z1, w0 = .004 * cw + .02 * cw * z0 * z0, w1 = .004 * cw + .02 * cw * z1 * z1;
+                                        ctx.beginPath(), ctx.moveTo(cw / 2 - w0, y0), ctx.lineTo(cw / 2 + w0, y0), ctx.lineTo(cw / 2 + w1, y1), 
+                                        ctx.lineTo(cw / 2 - w1, y1), ctx.closePath(), ctx.fill();
+                                    }
+                                    const railY = ch - .13 * (ch - top);
+                                    ctx.fillStyle = "#1F7A68", ctx.fillRect(0, railY, cw, ch - railY), ctx.fillStyle = "#E9C46A", 
+                                    ctx.fillRect(0, railY - .022 * (ch - top), cw, .022 * (ch - top));
+                                    const sw = Math.min(.56 * cw, 15 * g.font), sh = 2.6 * g.font, sx = cw / 2 - sw / 2, sy = top + 1.2 * g.pad;
+                                    ctx.fillStyle = "#145246", rrPath(ctx, sx, sy, sw, sh, .22 * sh), ctx.fill(), ctx.strokeStyle = "#FFFFFF", 
+                                    ctx.lineWidth = Math.max(3, .12 * g.font), rrPath(ctx, sx + .2 * g.font, sy + .2 * g.font, sw - .4 * g.font, sh - .4 * g.font, .16 * sh), 
+                                    ctx.stroke(), ctx.fillStyle = "#FFFFFF", ctx.textAlign = "center", ctx.textBaseline = "middle", 
+                                    ctx.font = "900 " + Math.round(1.25 * g.font) + 'px "PingFang TC","Noto Sans TC",sans-serif';
+                                    const rideText = moving ? dealText("下一站：？？？", "Next stop: ???") : dealText("到站，落車！", "We have arrived!");
+                                    ctx.fillText(rideText, cw / 2, sy + .53 * sh, sw - g.font);
+                                }(ctx, cw, ch, g, clamp01((t - 4150) / 1700), now); else {
+                                    const blur = hkCardBlur(card);
+                                    if (blur) ctx.imageSmoothingEnabled = !0, ctx.imageSmoothingQuality = "high", hkDrawPhotoCover(ctx, blur, blur.width, blur.height, 0, 0, cw, ch), 
+                                    ctx.fillStyle = "rgba(16,28,48,0.50)", ctx.fillRect(0, 0, cw, ch); else {
+                                        const bg = ctx.createLinearGradient(0, 0, 0, ch);
+                                        bg.addColorStop(0, "#2C4A7C"), bg.addColorStop(1, "#14213D"), ctx.fillStyle = bg, 
+                                        ctx.fillRect(0, 0, cw, ch);
+                                    }
+                                    const shown = photoCards.shown.slice();
+                                    "idle" !== a.phase && t >= 950 && a.piece >= 0 && (shown[a.piece] = !0), function(ctx, card, g, shown) {
+                                        const blur = hkCardBlur(card);
+                                        if (ctx.save(), rrPath(ctx, g.vx, g.vy, g.vw, g.vh, .02 * g.vw), ctx.clip(), blur) ctx.imageSmoothingEnabled = !0, 
+                                        ctx.imageSmoothingQuality = "high", ctx.drawImage(blur, g.vx, g.vy, g.vw, g.vh), 
+                                        ctx.fillStyle = "rgba(235,242,248,0.30)", ctx.fillRect(g.vx, g.vy, g.vw, g.vh); else {
+                                            const pg = ctx.createLinearGradient(0, g.vy, 0, g.vy + g.vh);
+                                            pg.addColorStop(0, "#BFD9EA"), pg.addColorStop(1, "#DDE8DD"), ctx.fillStyle = pg, 
+                                            ctx.fillRect(g.vx, g.vy, g.vw, g.vh);
+                                        }
+                                        if (hkCardImageReady(card)) for (let i = 0; i < 4; i++) {
+                                            if (!shown[i]) continue;
+                                            const r = hkViewPieceRect(g, i);
+                                            ctx.save(), ctx.beginPath(), ctx.rect(r.x, r.y, r.w, r.h), ctx.clip(), ctx.drawImage(card.img, g.vx, g.vy, g.vw, g.vh), 
+                                            ctx.restore();
+                                        }
+                                        ctx.restore(), ctx.strokeStyle = "rgba(255,255,255,0.92)", ctx.lineWidth = Math.max(3, .008 * g.vw), 
+                                        rrPath(ctx, g.vx, g.vy, g.vw, g.vh, .02 * g.vw), ctx.stroke();
+                                    }(ctx, card, g, finale && t >= 950 ? [ !0, !0, !0, !0 ] : shown);
+                                    const pw = Math.min(.62 * g.vw, 13 * g.font), ph = .84 * g.plateH, py = g.vy - g.plateH + .06 * g.plateH;
+                                    ctx.fillStyle = "rgba(20,82,70,0.94)", rrPath(ctx, g.cx - pw / 2, py, pw, ph, ph / 2), 
+                                    ctx.fill(), ctx.fillStyle = "#FFFFFF", ctx.textAlign = "center", ctx.textBaseline = "middle", 
+                                    ctx.font = "900 " + Math.round(1.02 * g.font) + 'px "PingFang TC","Noto Sans TC",sans-serif';
+                                    const plateText = finale && t >= 950 ? hkCardName(card) : dealText("第 " + photoCards.stop + " 站 · 呢度係邊度？", "Stop " + photoCards.stop + " · Where is this?");
+                                    if (ctx.fillText(plateText, g.cx, py + .54 * ph, pw - g.font), "idle" === a.phase) {
+                                        const next = photoCards.revealed < 4 ? photoCards.pieceOrder[photoCards.revealed] : -1;
+                                        if (next >= 0) {
+                                            const r = hkViewPieceRect(g, next), p = null != photoCards.previewLift ? clamp01(photoCards.previewLift) : shoulderRewardCycle.active ? 0 : clamp01(Number(shoulderFlexionState.progress) || 0), qx = r.x + r.w / 2, qy = r.y + r.h / 2, pulse = .5 + .5 * Math.sin(now / 170), lr = .3 * r.h;
+                                            ctx.save(), ctx.setLineDash([ Math.max(8, .22 * lr), Math.max(6, .14 * lr) ]), ctx.lineWidth = Math.max(4, .009 * g.vw), 
+                                            ctx.strokeStyle = "rgba(255,226,122," + (.7 + .3 * pulse).toFixed(3) + ")", hkLensPath(ctx, qx, qy, lr), 
+                                            ctx.stroke(), ctx.restore();
+                                            const bw = .3 * g.vw, restY = ch - .1 * bw, e = 1 - Math.pow(1 - p, 1.6);
+                                            drawHkBinoculars(ctx, g.cx + (qx - g.cx) * e, restY + (qy + .1 * bw - restY) * e, bw, 1);
+                                        }
+                                    } else if (t < 950) {
+                                        const q = t / 950, r = hkViewPieceRect(g, a.piece), qx = r.x + r.w / 2, qy = r.y + r.h / 2, dark = .62 * Math.min(1, q / .18) * (q > .7 ? Math.max(0, 1 - (q - .7) / .3) : 1), lr = .3 * r.h + (q > .58 ? (q - .58) / .42 * r.w * 1.1 : 0);
+                                        ctx.save(), ctx.fillStyle = "rgba(0,0,0," + dark.toFixed(3) + ")", ctx.fillRect(0, 0, cw, ch), 
+                                        ctx.beginPath(), ctx.rect(r.x, r.y, r.w, r.h), ctx.clip(), hkLensPath(ctx, qx, qy, lr), 
+                                        ctx.clip(), hkCardImageReady(card) && ctx.drawImage(card.img, g.vx, g.vy, g.vw, g.vh), 
+                                        ctx.restore(), q < .8 && (ctx.save(), ctx.beginPath(), ctx.rect(r.x, r.y, r.w, r.h), 
+                                        ctx.clip(), ctx.globalAlpha = Math.max(0, 1 - Math.max(0, q - .58) / .22), ctx.lineWidth = Math.max(6, .016 * g.vw), 
+                                        ctx.strokeStyle = "#0C1016", hkLensPath(ctx, qx, qy, lr), ctx.stroke(), ctx.restore()), 
+                                        drawHkBinoculars(ctx, qx, qy + .03 * g.vw + q * g.vw * .1, .3 * g.vw, Math.max(0, 1 - q / .16));
+                                    } else if (finale && t < 3450) {
+                                        const tt = t - 950, q = tt / 2500;
+                                        ctx.fillStyle = "rgba(8,14,26," + (.55 * Math.min(1, tt / 200)).toFixed(3) + ")", 
+                                        ctx.fillRect(0, 0, cw, ch);
+                                        const pop = (.55 + .45 * Math.min(1, tt / 260)) * (1 + .07 * Math.sin(Math.min(1, 3.2 * q) * Math.PI)), glow = .35 + .25 * Math.sin(now / 160);
+                                        ctx.fillStyle = "rgba(255,226,122," + glow.toFixed(3) + ")", rrPath(ctx, g.cx - g.cardW * pop * .54, g.cy - g.cardH * pop * .53, g.cardW * pop * 1.08, g.cardH * pop * 1.06, .08 * g.cardW), 
+                                        ctx.fill(), drawHkCard(ctx, card, g.cx, g.cy, g.cardW * pop, {
+                                            holoT: now,
+                                            starsShown: Math.floor((tt - 350) / 260) + 1
+                                        }), tt < 170 && (ctx.fillStyle = "rgba(255,255,255," + (.9 * (1 - tt / 170)).toFixed(3) + ")", 
+                                        ctx.fillRect(0, 0, cw, ch));
+                                    } else if (finale && t < 4150) {
+                                        const q = clamp01((t - 3450) / 700), e = 1 - Math.pow(1 - q, 2.4);
+                                        ctx.fillStyle = "rgba(8,14,26," + (.55 * (1 - q)).toFixed(3) + ")", ctx.fillRect(0, 0, cw, ch);
+                                        const slot = g.slots[Math.min(K, uniq.length) - 1] || g.slots[0];
+                                        drawHkCard(ctx, card, g.cx + (slot.x - g.cx) * e, g.cy + (slot.y - g.cy) * e - Math.sin(q * Math.PI) * g.cardH * .06, g.cardW + (slot.w - g.cardW) * e, {
+                                            holoT: now
+                                        });
+                                    }
+                                }
+                                g.slots.forEach((s, i) => {
+                                    const c = visible[i];
+                                    c ? drawHkCard(ctx, c, s.x, s.y, s.w, {}) : (ctx.save(), ctx.fillStyle = "rgba(10,20,40,0.30)", 
+                                    rrPath(ctx, s.x - s.w / 2, s.y - 1.16 * s.w / 2, s.w, 1.16 * s.w, .055 * s.w), ctx.fill(), 
+                                    ctx.setLineDash([ Math.max(5, .08 * s.w), Math.max(4, .06 * s.w) ]), ctx.lineWidth = Math.max(2, .025 * s.w), 
+                                    ctx.strokeStyle = "rgba(255,255,255,0.45)", rrPath(ctx, s.x - s.w / 2, s.y - 1.16 * s.w / 2, s.w, 1.16 * s.w, .055 * s.w), 
+                                    ctx.stroke(), ctx.restore());
+                                });
+                                const left = Math.max(0, 4 - photoCards.revealed);
+                                if (ctx.save(), ctx.textAlign = "center", ctx.textBaseline = "middle", ctx.shadowColor = "rgba(0,0,0,0.65)", 
+                                ctx.shadowBlur = 8, left > 0 && !riding) {
+                                    ctx.fillStyle = "#FFE27A", ctx.font = "900 " + Math.round(1.15 * g.font) + 'px "PingFang TC","Noto Sans TC",sans-serif';
+                                    const liftBoth = dealText("舉起望遠鏡 · 仲差 " + left + " 次", "Lift the binoculars · " + left + " to go"), liftText = dealText("舉起望遠鏡", "Lift the binoculars"), leftText = dealText("仲差 " + left + " 次", left + " to go");
+                                    g.portrait ? ctx.fillText(liftBoth, g.textX, g.textY, g.textW) : (ctx.fillText(liftText, g.textX, g.textY - .85 * g.font, g.textW), 
+                                    ctx.fillStyle = "#FFFFFF", ctx.font = "800 " + Math.round(.95 * g.font) + 'px "PingFang TC","Noto Sans TC",sans-serif', 
+                                    ctx.fillText(leftText, g.textX, g.textY + .75 * g.font, g.textW));
+                                }
+                                ctx.fillStyle = "#FFFFFF", ctx.font = "800 " + Math.round(.95 * g.font) + 'px "PingFang TC","Noto Sans TC",sans-serif';
+                                const countText = dealText("已集 " + settled.length + " 張", "Cards: " + settled.length);
+                                ctx.fillText(countText, g.countX, g.countY, g.countW), ctx.restore(), fxUpdateDraw(ctx), 
+                                ctx.restore();
+                            }(ctx, cw, ch);
                             if (isDealTableTheme()) return void function(ctx, cw, ch) {
                                 ensureDealTableRound();
                                 const g = function(cw, ch) {
@@ -11340,6 +11761,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                             if (isBasketballTheme() && "idle" !== basketballShot.phase) continue;
                             if (isSupermarketTheme()) continue;
                             if (isDealTableTheme()) continue;
+                            if (isPhotoCardTheme()) continue;
                             if (isLaundryStoryTheme()) continue;
                             if (isTeahouseDimsumMode() && "idle" !== teahouseServe.phase) continue;
                             ctx.save();
@@ -11448,7 +11870,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                         el.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:99998;pointer-events:none;background:rgba(10,20,18,.82);color:#e8fff6;font:12px/1.4 -apple-system,"PingFang TC",sans-serif;padding:6px 9px;border-radius:10px;white-space:pre;', 
                         document.body.appendChild(el), framePerf.overlayEl = el);
                         const p = framePerfSnapshot();
-                        el.textContent = `perf v143  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}\n左右手檢查 ${"off" === p.hand.check ? "關" : "開"}  鎖定手形 ${p.hand.lockSize || "-"}  大小拒絕 ${p.hand.sizeRejected}  遠處拒絕 ${p.hand.farRejected}` + (p.tool ? `\n衣夾 近指 ${p.tool.near} 放手≥${p.tool.nearExit} 張開≥${p.tool.nearOpen}  遠指 ${p.tool.far} 放手≥${p.tool.farExit} 張開≥${p.tool.farOpen}  門檻 ${p.tool.source}\n衣夾 合併 ${p.tool.combo} 拎起≤${p.tool.enter} 放手閘≥${p.tool.gate}\n衣夾 相對 基線 近${p.tool.relBaseNear} 遠${p.tool.relBaseFar} 合併${p.tool.relBaseCombo} 相對放手 ${p.tool.relOpen}` : ""), 
+                        el.textContent = `perf v144  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}\n左右手檢查 ${"off" === p.hand.check ? "關" : "開"}  鎖定手形 ${p.hand.lockSize || "-"}  大小拒絕 ${p.hand.sizeRejected}  遠處拒絕 ${p.hand.farRejected}` + (p.tool ? `\n衣夾 近指 ${p.tool.near} 放手≥${p.tool.nearExit} 張開≥${p.tool.nearOpen}  遠指 ${p.tool.far} 放手≥${p.tool.farExit} 張開≥${p.tool.farOpen}  門檻 ${p.tool.source}\n衣夾 合併 ${p.tool.combo} 拎起≤${p.tool.enter} 放手閘≥${p.tool.gate}\n衣夾 相對 基線 近${p.tool.relBaseNear} 遠${p.tool.relBaseFar} 合併${p.tool.relBaseCombo} 相對放手 ${p.tool.relOpen}` : ""), 
                         el.style.display = state.running ? "block" : "none";
                     }(perfT2);
                 } catch (e) {
@@ -12401,8 +12823,30 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                 return "煮蛋炒飯：今次煮好 " + cook.rounds + " 碟" + (started ? "，第 " + (cook.rounds + 1) + " 碟做到第 " + (cook.idx + 1) + " 步，下次繼續。" : "。");
             }() : "";
             roundLine && (dealSummary.hidden = !1, dealSummary.textContent = roundLine);
+            const cardLine = isPhotoCardTheme() ? function() {
+                if (!photoCards.card && !photoCards.collected.length) return "";
+                const n = photoCards.collected.length;
+                return n > 0 ? dealText("香港遊：今次去咗 " + n + " 個地方，集到 " + n + " 張閃咭。", "Hong Kong tour: " + n + " places visited and " + n + " cards collected today.") : dealText("香港遊：差少少就影到第一張閃咭，下次繼續。", "Hong Kong tour: almost got the first card. Continue next time.");
+            }() : "";
+            cardLine && (dealSummary.hidden = !1, dealSummary.textContent = cardLine);
         }
-        showScreen("result");
+        !function() {
+            const box = document.getElementById("cardAlbumSummary");
+            if (!box) return;
+            for (;box.firstChild; ) box.removeChild(box.firstChild);
+            const list = isPhotoCardTheme() ? photoCardCollectedUnique().slice(-24) : [];
+            box.hidden = !list.length, list.forEach(card => {
+                const fig = document.createElement("figure");
+                fig.className = "album-card stars-" + card.stars;
+                const im = document.createElement("img");
+                im.src = "img/cards/" + card.id + ".jpg", im.alt = hkCardName(card), im.loading = "lazy";
+                const cap = document.createElement("figcaption");
+                cap.textContent = hkCardName(card);
+                const st = document.createElement("span");
+                st.className = "album-stars", st.textContent = "★".repeat(card.stars), fig.appendChild(im), 
+                fig.appendChild(cap), fig.appendChild(st), box.appendChild(fig);
+            });
+        }(), showScreen("result");
     }
     const ADV_THEMES = [ "mahjong", "cards", "cooking", "flowers", "laundry" ], LEVEL6_SHARED_LEVEL5_THEMES = [ "flowers", "cards", "mahjong" ];
     function usesAdvancedThemeModule(id) {
@@ -14651,7 +15095,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
 <script src="level4-three-games-module.js"></script>
 <script>
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
-  const LEVEL_APP_BUILD = "v143-20261126-simple-setup";
+  const LEVEL_APP_BUILD = "v144-20261126-hk-tour-cards";
   const levelAppHadController = Boolean(navigator.serviceWorker.controller);
   let levelAppReloading = false;
 
