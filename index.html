@@ -739,6 +739,8 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
 .album-card.stars-3{ background:linear-gradient(135deg,#FF6B9D,#FFC14D 25%,#7EE081 50%,#4DC9FF 75%,#B07CFF); }
 .album-card img{ display:block; width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:6px; background:#dfe9ee; }
 .album-card figcaption{ margin-top:4px; padding:2px 3px 0; border-radius:5px 5px 0 0; background:#FFFBEF; font-size:14px; font-weight:800; line-height:1.25; color:#3A2A12; }
+.album-card.dish-card{ background:linear-gradient(135deg,#F3D9A4,#FFF6DF 50%,#E2B56A); }
+.album-card.dish-card img{ object-fit:contain; background:#FFFBEF; }
 .album-card .album-stars{ display:block; padding:0 3px 2px; border-radius:0 0 5px 5px; background:#FFFBEF; font-size:13px; line-height:1.2; color:#C98A00; letter-spacing:1px; }
 .result-grid{
   display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:16px 0 20px;
@@ -1333,6 +1335,8 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         Alexkom000、Mk2010、Diego Delso、LN9267、EditQ、Béria Lima de Rodríguez、Sparktour、Underwaterbuffalo、Wpcpey、Aethelfirth、Smallpei、Rehman Abubakr、Suicasmo、WiNG、Jan Kranendonk、Ank Kumar、姒姓賢寧、Deror_avi、Photo by TonySKTO、MyPlace2015 mm、Wing1990hk、Tusginewko、Katie Chan、Enochlau、Hankt、Kārlis Dambrāns from Latvia、Spielvogel (Spielvogel Archiv)、Bernard Spragg. NZ、Chong Fat、Yumeto、British Hker、Rob Young from United Kingdom、HK Arun、Minghong、Andrew Martin、Rutger van der Maar、Husyewl Lmsiuyu RAUOM、Lord Jaraxxus、xiquinhosilva、SH6188、N509FZ、Masanchuen、Qwer132477、Prosperity Horizons、Benh LIEU SONG (Flickr)、李家宇、User:Ahleong、Baycrest、C J B Scholten at English Wikipedia、FHKE (Flickr)、山民主義、Erc Chw、Krimuk2.0、hkgalbert、MAUOSREEGU DAVMUR。
         每張相嘅標題、攝影者、授權及來源網址：
         <a href="image-sources.json">image-sources.json</a></p>
+        <p>Level 3／4「茶樓飲茶」嘅 30 款點心、蒸籠同四位屋企人插圖（img/dimsum/）全部係電腦生成圖像，
+        唔係真實相片，亦唔係真人。</p>
       </details>
     </footer>
   </div>
@@ -2154,6 +2158,136 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             drawImageScaled(ctx, img, x - dw / 2, y - dh / 2, dw, dh);
         } else ctx.fillStyle = "#E8B04B", ctx.beginPath(), ctx.arc(x, y, .9 * r, 0, 2 * Math.PI), 
         ctx.fill();
+    }
+    const YUM_CHA_DISHES = [ [ "hargau", "蝦餃", "Shrimp dumplings" ], [ "siumai", "燒賣", "Siu mai" ], [ "charsiu_bao", "叉燒包", "BBQ pork buns" ], [ "lotus_rice", "糯米雞", "Sticky rice in lotus leaf" ], [ "chicken_feet", "鳳爪", "Chicken feet" ], [ "spare_ribs", "排骨", "Spare ribs" ], [ "beef_balls", "牛肉球", "Beef balls" ], [ "cheung_fun", "腸粉", "Rice noodle rolls" ], [ "turnip_cake", "蘿蔔糕", "Turnip cake" ], [ "sponge_cake", "馬拉糕", "Sponge cake" ], [ "egg_tart", "蛋撻", "Egg tarts" ], [ "custard_bun", "奶黃包", "Custard buns" ], [ "lava_bun", "流沙包", "Lava custard buns" ], [ "spring_roll", "春卷", "Spring rolls" ], [ "ham_sui_gok", "鹹水角", "Fried dumplings" ], [ "taro_puff", "芋角", "Taro puffs" ], [ "sesame_ball", "煎堆", "Sesame balls" ], [ "fun_gor", "潮州粉果", "Chiu Chow dumplings" ], [ "beancurd_roll", "鮮竹卷", "Bean curd rolls" ], [ "tripe", "金錢肚", "Beef tripe" ], [ "xiao_long_bao", "小籠包", "Xiao long bao" ], [ "soup_dumpling", "灌湯餃", "Soup dumpling" ], [ "chicken_fish_maw", "棉花雞", "Chicken with fish maw" ], [ "layer_cake", "千層糕", "Layer cake" ], [ "mango_pudding", "芒果布甸", "Mango pudding" ], [ "tofu_pudding", "豆腐花", "Tofu pudding" ], [ "charsiu_puff", "叉燒酥", "BBQ pork puffs" ], [ "potsticker", "鍋貼", "Potstickers" ], [ "chicken_bundle", "雞扎", "Chicken bundles" ], [ "water_chestnut_cake", "馬蹄糕", "Water chestnut cake" ] ].map((d, i) => ({
+        id: d[0],
+        zh: d[1],
+        en: d[2],
+        no: i + 1
+    })), YUM_CHA_FAMILY = [ {
+        id: "grandma",
+        file: "fam_grandma",
+        says: [ [ "好味！", "Yummy!" ], [ "多謝你！", "Thank you!" ], [ "好香呀！", "Smells good!" ] ]
+    }, {
+        id: "grandpa",
+        file: "fam_grandpa",
+        says: [ [ "正！", "Lovely!" ], [ "夠晒熱！", "Nice and hot!" ], [ "好嘢！", "Great!" ] ]
+    }, {
+        id: "mum",
+        file: "fam_mum",
+        says: [ [ "多謝！", "Thanks!" ], [ "我最鍾意！", "My favourite!" ], [ "好靚呀！", "Looks great!" ] ]
+    }, {
+        id: "boy",
+        file: "fam_boy",
+        says: [ [ "我要食！", "I want some!" ], [ "好好味！", "So yummy!" ], [ "好嘢！", "Yay!" ] ]
+    } ], yumCha = {
+        bag: [],
+        bagPos: 0,
+        table: [],
+        order: [],
+        served: 0,
+        ticks: [],
+        delivered: [],
+        eaten: [],
+        bills: 0,
+        tableNo: 0,
+        previewLift: null,
+        arrivedMs: 0,
+        anim: {
+            phase: "idle",
+            startedMs: 0,
+            slot: -1,
+            member: -1,
+            done: !1,
+            stage: 0,
+            say: 0
+        }
+    }, yumChaImgs = {};
+    function isYumChaTheme() {
+        return isTeahouseDimsumMode() && YUM_CHA_DISHES.length >= 6;
+    }
+    function yumChaImage(name) {
+        let im = yumChaImgs[name];
+        return im || (im = new Image, im.src = "img/dimsum/" + name + ".png", yumChaImgs[name] = im), 
+        im;
+    }
+    function yumChaImageReady(name) {
+        const im = yumChaImage(name);
+        return !!(im && im.complete && im.naturalWidth);
+    }
+    function yumChaDishName(dish) {
+        return dish ? dealText(dish.zh, dish.en) : "";
+    }
+    function resetYumChaAnim() {
+        const a = yumCha.anim;
+        a.phase = "idle", a.startedMs = 0, a.slot = -1, a.member = -1, a.done = !1, a.stage = 0, 
+        a.say = 0;
+    }
+    function beginYumChaTable() {
+        if (yumCha.bagPos + 6 > yumCha.bag.length) {
+            const last = {};
+            yumCha.table.forEach(d => {
+                last[d.id] = 1;
+            });
+            const o = hkCardShuffle(YUM_CHA_DISHES.length);
+            yumCha.bag = o.filter(i => !last[YUM_CHA_DISHES[i].id]).concat(o.filter(i => last[YUM_CHA_DISHES[i].id])), 
+            yumCha.bagPos = 0;
+        }
+        yumCha.table = yumCha.bag.slice(yumCha.bagPos, yumCha.bagPos + 6).map(i => YUM_CHA_DISHES[i]), 
+        yumCha.bagPos += 6, yumCha.order = hkCardShuffle(6), yumCha.served = 0, yumCha.ticks = yumCha.table.map(() => !1), 
+        yumCha.delivered = [], yumCha.tableNo++, yumCha.arrivedMs = nowMs(), resetYumChaAnim(), 
+        yumCha.table.forEach(d => yumChaImage(d.id)), YUM_CHA_FAMILY.forEach(f => yumChaImage(f.file)), 
+        yumChaImage("steamer_closed"), yumChaImage("steamer_lid"), yumCha.bag.slice(yumCha.bagPos, yumCha.bagPos + 6).forEach(i => yumChaImage(YUM_CHA_DISHES[i].id));
+    }
+    function ensureYumChaTable() {
+        yumCha.table.length || beginYumChaTable();
+    }
+    function yumChaSpot(g, member, k) {
+        const m = g.members[member], two = function(member) {
+            let n = 0;
+            for (let s = 0; s < 6; s++) s % YUM_CHA_FAMILY.length === member && n++;
+            return n;
+        }(member) > 1;
+        return {
+            x: m.x + (two ? (0 === k ? -.25 : .25) * g.ds : 0),
+            y: m.spotY + (two && k > 0 ? .1 * g.ds : 0)
+        };
+    }
+    function yumChaSprite(ctx, name, cx, cy, w, alpha) {
+        if (!yumChaImageReady(name)) return !1;
+        const im = yumChaImage(name), h = w * im.naturalHeight / im.naturalWidth;
+        return alpha < 1 ? (ctx.save(), ctx.globalAlpha = Math.max(0, alpha), ctx.drawImage(im, cx - w / 2, cy - h / 2, w, h), 
+        ctx.restore()) : ctx.drawImage(im, cx - w / 2, cy - h / 2, w, h), !0;
+    }
+    function drawYumChaSteam(ctx, cx, cy, w, strength, now) {
+        if (!(strength <= .02)) {
+            ctx.save();
+            for (let i = 0; i < 5; i++) {
+                const ph = (now / 1400 + .2 * i) % 1, x = cx + (i - 2) * w * .16 + Math.sin(now / 500 + 1.7 * i) * w * .04;
+                ctx.fillStyle = "rgba(255,255,255," + (.42 * strength * (1 - ph)).toFixed(3) + ")", 
+                ctx.beginPath(), ctx.arc(x, cy - ph * w * .55, w * (.07 + .09 * ph), 0, 2 * Math.PI), 
+                ctx.fill();
+            }
+            ctx.restore();
+        }
+    }
+    function drawYumChaSteamer(ctx, cx, cy, w, o) {
+        const baseAlpha = null == (o = o || {}).baseAlpha ? 1 : o.baseAlpha, lidAlpha = null == o.lidAlpha ? 1 : o.lidAlpha, lift = Math.max(0, o.lift || 0), now = o.now || 0, ready = yumChaImageReady("steamer_closed"), base = yumChaImage("steamer_closed"), h = ready ? w * base.naturalHeight / base.naturalWidth : .9 * w, x = cx - w / 2, y = cy - h / 2;
+        if (ctx.save(), ctx.globalAlpha = Math.max(0, baseAlpha), ready ? ctx.drawImage(base, x, y, w, h) : (ctx.fillStyle = "#D9A45B", 
+        ctx.beginPath(), ctx.ellipse(cx, cy, .5 * w, .42 * h, 0, 0, 2 * Math.PI), ctx.fill()), 
+        lift > .01 && yumChaImageReady("steamer_lid")) {
+            const ocx = cx, ocy = y + .345 * h, rx = .435 * w, ry = .3 * h;
+            ctx.fillStyle = "#3C2412", ctx.beginPath(), ctx.ellipse(ocx, ocy, rx, ry, 0, 0, 2 * Math.PI), 
+            ctx.fill();
+            const fog = ctx.createRadialGradient(ocx, ocy, 0, ocx, ocy, rx);
+            fog.addColorStop(0, "rgba(255,255,255,0.97)"), fog.addColorStop(.7, "rgba(250,246,238,0.90)"), 
+            fog.addColorStop(1, "rgba(235,225,210,0.70)"), ctx.fillStyle = fog, ctx.beginPath(), 
+            ctx.ellipse(ocx, ocy, .93 * rx, .9 * ry, 0, 0, 2 * Math.PI), ctx.fill();
+            const lid = yumChaImage("steamer_lid"), lw = .94 * w, lh = lw * lid.naturalHeight / lid.naturalWidth, wob = Math.sin(now / 90) * Math.min(1, lift) * w * .006;
+            ctx.globalAlpha = Math.max(0, baseAlpha * lidAlpha), ctx.drawImage(lid, cx - lw / 2 + wob + (o.lidDx || 0), y - .005 * h - lift * h * .3, lw, lh), 
+            ctx.globalAlpha = 1, drawYumChaSteam(ctx, cx, y + .3 * h - lift * h * .1, .8 * w, Math.min(1, lift) * baseAlpha, now);
+        }
+        ctx.restore();
     }
     const bowlingStrike = {
         phase: "idle",
@@ -4837,11 +4971,11 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             const th = THEMES[id], btn = document.createElement("button");
             btn.className = "activity-card", btn.dataset.theme = id, btn.innerHTML = '<div class="ac-copy"><h3></h3><p class="ac-goal"></p></div><div class="ac-visual"><img loading="eager" decoding="async"></div>', 
             btn.querySelector("h3").textContent = themeShownTitle(th);
-            const goalText = isShoulderFlexionLevel() && th.shoulderGoal || th.goal;
-            btn.querySelector(".ac-goal").textContent = goalText;
-            const img = btn.querySelector(".ac-visual img"), shoulderCover = isShoulderFlexionLevel() && th.shoulderThumbnail;
+            const yumChaCardOff = "dimsum" === th.id && "teahouse" !== state.dimsumSceneMode, goalText = isShoulderFlexionLevel() && th.shoulderGoal || th.goal, cardGoal = yumChaCardOff ? th.goal : goalText;
+            btn.querySelector(".ac-goal").textContent = cardGoal;
+            const img = btn.querySelector(".ac-visual img"), shoulderCover = isShoulderFlexionLevel() && !yumChaCardOff && th.shoulderThumbnail;
             img.src = shoulderCover ? th.shoulderThumbnail : th.thumbnail, img.alt = shoulderCover && th.shoulderThumbnailAlt || th.thumbnailAlt, 
-            img.addEventListener("error", () => btn.querySelector(".ac-visual").remove()), btn.setAttribute("aria-label", themeShownTitle(th) + "：" + goalText), 
+            img.addEventListener("error", () => btn.querySelector(".ac-visual").remove()), btn.setAttribute("aria-label", themeShownTitle(th) + "：" + cardGoal), 
             btn.addEventListener("click", () => function(themeId) {
                 if (!themeAvailableForLevel(themeId)) return state.theme = "2" === state.level ? "bilateral" : "dimsum", 
                 renderActivityLibrary(), void showScreen("library");
@@ -5609,7 +5743,10 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                 resetTeahouseServe(), resetSupermarketStory(), resetDealTable(), photoCards.order = [], 
                 photoCards.pos = 0, photoCards.card = null, photoCards.shown = [ !1, !1, !1, !1 ], 
                 photoCards.pieceOrder = [], photoCards.revealed = 0, photoCards.collected = [], 
-                photoCards.stop = 0, photoCards.previewLift = null, resetPhotoCardAnim(), resetLaundryStory(), 
+                photoCards.stop = 0, photoCards.previewLift = null, resetPhotoCardAnim(), yumCha.bag = [], 
+                yumCha.bagPos = 0, yumCha.table = [], yumCha.order = [], yumCha.served = 0, yumCha.ticks = [], 
+                yumCha.delivered = [], yumCha.eaten = [], yumCha.bills = 0, yumCha.tableNo = 0, 
+                yumCha.previewLift = null, yumCha.arrivedMs = 0, resetYumChaAnim(), resetLaundryStory(), 
                 dimsumOrderBannerRect = null, dimsumOrder = null, dimsumPlateContents = [], dimsumOrdersCompleted = 0, 
                 dimsumOrderCelebrateUntil = 0, dimsumOrderTimerId && (clearTimeout(dimsumOrderTimerId), 
                 dimsumOrderTimerId = null), laundryOrderBannerRect = null, laundryOrder = null, 
@@ -7347,6 +7484,9 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             id: "dimsum",
             title: "茶樓飲茶",
             goal: "基本前伸：將手穩定送到目標",
+            shoulderGoal: "舉手揭蒸籠，睇下今籠係咩點心；同屋企人剔滿點心紙就埋單",
+            shoulderThumbnail: "img/dimsum/yum_cha_thumb.jpg",
+            shoulderThumbnailAlt: "揭開緊嘅蒸籠同五籠點心",
             itemWord: "點心",
             difficulty: "容易",
             targetStyle: "steamer",
@@ -8461,9 +8601,20 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             "idle" !== a.phase || photoCards.revealed >= 4 || (a.piece = photoCards.pieceOrder[photoCards.revealed], 
             photoCards.revealed++, a.phase = "look", a.startedMs = nowMs(), a.stage = 0, a.done = photoCards.revealed >= 4, 
             a.done && photoCards.collected.push(photoCards.card.id));
+        }(), isYumChaTheme() && function() {
+            if (!isYumChaTheme()) return;
+            ensureYumChaTable();
+            const a = yumCha.anim;
+            "idle" !== a.phase || yumCha.served >= 6 || (a.slot = yumCha.order[yumCha.served], 
+            a.member = yumCha.served % YUM_CHA_FAMILY.length, a.say = Math.floor(yumCha.eaten.length / YUM_CHA_FAMILY.length) % 3, 
+            yumCha.served++, a.phase = "serve", a.startedMs = nowMs(), a.stage = 0, a.done = yumCha.served >= 6, 
+            yumCha.eaten.push(yumCha.table[a.slot].id), a.done && yumCha.bills++);
         }();
         const started = nowMs();
-        shoulderRewardCycle.active = !0, shoulderRewardCycle.startedMs = started, shoulderRewardCycle.finishAtMs = started + ("bowlinglane" === state.theme ? Math.max(SHOULDER_REWARD_MIN_MS, 2700) : "basketball" === state.theme ? Math.max(SHOULDER_REWARD_MIN_MS, 2220) : "supermarket" === state.theme ? Math.max(SHOULDER_REWARD_MIN_MS, shopStory.rewardMs) : isTeahouseDimsumMode() ? Math.max(SHOULDER_REWARD_MIN_MS, 2520) : isPhotoCardTheme() ? Math.max(SHOULDER_REWARD_MIN_MS, function() {
+        shoulderRewardCycle.active = !0, shoulderRewardCycle.startedMs = started, shoulderRewardCycle.finishAtMs = started + ("bowlinglane" === state.theme ? Math.max(SHOULDER_REWARD_MIN_MS, 2700) : "basketball" === state.theme ? Math.max(SHOULDER_REWARD_MIN_MS, 2220) : "supermarket" === state.theme ? Math.max(SHOULDER_REWARD_MIN_MS, shopStory.rewardMs) : isYumChaTheme() ? Math.max(SHOULDER_REWARD_MIN_MS, function() {
+            const a = yumCha.anim;
+            return "idle" === a.phase ? 0 : 2500 + (a.done ? 2600 : 200);
+        }()) : isTeahouseDimsumMode() ? Math.max(SHOULDER_REWARD_MIN_MS, 2520) : isPhotoCardTheme() ? Math.max(SHOULDER_REWARD_MIN_MS, function() {
             const a = photoCards.anim;
             return "idle" === a.phase ? 0 : 950 + (a.done ? 5e3 : 350);
         }()) : "tsuenwan" === state.theme ? SHOULDER_PHOTO_REWARD_MS : isLaundryStoryTheme() ? Math.max(SHOULDER_REWARD_MIN_MS, laundryStory.rewardMs) : isDealTableTheme() ? Math.max(SHOULDER_REWARD_MIN_MS, function() {
@@ -8599,6 +8750,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     function showFeedback(correct) {
         if (correct && (isLaundryStoryTheme() || isLaundryPegStoryGame())) return;
         if (correct && isPhotoCardTheme()) return;
+        if (correct && isYumChaTheme()) return;
         const el = document.getElementById("feedbackOverlay");
         el.textContent = correct ? "✓" : "✕", el.classList.toggle("correct-feedback", correct), 
         el.style.opacity = "1", el.style.display = "flex", setTimeout(() => {
@@ -8766,6 +8918,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         if (isShoulderFlexionLevel()) {
             if (isDealTableTheme()) return void (targets = []);
             if (isPhotoCardTheme()) return void (targets = []);
+            if (isYumChaTheme()) return void (targets = []);
             if (isLaundryStoryTheme()) return void (targets = []);
             if ("bowlinglane" === state.theme || "basketball" === state.theme || "supermarket" === state.theme || isTeahouseDimsumMode()) return void (targets = []);
             const photoLarge = "tsuenwan" === state.theme && !0, tw = photoLarge ? Math.min(.9 * cw, 1080) : Math.min(.38 * cw, 320), th = photoLarge ? Math.min(.43 * ch, .62 * tw) : tw * ("steamer" === style ? .74 : .62), category = cats[0], laneX = photoLarge ? .5 * cw : cw * (portrait ? .68 : .58);
@@ -10653,6 +10806,14 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                         if ("idle" === a.phase) return;
                                         const done = a.done;
                                         a.piece >= 0 && (photoCards.shown[a.piece] = !0), resetPhotoCardAnim(), done && isPhotoCardTheme() && beginPhotoCard();
+                                    }(), function() {
+                                        const a = yumCha.anim;
+                                        if ("idle" === a.phase) return;
+                                        const done = a.done;
+                                        a.slot >= 0 && (yumCha.ticks[a.slot] = !0, yumCha.delivered.push({
+                                            slot: a.slot,
+                                            member: a.member
+                                        })), resetYumChaAnim(), yumCha.arrivedMs = nowMs(), done && isYumChaTheme() && beginYumChaTable();
                                     }(), shoulderFlexionCycleAwarded = !1, shoulderRewardCycle.reset());
                                     let item = foods.find(food => !food.removed);
                                     item || (spawnInitialFoods(), item = foods.find(food => !food.removed)), Math.max(1, Number(shoulderFlexionState.selectedTargetDeg) || 1);
@@ -11649,6 +11810,244 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                 ctx.restore();
                             }(ctx, cw, ch);
                             if (isLaundryStoryTheme()) return void drawLaundryStoryScene(ctx, cw, ch);
+                            if (isYumChaTheme()) return void function(ctx, cw, ch) {
+                                ensureYumChaTable();
+                                const g = function(cw, ch) {
+                                    const portrait = ch > cw, cssScale = cw / Math.max(1, gameCanvas.clientWidth || cw), cssW = cw / cssScale, cssH = ch / cssScale, phone = portrait && cssW <= 600, top = (portrait ? 176 : 84) * cssScale, pad = 16 * cssScale, font = Math.round(Math.max(15 * cssScale, .042 * Math.min(cw, ch)));
+                                    let sheet, sw = cw, sceneBottom = ch - .4 * pad;
+                                    if (phone) {
+                                        const pipW = (Math.min(.4 * cssW, 168) + 22) * cssScale, pipH = (Math.min(.25 * cssH, 210) + 22) * cssScale;
+                                        sheet = {
+                                            x: .5 * pad,
+                                            y: ch - pipH - .4 * pad,
+                                            w: cw - pipW - .5 * pad,
+                                            h: pipH,
+                                            cols: 1,
+                                            rows: 6
+                                        }, sceneBottom = sheet.y - .5 * pad;
+                                    } else if (portrait) {
+                                        const sheetH = Math.min(.2 * ch, 236 * cssScale);
+                                        sheet = {
+                                            x: .6 * pad,
+                                            y: ch - sheetH - .5 * pad,
+                                            w: cw - 1.2 * pad,
+                                            h: sheetH,
+                                            cols: 3,
+                                            rows: 2
+                                        }, sceneBottom = sheet.y - .5 * pad;
+                                    } else {
+                                        const sheetW = Math.max(7.2 * font, Math.min(.25 * cw, 10.5 * font));
+                                        sheet = {
+                                            x: cw - sheetW - pad,
+                                            y: top + .2 * pad,
+                                            w: sheetW,
+                                            h: ch - top - 1.2 * pad,
+                                            cols: 1,
+                                            rows: 6
+                                        }, sw = sheet.x - .6 * pad;
+                                    }
+                                    const scx = 0 + sw / 2, sh = sceneBottom - top, plateH = 1.9 * font, n = YUM_CHA_FAMILY.length, slotW = .92 * sw / n, fh = Math.max(30, Math.min(.36 * sh, .95 * slotW / .76)), tableTop = top + plateH + .88 * fh, ds = Math.max(20, Math.min(.6 * slotW, .52 * fh)), tableRx = .8 * sw, tableRy = Math.max(40, .92 * (ch - tableTop)), tableCy = tableTop + tableRy, edgeY = x => tableCy - tableRy * Math.sqrt(Math.max(0, 1 - Math.pow((x - scx) / tableRx, 2))), memberX = i => 0 + .04 * sw + slotW * (i + .5);
+                                    let spotMax = tableTop;
+                                    for (let i = 0; i < n; i++) spotMax = Math.max(spotMax, edgeY(memberX(i)) + .6 * ds);
+                                    const bigTop = spotMax + .5 * ds + .2 * pad, bigH = Math.max(40, Math.min(sceneBottom - bigTop - .2 * pad, .46 * sw * .92)), bigW = bigH / .92, bigX = scx, bigY = sceneBottom - .2 * pad - bigH / 2, members = [];
+                                    for (let i = 0; i < n; i++) {
+                                        const x = memberX(i), e = edgeY(x);
+                                        members.push({
+                                            x: x,
+                                            bottom: e + .08 * fh,
+                                            h: fh,
+                                            spotY: e + .5 * ds
+                                        });
+                                    }
+                                    return {
+                                        portrait: portrait,
+                                        cssScale: cssScale,
+                                        top: top,
+                                        pad: pad,
+                                        font: font,
+                                        sheet: sheet,
+                                        sx: 0,
+                                        sw: sw,
+                                        scx: scx,
+                                        sh: sh,
+                                        sceneBottom: sceneBottom,
+                                        plateH: plateH,
+                                        slotW: slotW,
+                                        fh: fh,
+                                        tableTop: tableTop,
+                                        ds: ds,
+                                        tableRx: tableRx,
+                                        tableRy: tableRy,
+                                        tableCy: tableCy,
+                                        bigW: bigW,
+                                        bigH: bigH,
+                                        bigX: bigX,
+                                        bigY: bigY,
+                                        members: members
+                                    };
+                                }(cw, ch), a = yumCha.anim, now = nowMs(), active = "idle" !== a.phase, t = active ? now - a.startedMs : 0;
+                                !function(g, cw, ch, t) {
+                                    const a = yumCha.anim;
+                                    "idle" !== a.phase && (a.stage < 1 && (a.stage = 1, playDealClack()), a.stage < 2 && t >= 147 && (a.stage = 2, 
+                                    playDealChime(!1), speakCantonese(yumChaDishName(yumCha.table[a.slot]) + "！"), fxBurst(g.bigX, g.bigY - .15 * g.bigH, {
+                                        count: 18
+                                    })), a.stage < 3 && t >= 1700 && (a.stage = 3, playDealClack()), a.done && a.stage < 4 && t >= 2500 && (a.stage = 4, 
+                                    playDealChime(!0), playApplauseSound(), speakCantonese(dealText("食飽喇，埋單！", "All done. Bill, please!")), 
+                                    fxBurst(g.scx, g.bigY - .3 * g.bigH, {
+                                        count: 46,
+                                        speed: 6.5
+                                    })), a.done && a.stage < 5 && t >= 3200 && (a.stage = 5, fxBurst(g.sx + .24 * g.sw, g.tableTop, {
+                                        count: 30,
+                                        speed: 5.5
+                                    })), a.done && a.stage < 6 && t >= 3900 && (a.stage = 6, fxBurst(g.sx + .76 * g.sw, g.tableTop, {
+                                        count: 30,
+                                        speed: 5.5
+                                    })));
+                                }(g, 0, 0, t);
+                                const dish = active ? yumCha.table[a.slot] : null, billing = active && a.done && t >= 2500, fontFace = 'px "PingFang TC","Noto Sans TC",sans-serif';
+                                ctx.save(), ctx.beginPath(), ctx.rect(0, 0, cw, ch), ctx.clip(), ctx.imageSmoothingEnabled = !0, 
+                                ctx.imageSmoothingQuality = "high", function(ctx, cw, ch, g) {
+                                    const wallH = g.tableTop + .1 * g.fh, wall = ctx.createLinearGradient(0, 0, 0, wallH);
+                                    if (wall.addColorStop(0, "#F4E6C8"), wall.addColorStop(1, "#E6CFA4"), ctx.fillStyle = wall, 
+                                    ctx.fillRect(0, 0, cw, wallH), imgTeahouseBg.complete && imgTeahouseBg.naturalWidth > 0) {
+                                        const iw = imgTeahouseBg.naturalWidth, srcH = .235 * imgTeahouseBg.naturalHeight, sc = Math.max(cw / iw, wallH / srcH), dw = iw * sc, dh = srcH * sc;
+                                        ctx.drawImage(imgTeahouseBg, 0, 0, iw, srcH, (cw - dw) / 2, wallH - dh, dw, dh);
+                                    }
+                                    ctx.fillStyle = "rgba(60,30,10,0.10)", ctx.fillRect(0, 0, cw, wallH);
+                                    const floor = ctx.createLinearGradient(0, wallH, 0, ch);
+                                    floor.addColorStop(0, "#7C2F25"), floor.addColorStop(1, "#4F1D17"), ctx.fillStyle = floor, 
+                                    ctx.fillRect(0, wallH, cw, ch - wallH);
+                                }(ctx, cw, ch, g), YUM_CHA_FAMILY.forEach((f, i) => {
+                                    const m = g.members[i];
+                                    let hop = 0;
+                                    if (billing) hop = Math.abs(Math.sin((t - 2500) / 240 + .8 * i)) * m.h * .05; else if (active && a.member === i && t >= 1700) {
+                                        const q = clamp01((t - 1700) / 800);
+                                        hop = Math.abs(Math.sin(q * Math.PI * 2)) * m.h * .07 * (1 - .4 * q);
+                                    }
+                                    if (yumChaImageReady(f.file)) {
+                                        const im = yumChaImage(f.file), w = m.h * im.naturalWidth / im.naturalHeight;
+                                        ctx.drawImage(im, m.x - w / 2, m.bottom - m.h - hop, w, m.h);
+                                    }
+                                }), function(ctx, cw, ch, g) {
+                                    const rx = g.tableRx, ry = g.tableRy, cy = g.tableCy;
+                                    ctx.save(), ctx.fillStyle = "rgba(0,0,0,0.22)", ctx.beginPath(), ctx.ellipse(g.scx, cy + .5 * g.pad, 1.02 * rx, ry, 0, 0, 2 * Math.PI), 
+                                    ctx.fill();
+                                    const cloth = ctx.createLinearGradient(0, g.tableTop, 0, ch);
+                                    cloth.addColorStop(0, "#F3E6CF"), cloth.addColorStop(.25, "#FFF8EA"), cloth.addColorStop(1, "#F6EAD3"), 
+                                    ctx.fillStyle = cloth, ctx.beginPath(), ctx.ellipse(g.scx, cy, rx, ry, 0, 0, 2 * Math.PI), 
+                                    ctx.fill(), ctx.lineWidth = Math.max(2, .1 * g.font), ctx.strokeStyle = "rgba(176,142,92,0.55)", 
+                                    ctx.beginPath(), ctx.ellipse(g.scx, cy, rx, ry, 0, 0, 2 * Math.PI), ctx.stroke(), 
+                                    ctx.fillStyle = "rgba(190,214,214,0.30)", ctx.strokeStyle = "rgba(120,150,150,0.40)", 
+                                    ctx.beginPath(), ctx.ellipse(g.bigX, g.bigY + .1 * g.bigH, .78 * g.bigW, .52 * g.bigH, 0, 0, 2 * Math.PI), 
+                                    ctx.fill(), ctx.stroke(), ctx.restore();
+                                }(ctx, 0, ch, g);
+                                const counts = YUM_CHA_FAMILY.map(() => 0);
+                                if (yumCha.delivered.forEach(d => {
+                                    const s = yumChaSpot(g, d.member, counts[d.member]++), dd = yumCha.table[d.slot];
+                                    dd && yumChaSprite(ctx, dd.id, s.x, s.y, g.ds, 1);
+                                }), active) {
+                                    if (dish) {
+                                        const k = counts[a.member] || 0, spot = yumChaSpot(g, a.member, k);
+                                        if (t < 1050) {
+                                            const q = t / 1050, lidQ = clamp01(q / .4), dishQ = clamp01((q - .12) / .3);
+                                            if (dishQ < 1 && drawYumChaSteamer(ctx, g.bigX, g.bigY, g.bigW, {
+                                                lift: 1 + 3.2 * lidQ,
+                                                lidAlpha: 1 - lidQ,
+                                                lidDx: lidQ * g.bigW * .18,
+                                                baseAlpha: 1 - dishQ,
+                                                now: now
+                                            }), dishQ > 0) {
+                                                const pop = (.86 + .14 * dishQ) * (1 + .07 * Math.sin(clamp01((q - .12) / .55) * Math.PI));
+                                                yumChaSprite(ctx, dish.id, g.bigX, g.bigY, g.bigW * pop, dishQ), drawYumChaSteam(ctx, g.bigX, g.bigY - .12 * g.bigH, .8 * g.bigW, Math.max(0, 1 - .7 * q), now);
+                                            }
+                                        } else if (t < 1700) {
+                                            const q = clamp01((t - 1050) / 650), e = 1 - Math.pow(1 - q, 2.2);
+                                            yumChaSprite(ctx, dish.id, g.bigX + (spot.x - g.bigX) * e, g.bigY + (spot.y - g.bigY) * e - Math.sin(q * Math.PI) * g.bigH * .12, g.bigW + (g.ds - g.bigW) * e, 1);
+                                        } else {
+                                            const q = clamp01((t - 1700) / 240);
+                                            if (yumChaSprite(ctx, dish.id, spot.x, spot.y, g.ds * (1 + .12 * Math.sin(q * Math.PI)), 1), 
+                                            !billing) {
+                                                const m = g.members[a.member], say = YUM_CHA_FAMILY[a.member].says[a.say] || YUM_CHA_FAMILY[a.member].says[0], sayText = dealText(say[0], say[1]);
+                                                ctx.save(), ctx.font = "900 " + Math.round(.95 * g.font) + fontFace;
+                                                const bw = Math.max(3.4 * g.font, ctx.measureText(sayText).width + 1.3 * g.font), bh = 1.9 * g.font, bx = Math.max(g.sx + bw / 2 + .3 * g.pad, Math.min(g.sx + g.sw - bw / 2 - .3 * g.pad, m.x)), by = m.bottom - .24 * m.h, sc = .6 + .4 * q;
+                                                ctx.translate(bx, by), ctx.scale(sc, sc), ctx.fillStyle = "#FFFFFF", ctx.strokeStyle = "#1A6B5A", 
+                                                ctx.lineWidth = Math.max(3, .12 * g.font), ctx.beginPath(), ctx.moveTo(.45 * -g.font, -bh / 2 + 1), 
+                                                ctx.lineTo(0, -bh / 2 - .55 * g.font), ctx.lineTo(.45 * g.font, -bh / 2 + 1), ctx.closePath(), 
+                                                ctx.fill(), ctx.stroke(), rrPath(ctx, -bw / 2, -bh / 2, bw, bh, .42 * bh), ctx.fill(), 
+                                                ctx.stroke(), ctx.fillStyle = "#FFFFFF", ctx.fillRect(.36 * -g.font, -bh / 2 - 1, .72 * g.font, .2 * g.font), 
+                                                ctx.fillStyle = "#B3402A", ctx.textAlign = "center", ctx.textBaseline = "middle", 
+                                                ctx.fillText(sayText, 0, .04 * bh, bw - .6 * g.font), ctx.restore();
+                                            }
+                                        }
+                                    }
+                                } else if (yumCha.served < 6) {
+                                    const p = null != yumCha.previewLift ? clamp01(yumCha.previewLift) : shoulderRewardCycle.active ? 0 : clamp01(Number(shoulderFlexionState.progress) || 0), arrive = clamp01((now - yumCha.arrivedMs) / 420), ae = 1 - Math.pow(1 - arrive, 2.2), pulse = .5 + .5 * Math.sin(now / 200);
+                                    ctx.save(), ctx.strokeStyle = "rgba(255,196,60," + (.45 + .4 * pulse).toFixed(3) + ")", 
+                                    ctx.lineWidth = Math.max(4, .02 * g.bigW), ctx.setLineDash([ Math.max(8, .06 * g.bigW), Math.max(6, .04 * g.bigW) ]), 
+                                    ctx.beginPath(), ctx.ellipse(g.bigX, g.bigY + .1 * g.bigH, .62 * g.bigW, .44 * g.bigH, 0, 0, 2 * Math.PI), 
+                                    ctx.stroke(), ctx.restore(), drawYumChaSteamer(ctx, g.bigX - (1 - ae) * (g.bigX + g.bigW), g.bigY, g.bigW, {
+                                        lift: p,
+                                        now: now
+                                    });
+                                }
+                                const pw = Math.min(.86 * g.sw, 13.5 * g.font), ph = .84 * g.plateH, py = g.top + .08 * g.plateH, named = active && t >= 147, plateText = billing ? dealText("食飽喇，埋單！", "All done. Bill, please!") : named ? yumChaDishName(dish) + dealText("！", "!") : dealText("舉手揭蒸籠 · 今籠係咩？", "Lift to open · What is inside?");
+                                if (ctx.fillStyle = named || billing ? "rgba(179,38,30,0.95)" : "rgba(20,82,70,0.94)", 
+                                rrPath(ctx, g.scx - pw / 2, py, pw, ph, ph / 2), ctx.fill(), ctx.fillStyle = "#FFFFFF", 
+                                ctx.textAlign = "center", ctx.textBaseline = "middle", ctx.font = "900 " + Math.round(g.font * (named || billing ? 1.14 : 1.02)) + fontFace, 
+                                ctx.fillText(plateText, g.scx, py + .54 * ph, pw - g.font), function(ctx, g, t, active) {
+                                    const s = g.sheet, a = yumCha.anim, f = g.font, wide = s.cols > 1, headH = f * (wide ? 1.5 : g.portrait ? 1.45 : 1.8), footH = wide ? 0 : f * (g.portrait ? 1.3 : 1.5);
+                                    let ticked = 0;
+                                    yumCha.table.forEach((d, i) => {
+                                        (yumCha.ticks[i] || active && a.slot === i && t >= 1700) && ticked++;
+                                    });
+                                    const left = Math.max(0, 6 - ticked), titleText = dealText("點心紙", "Order sheet"), tableText = dealText("第 " + yumCha.tableNo + " 枱", "Table " + yumCha.tableNo), leftText = left > 0 ? dealText("仲差 " + left + " 籠", left + " to go") : dealText("食齊喇！", "All served!");
+                                    ctx.save(), ctx.shadowColor = "rgba(0,0,0,0.35)", ctx.shadowBlur = .5 * f, ctx.shadowOffsetY = .12 * f, 
+                                    ctx.fillStyle = "#FFFDF4", rrPath(ctx, s.x, s.y, s.w, s.h, .45 * f), ctx.fill(), 
+                                    ctx.shadowColor = "transparent", ctx.shadowBlur = 0, ctx.shadowOffsetY = 0, ctx.save(), 
+                                    rrPath(ctx, s.x, s.y, s.w, s.h, .45 * f), ctx.clip(), ctx.fillStyle = "#B3261E", 
+                                    ctx.fillRect(s.x, s.y, s.w, headH), ctx.restore(), ctx.textBaseline = "middle", 
+                                    ctx.fillStyle = "#FFFFFF", ctx.font = "900 " + Math.round(.98 * f) + 'px "PingFang TC","Noto Sans TC",sans-serif', 
+                                    ctx.textAlign = "left", ctx.fillText(titleText, s.x + .6 * f, s.y + .54 * headH, .42 * s.w), 
+                                    ctx.font = "800 " + Math.round(.82 * f) + 'px "PingFang TC","Noto Sans TC",sans-serif', 
+                                    wide ? (ctx.textAlign = "center", ctx.fillText(tableText, s.x + .52 * s.w, s.y + .54 * headH, .24 * s.w), 
+                                    ctx.textAlign = "right", ctx.fillStyle = "#FFE27A", ctx.fillText(leftText, s.x + s.w - .6 * f, s.y + .54 * headH, .3 * s.w)) : (ctx.textAlign = "right", 
+                                    ctx.fillText(tableText, s.x + s.w - .6 * f, s.y + .54 * headH, .44 * s.w));
+                                    const gridY = s.y + headH, gridH = s.h - headH - footH, cellW = s.w / s.cols, cellH = gridH / s.rows;
+                                    yumCha.table.forEach((d, i) => {
+                                        const col = i % s.cols, row = Math.floor(i / s.cols), x = s.x + col * cellW, y = gridY + row * cellH, isNow = active && a.slot === i, tick = yumCha.ticks[i] || isNow && t >= 1700;
+                                        isNow && t >= 147 && !yumCha.ticks[i] && (ctx.fillStyle = "rgba(255,226,122,0.55)", 
+                                        ctx.fillRect(x + .15 * f, y + .06 * cellH, cellW - .3 * f, .88 * cellH)), ctx.strokeStyle = "rgba(120,90,60,0.28)", 
+                                        ctx.lineWidth = Math.max(1, .04 * f), ctx.beginPath(), ctx.moveTo(x + .4 * f, y + cellH), 
+                                        ctx.lineTo(x + cellW - .4 * f, y + cellH), ctx.stroke();
+                                        const b = Math.min(.62 * cellH, 1.25 * f), bx = x + .55 * f, by = y + (cellH - b) / 2;
+                                        if (ctx.fillStyle = "#FFFFFF", ctx.strokeStyle = "#8A6A45", ctx.lineWidth = Math.max(2, .08 * f), 
+                                        rrPath(ctx, bx, by, b, b, .16 * b), ctx.fill(), ctx.stroke(), tick) {
+                                            const pop = isNow ? clamp01((t - 1700) / 200) : 1;
+                                            !function(ctx, bx, by, b, scale) {
+                                                ctx.save(), ctx.translate(bx + b / 2, by + b / 2), ctx.scale(scale, scale), ctx.translate(-b / 2, -b / 2), 
+                                                ctx.lineCap = "round", ctx.lineJoin = "round", ctx.lineWidth = Math.max(3, .17 * b), 
+                                                ctx.strokeStyle = "#D0312D", ctx.beginPath(), ctx.moveTo(.14 * b, .52 * b), ctx.lineTo(.42 * b, .8 * b), 
+                                                ctx.lineTo(.94 * b, .1 * b), ctx.stroke(), ctx.restore();
+                                            }(ctx, bx, by, b, isNow ? 1.6 - .6 * pop : 1);
+                                        }
+                                        const nameText = yumChaDishName(d);
+                                        ctx.textAlign = "left", ctx.fillStyle = tick ? "#8B8072" : "#3A2A12", ctx.font = "800 " + Math.round(Math.min(.98 * f, .52 * cellH)) + 'px "PingFang TC","Noto Sans TC",sans-serif', 
+                                        ctx.fillText(nameText, bx + b + .4 * f, y + .53 * cellH, Math.max(10, cellW - b - 1.5 * f));
+                                    }), wide || (ctx.textAlign = "center", ctx.fillStyle = "#B3261E", ctx.font = "900 " + Math.round(.95 * f) + 'px "PingFang TC","Noto Sans TC",sans-serif', 
+                                    ctx.fillText(leftText, s.x + s.w / 2, s.y + s.h - .52 * footH, s.w - f)), ctx.restore();
+                                }(ctx, g, t, active), billing) {
+                                    const q = clamp01((t - 2500) / 260), sc = 1.7 - .7 * q, stampText = dealText("埋單", "PAID"), w = Math.min(.62 * g.sw, 8.5 * g.font), h = .46 * w;
+                                    ctx.save(), ctx.translate(g.scx, g.bigY - .05 * g.bigH), ctx.rotate(-.16), ctx.scale(sc, sc), 
+                                    ctx.globalAlpha = q, ctx.fillStyle = "rgba(255,253,244,0.90)", rrPath(ctx, -w / 2, -h / 2, w, h, .16 * h), 
+                                    ctx.fill(), ctx.strokeStyle = "#D0312D", ctx.lineWidth = Math.max(5, .035 * w), 
+                                    rrPath(ctx, -w / 2, -h / 2, w, h, .16 * h), ctx.stroke(), ctx.lineWidth = Math.max(2, .012 * w), 
+                                    rrPath(ctx, -w / 2 + .05 * w, -h / 2 + .05 * w, w - .1 * w, h - .1 * w, .1 * h), 
+                                    ctx.stroke(), ctx.fillStyle = "#D0312D", ctx.textAlign = "center", ctx.textBaseline = "middle", 
+                                    ctx.font = "900 " + Math.round(.56 * h) + fontFace, ctx.fillText(stampText, 0, .04 * h, .8 * w), 
+                                    ctx.restore();
+                                }
+                                fxUpdateDraw(ctx), ctx.restore();
+                            }(ctx, cw, ch);
                             if (isTeahouseDimsumMode()) return void function(ctx, cw, ch) {
                                 !function() {
                                     if ("idle" === teahouseServe.phase) return;
@@ -11762,6 +12161,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                             if (isSupermarketTheme()) continue;
                             if (isDealTableTheme()) continue;
                             if (isPhotoCardTheme()) continue;
+                            if (isYumChaTheme()) continue;
                             if (isLaundryStoryTheme()) continue;
                             if (isTeahouseDimsumMode() && "idle" !== teahouseServe.phase) continue;
                             ctx.save();
@@ -11870,7 +12270,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                         el.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:99998;pointer-events:none;background:rgba(10,20,18,.82);color:#e8fff6;font:12px/1.4 -apple-system,"PingFang TC",sans-serif;padding:6px 9px;border-radius:10px;white-space:pre;', 
                         document.body.appendChild(el), framePerf.overlayEl = el);
                         const p = framePerfSnapshot();
-                        el.textContent = `perf v144  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}\n左右手檢查 ${"off" === p.hand.check ? "關" : "開"}  鎖定手形 ${p.hand.lockSize || "-"}  大小拒絕 ${p.hand.sizeRejected}  遠處拒絕 ${p.hand.farRejected}` + (p.tool ? `\n衣夾 近指 ${p.tool.near} 放手≥${p.tool.nearExit} 張開≥${p.tool.nearOpen}  遠指 ${p.tool.far} 放手≥${p.tool.farExit} 張開≥${p.tool.farOpen}  門檻 ${p.tool.source}\n衣夾 合併 ${p.tool.combo} 拎起≤${p.tool.enter} 放手閘≥${p.tool.gate}\n衣夾 相對 基線 近${p.tool.relBaseNear} 遠${p.tool.relBaseFar} 合併${p.tool.relBaseCombo} 相對放手 ${p.tool.relOpen}` : ""), 
+                        el.textContent = `perf v145  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}\n左右手檢查 ${"off" === p.hand.check ? "關" : "開"}  鎖定手形 ${p.hand.lockSize || "-"}  大小拒絕 ${p.hand.sizeRejected}  遠處拒絕 ${p.hand.farRejected}` + (p.tool ? `\n衣夾 近指 ${p.tool.near} 放手≥${p.tool.nearExit} 張開≥${p.tool.nearOpen}  遠指 ${p.tool.far} 放手≥${p.tool.farExit} 張開≥${p.tool.farOpen}  門檻 ${p.tool.source}\n衣夾 合併 ${p.tool.combo} 拎起≤${p.tool.enter} 放手閘≥${p.tool.gate}\n衣夾 相對 基線 近${p.tool.relBaseNear} 遠${p.tool.relBaseFar} 合併${p.tool.relBaseCombo} 相對放手 ${p.tool.relOpen}` : ""), 
                         el.style.display = state.running ? "block" : "none";
                     }(perfT2);
                 } catch (e) {
@@ -12829,6 +13229,12 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                 return n > 0 ? dealText("香港遊：今次去咗 " + n + " 個地方，集到 " + n + " 張閃咭。", "Hong Kong tour: " + n + " places visited and " + n + " cards collected today.") : dealText("香港遊：差少少就影到第一張閃咭，下次繼續。", "Hong Kong tour: almost got the first card. Continue next time.");
             }() : "";
             cardLine && (dealSummary.hidden = !1, dealSummary.textContent = cardLine);
+            const yumLine = isYumChaTheme() ? function() {
+                if (!yumCha.table.length && !yumCha.eaten.length) return "";
+                const n = yumCha.eaten.length, m = yumCha.bills;
+                return n > 0 && m > 0 ? dealText("飲茶：今次同屋企人食咗 " + n + " 籠點心，埋咗 " + m + " 次單。", "Yum cha: " + n + " baskets of dim sum shared and " + m + (m > 1 ? " bills" : " bill") + " paid today.") : n > 0 ? dealText("飲茶：今次同屋企人食咗 " + n + " 籠點心。", "Yum cha: " + n + (n > 1 ? " baskets" : " basket") + " of dim sum shared today.") : dealText("飲茶：差少少就揭到第一籠，下次繼續。", "Yum cha: almost opened the first basket. Continue next time.");
+            }() : "";
+            yumLine && (dealSummary.hidden = !1, dealSummary.textContent = yumLine);
         }
         !function() {
             const box = document.getElementById("cardAlbumSummary");
@@ -12845,6 +13251,29 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                 const st = document.createElement("span");
                 st.className = "album-stars", st.textContent = "★".repeat(card.stars), fig.appendChild(im), 
                 fig.appendChild(cap), fig.appendChild(st), box.appendChild(fig);
+            });
+        }(), function() {
+            const box = document.getElementById("cardAlbumSummary");
+            if (!box || !isYumChaTheme()) return;
+            for (;box.firstChild; ) box.removeChild(box.firstChild);
+            const list = function() {
+                const seen = {}, out = [];
+                return yumCha.eaten.forEach(id => {
+                    if (!seen[id]) {
+                        seen[id] = 1;
+                        const d = YUM_CHA_DISHES.find(x => x.id === id);
+                        d && out.push(d);
+                    }
+                }), out;
+            }().slice(-24);
+            box.hidden = !list.length, list.forEach(dish => {
+                const fig = document.createElement("figure");
+                fig.className = "album-card dish-card";
+                const im = document.createElement("img");
+                im.src = "img/dimsum/" + dish.id + ".png", im.alt = yumChaDishName(dish), im.loading = "lazy";
+                const cap = document.createElement("figcaption");
+                cap.textContent = yumChaDishName(dish), fig.appendChild(im), fig.appendChild(cap), 
+                box.appendChild(fig);
             });
         }(), showScreen("result");
     }
@@ -15095,7 +15524,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
 <script src="level4-three-games-module.js"></script>
 <script>
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
-  const LEVEL_APP_BUILD = "v144-20261126-hk-tour-cards";
+  const LEVEL_APP_BUILD = "v145-20261127-yum-cha";
   const levelAppHadController = Boolean(navigator.serviceWorker.controller);
   let levelAppReloading = false;
 
