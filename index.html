@@ -579,6 +579,20 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
 .game-stage.simple-words.public-clean-hud.patient-card-instruction .adv-panel{ display:none !important; }
 .game-stage.simple-words .adaptive-streak{ display:none !important; }
 .game-stage.simple-words.patient-shoulder-hud .hud-item:nth-child(-n+2){ display:none; }
+.track-chip{
+  position:absolute; left:50%; top:12px; transform:translateX(-50%); z-index:34;
+  max-width:92%; padding:7px 20px; border-radius:999px; box-sizing:border-box;
+  background:#FFF3C4; color:#5B3A00; border:3px solid #E0A100;
+  box-shadow:0 4px 14px rgba(0,0,0,.20);
+  font:900 clamp(22px,max(2.2vw,2.2vh),26px)/1.2 "PingFang TC","Noto Sans TC",sans-serif;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; pointer-events:none;
+}
+.track-chip[hidden]{ display:none; }
+.voice-warning{
+  margin:8px 0; padding:9px 12px; border-radius:10px; border:2px solid #E0A100;
+  background:#FFF8DC; color:#5B3A00; font-weight:700; font-size:15px; line-height:1.4; text-align:left;
+}
+.voice-warning[hidden]{ display:none; }
 .patient-game-instruction{
   display:none; position:absolute; left:14px; top:14px; z-index:31;
   max-width:44vw; padding:9px 14px; border-radius:14px;
@@ -1479,11 +1493,11 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
           </button>
           <button class="option-btn" type="button" data-laundry-difficulty="zones2">
             着燈兩架
-            <small>進階一：左右兩個架，夾到閃燈嗰個架先算啱</small>
+            <small>進階一：左右兩個架，擺到着燈嗰個架先算啱</small>
           </button>
           <button class="option-btn" type="button" data-laundry-difficulty="zones">
             着燈四架
-            <small>進階二：四個架（2×2），夾到閃燈嗰個架先算啱</small>
+            <small>進階二：四個架（2×2），擺到着燈嗰個架先算啱</small>
           </button>
           <button class="option-btn" type="button" data-laundry-difficulty="sort2">
             分類兩架
@@ -1514,19 +1528,19 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     </div>
     <div class="card collapsible collapsed" id="cookSqueezeCard" data-accordion="cook-squeeze" hidden>
       <h2><span>煮飯：握力器揸幾多下</span>
-        <span class="selected-preview" id="preview-cook-squeeze">中（44 下）</span></h2>
+        <span class="selected-preview" id="preview-cook-squeeze">中（22 下）</span></h2>
       <div class="card-body">
         <div class="option-row" id="cookSqueezeOptions">
           <button class="option-btn" type="button" data-cook-squeeze="less">
-            少（25 下）
+            少（13 下）
             <small>每步次數約減半（最少 1 下），適合手較易攰嘅病人</small>
           </button>
           <button class="option-btn selected" type="button" data-cook-squeeze="normal">
-            中（44 下）
+            中（22 下）
             <small>抓鬆飯 3 → 打蛋 4 → 拌蛋 4 → 洗蔥 3 → 切蔥 5 → 熱鍋 2 → 落油 2 → 倒飯 3 → 落鹽 4 → 落蔥花 5 → 熄火 1 → 上碟 8</small>
           </button>
           <button class="option-btn" type="button" data-cook-squeeze="more">
-            多（69 下）
+            多（35 下）
             <small>每步次數約 ×1.5</small>
           </button>
         </div>
@@ -1703,6 +1717,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
           <button type="button" class="secondary" id="btnCameraReturn" data-testid="button-camera-return">返回上一頁</button>
         </div>
       </div>
+      <div id="voiceWarning" class="voice-warning" role="note" hidden data-testid="note-voice-warning"></div>
       <button class="btn-primary" id="btnStartGame" disabled>開始遊戲 ▶</button>
       <!-- v121: therapist demonstrated with their own hand and the tracker locked
            onto it — restart the calibration on this screen without leaving it. -->
@@ -1741,6 +1756,8 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
       <canvas id="gameCanvas"></canvas>
       <div id="patientGameInstruction" class="patient-game-instruction"
         role="status" aria-live="polite"></div>
+      <div id="trackChip" class="track-chip" role="status" aria-live="polite" hidden
+        data-testid="status-tracking-prompt"></div>
       <div class="cook-motion-guide" id="cookMotionGuide" aria-hidden="true"
         data-testid="panel-cooking-motion-guide">
         <img id="cookMotionGif" alt="">
@@ -2604,7 +2621,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                 scene: "cashier",
                 item: line.id,
                 action: "unload",
-                text: "抬高手，將" + it.label + "由車攞出放上收銀枱",
+                text: "抬高手，放" + it.label + "上收銀枱",
                 prompt: "攞出" + it.label
             });
         }), steps.push({
@@ -2957,8 +2974,8 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         const n = LAUNDRY_LOAD_SIZES[sizeKey] || 4;
         return Math.max(1, round || 1) > 1 ? storyRoundPick(LAUNDRY_STORY_POOL, n, round) : LAUNDRY_STORY_POOL.slice(0, n);
     }
-    function buildLaundrySteps(list, round) {
-        const steps = [], n = list.length, r = Math.max(1, round || 1), rep = (scene, action, stage, item, k, text, en) => steps.push({
+    function buildLaundrySteps(list, round, opts) {
+        const steps = [], n = list.length, r = Math.max(1, round || 1), autoWash = !(!opts || !opts.autoWash), rep = (scene, action, stage, item, k, text, en) => steps.push({
             kind: "rep",
             scene: scene,
             action: action,
@@ -2990,18 +3007,18 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             sub: "一籃污糟衫，逐件放入洗衣機",
             subEn: "Put the clothes into the washer one by one"
         }), list.forEach((id, k) => rep("wash", "load", 0, id, k, "抬高手，將衫放入洗衣機", "Lift your arm: put a garment into the washer")), 
-        rep("wash", "press", 1, null, 0, "抬高手，撳掣開機", "Lift your arm: press the start button"), 
+        autoWash || rep("wash", "press", 1, null, 0, "抬高手，撳掣開機", "Lift your arm: press the start button"), 
         steps.push({
             kind: "scene",
             scene: "wash",
             cut: "washing",
             stage: 1,
             ms: 3800,
-            text: "洗緊衫，休息一陣",
-            en: "Washing. Take a rest",
+            text: "洗緊衫，放低隻手休息一陣",
+            en: "Washing. Lower your arm and rest",
             sub: "洗衣機轉緊",
             subEn: "The washer is spinning"
-        }), list.forEach((id, k) => rep("wash", "unload", 1, id, k, "抬高手，將衫由洗衣機攞出嚟", "Lift your arm: take a garment out of the washer")), 
+        }), list.forEach((id, k) => rep("wash", "unload", 1, id, k, "抬高手，攞出洗衣機啲衫", "Lift your arm: take the clothes out of the washer")), 
         steps.push({
             kind: "scene",
             scene: "balcony",
@@ -3019,8 +3036,8 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             cut: "sun",
             stage: 3,
             ms: 6200,
-            text: "太陽出嚟喇，休息一陣",
-            en: "The sun is out. Take a rest",
+            text: "太陽出嚟喇，放低隻手休息一陣",
+            en: "The sun is out. Lower your arm and rest",
             sub: "等太陽晒乾啲衫",
             subEn: "Let the sun dry the clothes"
         }), list.forEach((id, k) => rep("balcony", "collect", 4, id, k, "抬高手，將衫收落嚟", "Lift your arm: take a garment down")), 
@@ -3066,8 +3083,9 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     function beginLaundryStory(roundsDone) {
         resetLaundryStory(), laundryStory.rounds = Math.max(0, roundsDone || 0), laundryStory.loadSize = laundryLoadSizeKey(), 
         laundryStory.list = buildLaundryList(laundryStory.loadSize, laundryStory.rounds + 1), 
-        laundryStory.steps = buildLaundrySteps(laundryStory.list, laundryStory.rounds + 1), 
-        laundryStory.basket = laundryStory.list.slice(), laundryStory.pole = laundryStory.list.map(() => null), 
+        laundryStory.steps = buildLaundrySteps(laundryStory.list, laundryStory.rounds + 1, {
+            autoWash: isLaundryPegStoryGame()
+        }), laundryStory.basket = laundryStory.list.slice(), laundryStory.pole = laundryStory.list.map(() => null), 
         laundryStory.shelf = laundryStory.list.map(() => null), laundryStory.active = !0, 
         laundryStory.stepStartedMs = nowMs();
     }
@@ -3086,7 +3104,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         laundryStory.washed = !0), "sun" === prev.cut && (laundryStory.dry = !0)), laundryStory.idx = Math.min(i, laundryStory.steps.length - 1), 
         laundryStory.stepStartedMs = nowMs();
         const cur = laundryCurrentStep();
-        cur && (laundryStory.stage = cur.stage);
+        cur && (laundryStory.stage = cur.stage), cur && "washing" === cur.cut && (laundryStory.washOn = !0);
     }
     function laundryTake(arr, id) {
         const i = arr.indexOf(id);
@@ -3369,7 +3387,8 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                     laundryStory.spokenKey = key;
                     const pegSay = isLaundryPegStoryGame() && "rep" === cur.kind && LAUNDRY_PEG_TEXT[cur.action];
                     try {
-                        speakCantonese(pegSay ? pegSay.say : storySay(cur.text));
+                        "rep" === cur.kind ? stepSay(pegSay ? pegSay.say : storySay(cur.text)) : (stepRepeatClear(), 
+                        speakCantonese(storySay(cur.text)));
                     } catch (e) {}
                 }
             }
@@ -3652,52 +3671,45 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     }
     const LAUNDRY_PEG_TEXT = {
         load: {
-            pick: "夾起一件衫",
+            pick: "攞起一件衫",
             place: "放入洗衣機",
-            say: "夾起一件衫，放入洗衣機",
-            pickEn: "Clip a garment",
+            say: "攞起一件衫，放入洗衣機",
+            pickEn: "Pick up a garment",
             placeEn: "Put it into the washer"
         },
-        press: {
-            pick: "去開機掣，夾一下",
-            place: "",
-            say: "去開機掣度，夾一下開機",
-            pickEn: "Squeeze at the start button",
-            placeEn: ""
-        },
         unload: {
-            pick: "夾起洗衣機入面件衫",
+            pick: "攞起洗衣機入面件衫",
             place: "放返入衫籃",
-            say: "夾起洗衣機入面件衫，放返入衫籃",
-            pickEn: "Clip a garment in the washer",
+            say: "攞起洗衣機入面件衫，放返入衫籃",
+            pickEn: "Pick up a garment in the washer",
             placeEn: "Put it back into the basket"
         },
         hang: {
-            pick: "夾起一件衫",
+            pick: "攞起一件衫",
             place: "晾上竹",
-            say: "夾起一件衫，晾上竹",
-            pickEn: "Clip a garment",
+            say: "攞起一件衫，晾上竹",
+            pickEn: "Pick up a garment",
             placeEn: "Hang it on the pole"
         },
         collect: {
-            pick: "夾起竹上面件衫",
+            pick: "攞起竹上面件衫",
             place: "收入衫籃",
-            say: "夾起竹上面件衫，收入衫籃",
-            pickEn: "Clip a garment on the pole",
+            say: "攞起竹上面件衫，收入衫籃",
+            pickEn: "Pick up a garment on the pole",
             placeEn: "Put it into the basket"
         },
         fold: {
-            pick: "夾起一件衫",
+            pick: "攞起一件衫",
             place: "放上枱摺好",
-            say: "夾起一件衫，放上枱摺好",
-            pickEn: "Clip a garment",
+            say: "攞起一件衫，放上枱摺好",
+            pickEn: "Pick up a garment",
             placeEn: "Put it on the table to fold"
         },
         store: {
-            pick: "夾起摺好嘅衫",
+            pick: "攞起摺好嘅衫",
             place: "放入衣櫃",
-            say: "夾起摺好嘅衫，放入衣櫃",
-            pickEn: "Clip a folded garment",
+            say: "攞起摺好嘅衫，放入衣櫃",
+            pickEn: "Pick up a folded garment",
             placeEn: "Put it into the wardrobe"
         }
     }, laundryPeg = {
@@ -4655,7 +4667,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         const elapsed = nowMs() - releaseAttemptStartMs;
         releaseAttemptStartMs = 0, elapsed >= 3e3 || !succeeded ? (sessionSafety.releaseDelayCount++, 
         consecutiveReleaseDifficulty++, Math.round(elapsed), consecutiveReleaseDifficulty >= 3 && (sessionSafety.repeatedReleaseDifficulty++, 
-        consecutiveReleaseDifficulty = 0, showSafetyPause("放手比較困難，先停一停", "連續幾次放手都比較慢或未能放開。請放下物件、張開手、放鬆，並由治療師重新評估手部繃緊程度，需要時改用更大的物件或更短距離。", {
+        consecutiveReleaseDifficulty = 0, showSafetyPause("放手比較困難，先休息一陣", "連續幾次放手都比較慢或未能放開。請放下物件、張開手、放鬆，並由治療師重新評估手部繃緊程度，需要時改用更大的物件或更短距離。", {
             reason: "repeated_release_difficulty"
         }))) : consecutiveReleaseDifficulty = 0;
     }
@@ -4751,8 +4763,8 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             gameType: "pinch",
             label: "插花",
             labelEn: "Flower Arranging",
-            hint: "患手三指張開，輕捏拿起花材，移到花盤停住，就會自動放下（張開三指亦可放下）；返到花材處先張開三指再捏下一枝",
-            actionCue: "三指張開 → 輕捏拿起 → 移到花盤 → 停住自動放下"
+            hint: "患手三指張開，輕捏拿起花材，移到花瓶等一等，就會自動放下（張開三指亦可放下）；返到花材處先張開三指再捏下一枝",
+            actionCue: "三指張開 → 輕捏拿起 → 移到花瓶 → 等一等自動放下"
         },
         chopsticks: {
             id: "chopsticks",
@@ -4769,8 +4781,8 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             gameType: "pinch",
             label: "衣夾晾衫",
             labelEn: "Cloth-Peg Laundry",
-            hint: "患手揸住真衣夾。揸實衣夾拿起衣物，舉高移到晾衫架停住，就會自動掛上（放鬆衣夾亦可放下）；返到衫籃先鬆開衣夾再夾下一件",
-            actionCue: "鬆開衣夾 → 揸實拿起 → 舉高到衣架 → 停住自動掛上"
+            hint: "患手揸住真衣夾。捏住衣夾攞起衣物，舉高移到晾衫架等一等，就會自動掛上（放鬆衣夾亦可放下）；返到衫籃先鬆開衣夾再攞下一件",
+            actionCue: "鬆開衣夾 → 捏住衣夾攞起 → 舉高到衣架 → 等一等自動掛上"
         },
         cards: {
             id: "cards",
@@ -4778,8 +4790,8 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             gameType: "pinch",
             label: "啤牌",
             labelEn: "Playing Cards",
-            hint: "患手三指張開，輕捏拿起指定花色嘅啤牌，移到患側收牌區停住，就會自動放下（張開三指亦可放下）；先張開三指再捏下一張",
-            actionCue: "三指張開 → 輕捏拿起 → 移到收牌區 → 停住自動放下"
+            hint: "患手三指張開，輕捏拿起指定花色嘅啤牌，移到患側放牌區等一等，就會自動放下（張開三指亦可放下）；先張開三指再捏下一張",
+            actionCue: "三指張開 → 輕捏拿起 → 移到放牌區 → 等一等自動放下"
         },
         mahjong: {
             id: "mahjong",
@@ -4787,8 +4799,8 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             gameType: "pinch",
             label: "麻雀",
             labelEn: "Mahjong",
-            hint: "患手三指張開，輕捏拿起一組麻雀，移到患側放牌區停住，就會自動放下（張開三指亦可放下）；先張開三指再捏下一組",
-            actionCue: "三指張開 → 輕捏拿起 → 移到放牌區 → 停住自動放下"
+            hint: "患手三指張開，輕捏拿起一組麻雀，移到患側放牌區等一等，就會自動放下（張開三指亦可放下）；先張開三指再捏下一組",
+            actionCue: "三指張開 → 輕捏拿起 → 移到放牌區 → 等一等自動放下"
         },
         cooking: {
             id: "cooking",
@@ -4796,15 +4808,15 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             gameType: "grasp",
             label: "煮蛋炒飯",
             labelEn: "Cook Egg Fried Rice",
-            hint: "患手揸住握力器（Digi-Flex），成隻手揸實再放鬆計一下；每一步揸夠次數就煮到",
-            actionCue: "揸實握力器 → 放鬆 ＝ 1 下"
+            hint: "患手揸住握力器（Digi-Flex），成隻手揸一下再放鬆計一次；每一步揸夠次數就煮到",
+            actionCue: "揸一下握力器 → 放鬆 ＝ 1 次"
         }
     };
     function level6TaskProfile() {
         const task = LEVEL6_TASKS[state.level6Task] || LEVEL6_TASKS.chopsticks;
         if ("peg" === task.id && !1 !== state.laundryPegStory) return Object.assign({}, task, {
-            hint: "患手揸住真衣夾。手移到着燈位置，揸實衣夾夾起件衫；移到目的地停一停，就會自動放低",
-            actionCue: "移手到着燈位置 → 揸實衣夾夾起 → 移到目的地 → 停住自動放低"
+            hint: "患手揸住真衣夾。手移到着燈位置，捏住衣夾攞起件衫；移到目的地等一等，就會自動放低",
+            actionCue: "移手到着燈位置 → 捏住衣夾攞起 → 移到目的地 → 等一等自動放低"
         });
         if ("chopsticks" !== task.id) return task;
         const basic = "complex" !== state.dimsumDifficulty;
@@ -5641,9 +5653,9 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             tts: "煮飯。跟住指示，一步一步煮一碟蛋炒飯，總共十二步。每一步做夠動作就會自動去下一步。"
         },
         cooking_digiflex: {
-            lines: [ "揸住握力器，每一步揸實再放鬆，揸夠次數就煮到（共 12 步）", "每揸一下，畫面即時有動作：切蔥、落油、兜炒", "如有需要，可以按「跳過這一步」" ],
+            lines: [ "揸住握力器，每一步揸一下再放鬆，揸夠次數就煮到（共 12 步）", "每揸一下，畫面即時有動作：切蔥、落油、兜炒", "如有需要，可以按「跳過這一步」" ],
             tail: "網頁只睇手指開合，唔識別器材，亦唔量度握力。",
-            tts: "煮飯。揸住握力器，每一步揸實再放鬆，揸夠次數就煮到。總共十二步。"
+            tts: "煮飯。揸住握力器，每一步揸一下再放鬆，揸夠次數就煮到。總共十二步。"
         },
         mahjong: {
             lines: [ "拼牌挑戰：手上有一副未完成的牌", "揀一組候選牌，拼成 14 隻的和牌", "有時有幾條路線，睇清花色可以做大糊" ],
@@ -5656,9 +5668,9 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             tts: "啤牌。睇清楚指定花色，收集足夠張數同花色的牌，就完成一輪。"
         },
         peg_laundry: {
-            lines: [ "手移到着燈位置，揸實衣夾夾起", "移到目的地停一停，就會自動放低", "由洗衫、晾衫、摺衫做到放入衣櫃" ],
+            lines: [ "手移到着燈位置，捏住衣夾攞起", "移到目的地等一等，就會自動放低", "由洗衫、晾衫、摺衫做到放入衣櫃" ],
             tail: "網頁不識別實體工具，亦不量度握力或捏力。",
-            tts: "洗衫晾衫。手移到着燈位置，揸實衣夾夾起。移到目的地停一停，就會自動放低。"
+            tts: "洗衫晾衫。手移到着燈位置，捏住衣夾攞起。移到目的地等一等，就會自動放低。"
         },
         laundry: {
             lines: [ "拿起衣物，放入相同顏色的衫籃", "每件衣物同衫籃都有顏色名稱", "做得多會加多顏色同款式" ],
@@ -5678,7 +5690,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         laundry: "洗衫晾衫",
         cards: "揭牌",
         mahjong: "摸牌"
-    };
+    }, PLAIN_VERB_PINCH_HOLD = "捏住", PLAIN_VERB_CHOPSTICK_HOLD = "夾住";
     function plainSay(plain, formal) {
         return plain;
     }
@@ -5689,13 +5701,13 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         const th = getTheme(), theme = state.theme, item = th && th.itemWord || "物件";
         if ("3" === state.level || "4" === state.level) {
             const act = "dimsum" === theme ? isTeahouseDimsumMode() ? "揭開蒸籠" : "攞點心" : PLAIN_SHOULDER_DO[theme] || "攞" + item;
-            return "assisted-stick" === state.shoulderExerciseMode ? [ "兩隻手揸住支棍", "一齊舉高，" + act, "放低支棍，再嚟過" ] : [ "舉高隻手，" + act, "放低隻手，再嚟過" ];
+            return "assisted-stick" === state.shoulderExerciseMode ? [ "兩隻手揸住支棍", "一齊舉高支棍", "放低支棍，再嚟下一個" ] : [ "舉高隻手，" + act, "放低隻手，再嚟下一個" ];
         }
         if ("67" === state.level) {
             const task = state.level6Task;
-            return "cooking" === task ? [ "揸實握力器", "再放鬆", "咁就計一下" ] : "chopsticks" === task ? "complex" === state.dimsumDifficulty ? [ "聽清楚要邊款點心", "筷子尖指住佢，停一停", "夾去隻碟，停一停" ] : [ "筷子尖指住點心", "停一停，就夾起", "夾去隻碟，停一停" ] : "peg" === task ? !1 !== state.laundryPegStory ? [ "隻手去着燈嗰度", "揸實衣夾，夾起", "擺到目的地，停一停" ] : [ "揸實衣夾，夾起件衫", "舉高，擺去衫架", "停一停，就掛好" ] : "cards" === task ? [ "睇上面要邊隻花", "三隻手指，揸起張牌", "擺去收牌區，停一停" ] : "mahjong" === task ? [ "揀一組牌", "三隻手指，揸起佢", "擺去放牌區，停一停" ] : [ "三隻手指，揸起枝花", "擺去花盤", "停一停，就放低" ];
+            return "cooking" === task ? [ "揸一下握力器", "再放鬆隻手", "咁就計一次" ] : "chopsticks" === task ? "complex" === state.dimsumDifficulty ? [ "睇上面要邊款點心", "筷子尖指住佢，等一等", "夾去隻碟，等一等" ] : [ "筷子尖指住點心", "等一等，就夾起", "夾去隻碟，等一等" ] : "peg" === task ? !1 !== state.laundryPegStory ? [ "隻手去着燈嗰度", "捏住衣夾，攞起件衫", "擺到目的地，等一等" ] : [ "捏住衣夾，攞起件衫", "舉高，擺去衫架", "等一等，就掛好" ] : "cards" === task ? [ "睇上面要邊隻花", "三隻手指，捏起張牌", "擺去放牌區，等一等" ] : "mahjong" === task ? [ "揀一組牌", "三隻手指，捏起佢", "擺去放牌區，等一等" ] : [ "三隻手指，捏起枝花", "擺去花瓶", "等一等，就放低" ];
         }
-        return "cards" === theme ? [ "睇上面要邊隻花", "揸拳頭，攞起張牌", "擺去收牌區，打開隻手" ] : "mahjong" === theme ? [ "揀一組牌", "揸拳頭，攞起佢", "擺去放牌區，打開隻手" ] : "flowers" === theme ? [ "揸拳頭，攞起枝花", "擺入花瓶", "打開隻手，放低" ] : "laundry" === theme ? [ "揸拳頭，攞起件衫", "擺入同色嘅籃", "打開隻手，放低" ] : "fridge" === theme ? [ "揸拳頭，攞起食物", isFridgeZoneMode() ? "擺入着燈嗰格" : "擺入雪櫃", "打開隻手，放低" ] : "dimsum" === theme ? [ "揸拳頭，攞起點心", "擺去同款嗰籠", "打開隻手，放低" ] : [ "揸拳頭，攞起" + item, "擺去同款嗰度", "打開隻手，放低" ];
+        return "cards" === theme ? [ "睇上面要邊隻花", "揸拳頭，攞起張牌", "擺去放牌區，打開隻手" ] : "mahjong" === theme ? [ "揀一組牌", "揸拳頭，攞起佢", "擺去放牌區，打開隻手" ] : "flowers" === theme ? [ "揸拳頭，攞起枝花", "擺入花瓶", "打開隻手，放低" ] : "laundry" === theme ? [ "揸拳頭，攞起件衫", "擺入同色嘅籃", "打開隻手，放低" ] : "fridge" === theme ? [ "揸拳頭，攞起食物", isFridgeZoneMode() ? "擺入着燈嗰格" : "擺入雪櫃", "打開隻手，放低" ] : "dimsum" === theme ? [ "揸拳頭，攞起點心", "擺去同款嗰籠", "打開隻手，放低" ] : [ "揸拳頭，攞起" + item, "擺去同款嗰度", "打開隻手，放低" ];
     }
     function updateRulesForActivity() {
         const th = getTheme(), shoulderModeCue = shoulderExerciseModeAvailable() ? shoulderExerciseProfile().cue + " · " : "", actionCue = "2" === state.level ? "患臂桌面承托 → 由中線向患側外滑 → 返回中線" : "3" === state.level ? shoulderModeCue + "0° 起點 → 治療師選定 30°／40°／50°／60° 目標 → 返回 0°" : "4" === state.level ? shoulderModeCue + "0° 起點 → 治療師選定 60° 或以上目標 → 返回 0°" : "67" === state.level ? activeLevel67ToolProfile().actionCue : "張手 → 輕握 → 放手";
@@ -5838,12 +5850,12 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                 compensationButton && (compensationButton.hidden = !0), compensationPanel && compensationPanel.classList.remove("show")) : (trialIndicator && trialIndicator.classList.remove("show"), 
                 compensationButton && (compensationButton.hidden = !1), movementRecordingApi.start()), 
                 DWELL_MS = state.dwellMs, score = 0, correctCount = 0, grabCount = 0, totalWrong = 0, 
-                wrongStreak = 0, level5TargetSideFlip = Math.random() < .5, shoulderFlexionLastRepetition = 0, 
-                shoulderFlexionCycleAwarded = !1, shoulderRewardCycle.reset(), shoulderHoldSpokenSecond = null, 
-                shoulderHoldInterruptedSpoken = !1, hideTargetHoldCountdown(), lastLevelShown = -1, 
-                heldItem = null, foods = [], targets = [], resetBowlingStrike(), resetBasketballShot(), 
-                resetTeahouseServe(), resetSupermarketStory(), resetDealTable(), photoCards.order = [], 
-                photoCards.pos = 0, photoCards.card = null, photoCards.shown = [ !1, !1, !1, !1 ], 
+                wrongStreak = 0, lastWrongItemType = "", level5TargetSideFlip = Math.random() < .5, 
+                shoulderFlexionLastRepetition = 0, shoulderFlexionCycleAwarded = !1, shoulderRewardCycle.reset(), 
+                shoulderHoldSpokenSecond = null, shoulderHoldInterruptedSpoken = !1, hideTargetHoldCountdown(), 
+                lastLevelShown = -1, heldItem = null, foods = [], targets = [], resetBowlingStrike(), 
+                resetBasketballShot(), resetTeahouseServe(), resetSupermarketStory(), resetDealTable(), 
+                photoCards.order = [], photoCards.pos = 0, photoCards.card = null, photoCards.shown = [ !1, !1, !1, !1 ], 
                 photoCards.pieceOrder = [], photoCards.revealed = 0, photoCards.collected = [], 
                 photoCards.stop = 0, photoCards.previewLift = null, resetPhotoCardAnim(), yumCha.bag = [], 
                 yumCha.bagPos = 0, yumCha.table = [], yumCha.order = [], yumCha.served = 0, yumCha.ticks = [], 
@@ -5913,8 +5925,8 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                         if (!themeAvailableForLevel("cooking")) return state.theme = "dimsum", void (advCurrent = "dimsum");
                         cook.active = !0, cook.rounds = 0, cook.reset(), cook.layout = cookLayout(), cook.poseOn = !1, 
                         isLevel6DigiflexTask() ? (cook.introUntil = nowMs() + 3200, cook.readyAt = cook.introUntil + 400, 
-                        advSetNote(""), cookRenderPanel(), speakCantonese("買完餸返到屋企，而家煮蛋炒飯。"), cook.announceAt = cook.introUntil - 400, 
-                        setActionPrompt("揸實", "")) : (advSetNote(poseFailed ? "姿勢追蹤（肩／肘）未能載入，已轉為手部動作練習：追蹤有限，可用「跳過此步」繼續。" : "正在載入姿勢追蹤（肩／肘）…期間可先用手部動作練習。前臂旋前／旋後為螢幕估算回饋，並非醫學量度。"), 
+                        advSetNote(""), cookRenderPanel(), speakCantonese("返到屋企喇，而家煮蛋炒飯。"), cook.announceAt = cook.introUntil - 400, 
+                        setActionPrompt("揸一下", "")) : (advSetNote(poseFailed ? "姿勢追蹤（肩／肘）未能載入，已轉為手部動作練習：追蹤有限，可用「跳過此步」繼續。" : "正在載入姿勢追蹤（肩／肘）…期間可先用手部動作練習。前臂旋前／旋後為螢幕估算回饋，並非醫學量度。"), 
                         state.qaMode || ensurePoseLandmarker().then(p => {
                             cook.poseOn = !!p, advSetNote(p ? "姿勢追蹤已啟用。前臂旋前／旋後為螢幕估算回饋，並非醫學量度。" : "姿勢追蹤（肩／肘）未能載入，已轉為手部動作練習：追蹤有限，可用「跳過此步」繼續。"), 
                             cookRenderPanel();
@@ -5929,32 +5941,17 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                 isLaundryOrderGame() && newLaundryOrder(), isFridgeGame() && newFridgeRound()), 
                 dwellTarget = null, dwellStartTime = 0, document.getElementById("cogOverlay").classList.add("hidden"), 
                 cogTimerId && (clearInterval(cogTimerId), cogTimerId = null), state.running = !0, 
-                state.paused = !1, resetSessionSafety(), resetSafetyRuntime(), document.getElementById("btnPause").textContent = "Ⅱ 暫停", 
-                document.getElementById("btnPause").classList.remove("pause-active"), usesAdvancedThemeModule() || isLevel4StandaloneGame() || (showLevelUpBanner(), 
-                function() {
-                    if (!foods.length) return;
-                    if (isPublicLevel5DimsumLayout()) return void foods.filter(food => !food.removed && !food.isDistractor).forEach((food, index) => {
-                        const slot = function(index, cw, ch) {
-                            const geometry = publicLevel5DimsumGeometry(cw, ch);
-                            return geometry.slots[index % geometry.slots.length];
-                        }(index, gameCanvas.width, gameCanvas.height, food.r);
-                        food.x = slot.x, food.y = slot.y, food.baseX = slot.x, food.baseY = slot.y;
-                    });
-                    const exclusion = getInstructionExclusionRect(gameCanvas.width, gameCanvas.height, Math.max(18, .16 * (foods[0]?.r || 100)));
-                    if (!exclusion) return;
-                    const defs = getDimSumDefs();
-                    foods.forEach((food, index) => {
-                        if (food.isDistractor || food.held || food.removed) return;
-                        if (!circleOverlapsRect(food.x, food.y, food.r, exclusion)) return;
-                        const def = defs.find(item => item.type === food.type) || defs[0];
-                        if (!def) return;
-                        const others = foods.filter((_, otherIndex) => otherIndex !== index);
-                        foods[index] = makeFoodAt(def, others);
-                    });
-                }()), gameTimerId && clearInterval(gameTimerId), gameTimerId = setInterval(() => {
+                state.paused = !1, trackPromptReset(!0), resetSessionSafety(), resetSafetyRuntime(), 
+                document.getElementById("btnPause").textContent = "Ⅱ 暫停", document.getElementById("btnPause").classList.remove("pause-active"), 
+                usesAdvancedThemeModule() || isLevel4StandaloneGame() || (showLevelUpBanner(), ensureFoodsClearOfInstructions()), 
+                gameTimerId && clearInterval(gameTimerId), gameTimerId = setInterval(() => {
                     !state.paused && state.running && (timeLeft--, updateHUD(), timeLeft <= 0 && endGame());
                 }, 1e3), gameRAF && cancelAnimationFrame(gameRAF), gameRAF = requestAnimationFrame(gameLoop), 
-                window.addEventListener("resize", resizeGameCanvas);
+                window.addEventListener("resize", resizeGameCanvas), window.addEventListener("resize", () => {
+                    try {
+                        trackChipPlace();
+                    } catch (_e) {}
+                });
             }(), gameStartInProgress = !1;
         }
     }
@@ -5966,18 +5963,6 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             onerror: () => startSelectedGame()
         }), fallbackMs = Math.max(6500, Math.min(18e3, 210 * text.length));
         rulesStartTimer = setTimeout(() => startSelectedGame(), utterance ? fallbackMs : 600);
-    }
-    function speakCantonese(text, opts) {
-        if (!("speechSynthesis" in window)) return opts && opts.onerror && setTimeout(opts.onerror, 0), 
-        null;
-        try {
-            window.speechSynthesis.cancel();
-        } catch (e) {}
-        const english = !(!window.YCHLanguage || !window.YCHLanguage.isEnglish()), spokenText = english ? window.YCHLanguage.translateToEnglish(text) : window.YCHLanguage?.text(text) || text, u = new SpeechSynthesisUtterance(spokenText), voices = window.speechSynthesis.getVoices(), englishVoice = english ? voices.find(v => /^en-HK$/i.test(v.lang)) || voices.find(v => /^en-(GB|US|AU)$/i.test(v.lang)) || voices.find(v => /^en/i.test(v.lang)) : null, yueVoice = voices.find(v => /yue|zh-HK|zh_HK/i.test(v.lang)) || voices.find(v => /Cantonese|廣東|粵/i.test(v.name)) || voices.find(v => /zh-TW|zh_TW/i.test(v.lang)) || voices.find(v => /zh/i.test(v.lang)), selectedVoice = english ? englishVoice : yueVoice;
-        return selectedVoice && (u.voice = selectedVoice), u.lang = selectedVoice ? selectedVoice.lang : english ? "en-US" : "zh-HK", 
-        u.rate = opts && opts.rate || (english ? .92 : .85), u.pitch = opts && opts.pitch || 1, 
-        u.volume = 1, opts && opts.onend && (u.onend = opts.onend), opts && opts.onerror && (u.onerror = opts.onerror), 
-        window.speechSynthesis.speak(u), u;
     }
     document.getElementById("btnStartGame").addEventListener("click", () => {
         beginGameFromCalibration();
@@ -5999,6 +5984,419 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     }), document.getElementById("btnCalibForceStart").addEventListener("click", () => {
         console.warn("calibration skipped by therapist (force start)"), beginGameFromCalibration();
     });
+    const SPEECH_RANK = {
+        step: 4,
+        correct: 3,
+        track: 2,
+        praise: 1
+    }, SPEECH_RATE_ZH = .85, SPEECH_RATE_ZH_NUMBER = .82, SPEECH_RATE_EN = .92;
+    let speechNow = {
+        rank: 0,
+        token: 0,
+        until: 0
+    }, speechWaiting = null;
+    const SPEECH_WAIT_MAX_MS = 5e3, SPEECH_WAIT_GAP_MS = 250;
+    function speechRankOf(opts) {
+        return SPEECH_RANK[opts && opts.priority] || SPEECH_RANK.step;
+    }
+    function speechBusyRank(now) {
+        const t = Number.isFinite(now) ? now : performance.now();
+        return speechNow.rank ? t > speechNow.until ? (speechNow.rank = 0, 0) : speechNow.rank : 0;
+    }
+    function speechCanSay(priority, now) {
+        return speechRankOf({
+            priority: priority
+        }) >= speechBusyRank(now);
+    }
+    function speechEstimateMs(text, rate) {
+        return 900 + 330 * String(text || "").replace(/\s/g, "").length / Math.max(.5, rate || SPEECH_RATE_ZH);
+    }
+    const CANTO_DIGITS = [ "零", "一", "二", "三", "四", "五", "六", "七", "八", "九", "十" ], EN_ITEM_NAMES = {
+        "牛肉球": [ "beef ball", "beef balls" ],
+        "蝦餃": "har gow",
+        "燒賣": "siu mai",
+        "恤衫": [ "shirt", "shirts" ],
+        "孖煙通": [ "pair of boxer shorts", "pairs of boxer shorts" ],
+        "牛仔褲": [ "pair of jeans", "pairs of jeans" ],
+        "半截裙": [ "skirt", "skirts" ],
+        "底衫": [ "vest", "vests" ],
+        "襪": [ "pair of socks", "pairs of socks" ],
+        "上衣": "tops",
+        "褲": "trousers",
+        "裙": "skirts",
+        "內衣襪": "underwear and socks",
+        "上身": "upper body",
+        "下身": "lower body",
+        "黑桃": "spades",
+        "紅心": "hearts",
+        "紅磚": "diamonds",
+        "梅花": "clubs",
+        "紅色": "red",
+        "藍色": "blue",
+        "黃色": "yellow",
+        "綠色": "green"
+    }, EN_GARMENT_NAMES = {
+        "襪": [ "socks", !0 ],
+        "短褲": [ "shorts", !0 ],
+        "背心": [ "vest", !1 ],
+        "T恤": [ "T-shirt", !1 ],
+        "外套": [ "jacket", !1 ],
+        "長褲": [ "trousers", !0 ]
+    };
+    function enName(zh, n) {
+        const v = EN_ITEM_NAMES[zh];
+        return v ? Array.isArray(v) ? v[(Number(n) || 1) > 1 ? 1 : 0] : v : "";
+    }
+    const TRACK_PROMPTS = {
+        T1: {
+            say: "鏡頭睇唔到隻手，放返入畫面中間。",
+            chip: "睇唔到隻手",
+            en: "The camera cannot see your hand. Bring it back to the middle of the screen.",
+            chipEn: "Hand not seen"
+        },
+        T2: {
+            say: "鏡頭睇唔到膊頭，坐返正中間。",
+            chip: "睇唔到膊頭",
+            en: "The camera cannot see your shoulder. Sit back in the middle.",
+            chipEn: "Shoulder not seen"
+        },
+        T3: {
+            say: "太近鏡頭喇，坐後少少。",
+            chip: "太近",
+            en: "You are too close to the camera. Move back a little.",
+            chipEn: "Too close"
+        },
+        T4: {
+            say: "太遠喇，坐近少少。",
+            chip: "太遠",
+            en: "You are too far from the camera. Move a little closer.",
+            chipEn: "Too far"
+        },
+        T5: {
+            say: "試吓用返{side}手。",
+            chip: "用{side}手",
+            en: "Try using your {side} hand.",
+            chipEn: "Use {side} hand"
+        },
+        T6: {
+            say: "鏡頭睇得唔清楚，隻手定住，等一等。",
+            chip: "鏡頭對緊",
+            en: "The camera is not seeing clearly. Keep your hand still and wait a moment.",
+            chipEn: "Camera adjusting"
+        },
+        T7: {
+            say: "鏡頭重新連接緊，等一等。",
+            chip: "重新連接緊",
+            en: "The camera is reconnecting. Please wait a moment.",
+            chipEn: "Reconnecting"
+        },
+        T8: {
+            say: "請姑娘幫手校返個鏡頭。",
+            chip: "請叫姑娘",
+            en: "Please ask your therapist to adjust the camera.",
+            chipEn: "Ask your therapist"
+        },
+        T9: {
+            say: "見到喇，繼續。",
+            chip: "",
+            en: "I can see you now. Carry on.",
+            chipEn: ""
+        }
+    }, TRACK_HOLD_MS = 3e3, TRACK_COOLDOWN_MS = 15e3, TRACK_ESCALATE_MS = 15e3, TRACK_MAX_SPOKEN = 2, TRACK_DROP_WINDOW_MS = 3e3, TRACK_DROP_COUNT = 3, TRACK_CLEAR_MS = 1200;
+    function trackPromptText(code, side) {
+        const p = TRACK_PROMPTS[code];
+        if (!p) return {
+            say: "",
+            chip: "",
+            en: "",
+            chipEn: ""
+        };
+        const zh = "left" === side ? "左" : "右", en = "left" === side ? "left" : "right", fill = (t, word) => String(t).split("{side}").join(word);
+        return {
+            say: fill(p.say, zh),
+            chip: fill(p.chip, zh),
+            en: fill(p.en, en),
+            chipEn: fill(p.chipEn, en)
+        };
+    }
+    const STEP_REPEAT_IDLE_MS = 1e4, STEP_REPEAT_MAX = 2, TRACK_GRACE_MS = 5e3, TRACK_SNAP_STALE_MS = 1500, TRACK_REF_SAMPLES = 12, TRACK_HAND_NEAR_RATIO = 2.2, TRACK_HAND_FAR_RATIO = .4, TRACK_SHOULDER_NEAR_RATIO = 1.5, TRACK_SHOULDER_FAR_RATIO = .6, TRACK_OPPOSITE_SCORE = .8, TRACK_OPPOSITE_LONE_SCORE = .9;
+    let trackPromptState = {
+        cond: "",
+        condSince: 0,
+        active: "",
+        episodeAt: 0,
+        spoken: 0,
+        clearSince: 0,
+        lastSaid: {},
+        drops: [],
+        wasOk: !0
+    }, trackHandSnap = {
+        at: 0,
+        hands: 0,
+        present: !1,
+        span: NaN,
+        opposite: !1,
+        sizeDir: 0
+    }, trackRef = {
+        hand: [],
+        handRef: NaN,
+        handAt: 0,
+        shoulder: [],
+        shoulderRef: NaN
+    }, trackGameStartedAt = 0, trackQa = {
+        mode: "off",
+        input: null
+    }, trackPromptLog = [], stepRepeat = {
+        text: "",
+        opts: null,
+        at: 0,
+        count: 0
+    }, stepRepeatRef = null;
+    function trackNoteHandFrame(results, selectedIndex) {
+        const lms = Array.isArray(results && results.landmarks) ? results.landmarks : [], snap = {
+            at: nowMs(),
+            hands: lms.length,
+            present: selectedIndex >= 0,
+            span: NaN,
+            opposite: !1,
+            sizeDir: 0
+        };
+        if (lms.length) {
+            const d = handAdmitDiag, affected = activeAffectedSide();
+            snap.span = handSpanOf(lms[selectedIndex >= 0 ? selectedIndex : 0]);
+            const otherSide = ("left" === d.label || "right" === d.label) && d.label !== affected && "on" === d.check;
+            snap.opposite = otherSide && ("rejected" === d.path && d.score >= TRACK_OPPOSITE_SCORE || "lone" === d.path && d.score >= TRACK_OPPOSITE_LONE_SCORE), 
+            selectedIndex < 0 && "size" === d.path && Number.isFinite(snap.span) && d.lockSize > 0 && (snap.sizeDir = snap.span > d.lockSize ? 1 : -1);
+        }
+        trackHandSnap = snap;
+    }
+    function trackArmRaiseDeg(shoulder, elbow, aspect) {
+        if (!level4PosePointUsable(shoulder) || !level4PosePointUsable(elbow)) return NaN;
+        const dx = (elbow.x - shoulder.x) * (aspect || 1), dy = elbow.y - shoulder.y;
+        return 180 * Math.atan2(Math.abs(dx), dy) / Math.PI;
+    }
+    const TRACK_CHIP_GAP = 10, TRACK_CHIP_REPLACE_MS = 500;
+    let trackChipPlacedAt = 0, cookStepLabelRect = null;
+    function trackChipFreeSlot(min, max, width, prefer, blocked) {
+        const cuts = (blocked || []).filter(b => b[1] > min && b[0] < max).map(b => [ Math.max(min, b[0]), Math.min(max, b[1]) ]).sort((a, b) => a[0] - b[0]), free = [];
+        let at = min;
+        for (const c of cuts) c[0] > at && free.push([ at, c[0] ]), at = Math.max(at, c[1]);
+        at < max && free.push([ at, max ]);
+        let best = null, widest = null;
+        for (const f of free) {
+            const len = f[1] - f[0];
+            if ((!widest || len > widest[1] - widest[0]) && (widest = f), len < width) continue;
+            const centre = Math.max(f[0] + width / 2, Math.min(prefer, f[1] - width / 2));
+            (!best || Math.abs(centre - prefer) < Math.abs(best.centre - prefer)) && (best = {
+                centre: centre,
+                fits: !0,
+                room: len
+            });
+        }
+        return best || (widest ? {
+            centre: (widest[0] + widest[1]) / 2,
+            fits: !1,
+            room: widest[1] - widest[0]
+        } : {
+            centre: prefer,
+            fits: !1,
+            room: 0
+        });
+    }
+    function trackChipCanvasObstacles(sr) {
+        const out = [], canvas = document.getElementById("gameCanvas");
+        if (!canvas || !canvas.width) return out;
+        const cr = canvas.getBoundingClientRect(), kx = cr.width / canvas.width, ky = cr.height / canvas.height, add = r => {
+            r && out.push({
+                left: cr.left - sr.left + r.left * kx,
+                right: cr.left - sr.left + r.right * kx,
+                top: cr.top - sr.top + r.top * ky,
+                bottom: cr.top - sr.top + r.bottom * ky
+            });
+        };
+        if (isDimsumOrderGame() && dimsumOrderBannerRect) {
+            const r = dimsumOrderBannerRect;
+            add({
+                left: r.left + 10,
+                top: r.top + 10,
+                right: r.right - 10,
+                bottom: r.bottom - 10
+            });
+        }
+        return "67" === state.level && "cooking" === state.theme && add(cookStepLabelRect), 
+        out;
+    }
+    function trackChipPlace() {
+        const el = document.getElementById("trackChip");
+        if (!el || el.hidden) return null;
+        const stage = el.parentElement, sr = stage.getBoundingClientRect();
+        if (!sr.width) return null;
+        el.style.fontSize = "", el.style.maxWidth = "";
+        const buttons = Array.from(stage.querySelectorAll(".game-controls .game-control-btn")).map(b => b.getBoundingClientRect()).filter(b => b.width > 0 && b.height > 0);
+        let h = el.offsetHeight, top = 12, bandBottom = 12 + h;
+        if (buttons.length) {
+            const bTop = Math.min(...buttons.map(b => b.top)) - sr.top, bBottom = Math.max(...buttons.map(b => b.bottom)) - sr.top;
+            top = bTop >= h + 12 ? Math.max(6, Math.round((bTop - h) / 2)) : Math.max(6, Math.round(bTop + (bBottom - bTop - h) / 2)), 
+            bandBottom = top + h;
+        }
+        const blocked = function(stage, chip, sr, bandBottom) {
+            const out = [], area = sr.width * sr.height, walk = (node, depth) => {
+                for (const e of node.children) {
+                    if (e === chip || "CANVAS" === e.tagName || "VIDEO" === e.tagName) continue;
+                    const b = e.getBoundingClientRect();
+                    if (b.width < 2 || b.height < 2 || b.bottom <= sr.top || b.top >= sr.top + bandBottom) continue;
+                    const cs = getComputedStyle(e);
+                    "none" !== cs.display && "hidden" !== cs.visibility && 0 !== Number(cs.opacity) && (("BUTTON" === e.tagName || parseFloat(cs.borderTopWidth) > 0 || "none" !== cs.backgroundImage || "rgba(0, 0, 0, 0)" !== cs.backgroundColor && "transparent" !== cs.backgroundColor || !e.children.length && (e.textContent || "").trim()) && b.width * b.height <= .5 * area && (b.width < .9 * sr.width || !e.children.length) ? out.push({
+                        left: b.left - sr.left,
+                        right: b.right - sr.left,
+                        top: b.top - sr.top,
+                        bottom: b.bottom - sr.top
+                    }) : depth < 4 && walk(e, depth + 1));
+                }
+            };
+            return walk(stage, 0), out;
+        }(stage, el, sr, bandBottom + 4).concat(trackChipCanvasObstacles(sr)).filter(o => o.bottom > top - 4 && o.top < bandBottom + 4).map(o => [ o.left - TRACK_CHIP_GAP, o.right + TRACK_CHIP_GAP ]), min = TRACK_CHIP_GAP, max = sr.width - TRACK_CHIP_GAP;
+        let slot = trackChipFreeSlot(min, max, el.offsetWidth, sr.width / 2, blocked);
+        if (!slot.fits && "67" === state.level && "cooking" === state.theme && cookStepLabelRect) {
+            const label = trackChipCanvasObstacles(sr).pop();
+            if (label && label.left + el.offsetWidth <= max) return el.style.left = Math.round(label.left + el.offsetWidth / 2) + "px", 
+            el.style.top = Math.round(label.bottom + 8) + "px", trackChipPlacedAt = nowMs(), 
+            {
+                top: label.bottom + 8,
+                centre: label.left + el.offsetWidth / 2,
+                fits: !0,
+                below: !0,
+                blocked: blocked
+            };
+        }
+        for (let size = parseFloat(getComputedStyle(el).fontSize) - 2; !slot.fits && size >= 18; size -= 2) el.style.fontSize = size + "px", 
+        slot = trackChipFreeSlot(min, max, el.offsetWidth, sr.width / 2, blocked);
+        return !slot.fits && slot.room > 60 && (el.style.maxWidth = Math.floor(slot.room) + "px"), 
+        el.style.left = Math.round(slot.centre) + "px", el.style.top = top + "px", trackChipPlacedAt = nowMs(), 
+        {
+            top: top,
+            centre: slot.centre,
+            fits: slot.fits,
+            blocked: blocked
+        };
+    }
+    function trackPromptShow(code) {
+        const el = document.getElementById("trackChip");
+        if (!el) return;
+        if (!code) return void (el.hidden || (el.hidden = !0, el.textContent = "", el.dataset.code = ""));
+        if (el.dataset.code === code && !el.hidden) return void (Math.abs(nowMs() - trackChipPlacedAt) >= TRACK_CHIP_REPLACE_MS && trackChipPlace());
+        const t = trackPromptText(code, activeAffectedSide());
+        el.textContent = dealText(t.chip, t.chipEn), el.dataset.code = code, el.hidden = !1, 
+        trackChipPlace();
+    }
+    function trackPromptReset(startGame) {
+        trackPromptState = {
+            cond: "",
+            condSince: 0,
+            active: "",
+            episodeAt: 0,
+            spoken: 0,
+            clearSince: 0,
+            lastSaid: {},
+            drops: [],
+            wasOk: !0
+        }, trackHandSnap = {
+            at: 0,
+            hands: 0,
+            present: !1,
+            span: NaN,
+            opposite: !1,
+            sizeDir: 0
+        }, startGame && (trackRef = {
+            hand: [],
+            handRef: NaN,
+            handAt: 0,
+            shoulder: [],
+            shoulderRef: NaN
+        }, trackGameStartedAt = nowMs(), trackPromptLog = [], stepRepeat = {
+            text: "",
+            opts: null,
+            at: 0,
+            count: 0
+        }, stepRepeatRef = null), trackPromptShow("");
+    }
+    function stepSay(text, opts) {
+        return stepRepeat = {
+            text: "",
+            opts: null,
+            at: 0,
+            count: 0
+        }, stepRepeat.text = String(text || ""), stepRepeat.opts = opts || null, stepRepeat.at = nowMs(), 
+        stepRepeatRef = null, speakCantonese(text, opts);
+    }
+    function stepRepeatClear() {
+        stepRepeat.text = "";
+    }
+    function stepRepeatMoved() {
+        let cw = 1, ch = 1;
+        try {
+            cw = gameCanvas.width || 1, ch = gameCanvas.height || 1;
+        } catch (_e) {}
+        const cur = {
+            x: cursorX >= 0 ? cursorX / cw : -1,
+            y: cursorY >= 0 ? cursorY / ch : -1,
+            p: Number(shoulderFlexionState && shoulderFlexionState.progress) || 0,
+            n: score + "|" + correctCount + "|" + grabCount + "|" + (heldItem ? 1 : 0) + "|" + ("object" == typeof cook && cook.reps || 0)
+        }, ref = stepRepeatRef;
+        if (!ref) return stepRepeatRef = cur, !1;
+        const moved = cur.n !== ref.n || Math.abs(cur.p - ref.p) > .1 || (cur.x >= 0 && ref.x >= 0 ? Math.hypot(cur.x - ref.x, cur.y - ref.y) > .06 : cur.x >= 0 != ref.x >= 0);
+        return moved && (stepRepeatRef = cur), moved;
+    }
+    function speechFlushWaiting() {
+        const w = speechWaiting;
+        w && (performance.now() > w.expires ? speechWaiting = null : speechRankOf(w.opts) < speechBusyRank() || (speechWaiting = null, 
+        speakCantonese(w.text, w.opts)));
+    }
+    function speakCantonese(text, opts) {
+        if (!("speechSynthesis" in window)) return opts && opts.onerror && setTimeout(opts.onerror, 0), 
+        null;
+        const rank = speechRankOf(opts);
+        if (rank < speechBusyRank()) return opts && "correct" === opts.priority ? (speechWaiting = {
+            text: text,
+            opts: opts,
+            expires: performance.now() + SPEECH_WAIT_MAX_MS
+        }, setTimeout(speechFlushWaiting, Math.max(60, speechNow.until - performance.now() + 60)), 
+        null) : (opts && opts.onend && setTimeout(opts.onend, 0), null);
+        try {
+            window.speechSynthesis.cancel();
+        } catch (e) {}
+        const english = !(!window.YCHLanguage || !window.YCHLanguage.isEnglish()), numbered = !english && function(text) {
+            return /\d/.test(String(text || ""));
+        }(text), spokenText = english ? window.YCHLanguage.translateToEnglish(text) : function(text) {
+            return String(null == text ? "" : text).replace(/([^\d\s]?)(\s*)(\d+)(\s*)(?=(.?))/g, (m, before, sp1, digits, sp2, after) => {
+                const cjkBefore = /[\u3400-\u9fff]/.test(before), cjkAfter = /[\u3400-\u9fff]/.test(after);
+                return digits.length > 2 || !cjkBefore && !cjkAfter ? m : before + function(n, measure) {
+                    if (n = Math.round(Number(n)), !Number.isFinite(n) || n < 0 || n > 99) return String(n);
+                    if (2 === n && measure) return "兩";
+                    if (n <= 10) return CANTO_DIGITS[n];
+                    const tens = Math.floor(n / 10), ones = n % 10;
+                    return (tens > 1 ? CANTO_DIGITS[tens] : "") + "十" + (ones ? CANTO_DIGITS[ones] : "");
+                }(digits, cjkAfter && "第" !== before);
+            });
+        }(window.YCHLanguage?.text(text) || text), u = new SpeechSynthesisUtterance(spokenText), voices = window.speechSynthesis.getVoices(), englishVoice = english ? voices.find(v => /^en-HK$/i.test(v.lang)) || voices.find(v => /^en-(GB|US|AU)$/i.test(v.lang)) || voices.find(v => /^en/i.test(v.lang)) : null, yueVoice = voices.find(v => /yue|zh-HK|zh_HK/i.test(v.lang)) || voices.find(v => /Cantonese|廣東|粵/i.test(v.name)) || voices.find(v => /zh-TW|zh_TW/i.test(v.lang)) || voices.find(v => /zh/i.test(v.lang)), selectedVoice = english ? englishVoice : yueVoice;
+        selectedVoice && (u.voice = selectedVoice), u.lang = selectedVoice ? selectedVoice.lang : english ? "en-US" : "zh-HK", 
+        u.rate = opts && opts.rate || (english ? SPEECH_RATE_EN : numbered ? SPEECH_RATE_ZH_NUMBER : SPEECH_RATE_ZH), 
+        u.pitch = opts && opts.pitch || 1, u.volume = 1;
+        const token = speechNow.token + 1;
+        speechNow = {
+            rank: rank,
+            token: token,
+            until: performance.now() + speechEstimateMs(spokenText, u.rate)
+        };
+        const finished = () => {
+            speechNow.token === token && (speechNow.rank = 0, speechWaiting && setTimeout(speechFlushWaiting, SPEECH_WAIT_GAP_MS));
+        };
+        return u.onend = ev => {
+            finished(), opts && opts.onend && opts.onend(ev);
+        }, u.onerror = ev => {
+            finished(), opts && opts.onerror && opts.onerror(ev);
+        }, window.speechSynthesis.speak(u), u;
+    }
     let feedbackSpeechTimer = 0;
     function speakAfterFeedback(text, delay, opts) {
         clearTimeout(feedbackSpeechTimer);
@@ -6060,17 +6458,56 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             setPromptSlot("rules");
         }, 5e3);
     }
-    "speechSynthesis" in window && (window.speechSynthesis.onvoiceschanged = () => {});
-    let recoveryPauseActive = !1;
+    const VOICE_WARNING_TEXT = "提提姑娘：呢部機搵唔到廣東話語音，指示可能會用其他語音讀出。", VOICE_WARNING_TEXT_EN = "Note for therapist: no Cantonese voice was found on this device. Instructions may be read in another voice.";
+    function updateVoiceWarning() {
+        const el = document.getElementById("voiceWarning");
+        if (!el) return !1;
+        let missing = !1;
+        try {
+            "speechSynthesis" in window && (missing = function(voices, english) {
+                const list = Array.isArray(voices) ? voices : [];
+                return !(english || !list.length || list.some(v => /yue|zh[-_]HK/i.test(String(v && v.lang || "")) || /Cantonese|廣東|粵/i.test(String(v && v.name || ""))));
+            }(Array.from(window.speechSynthesis.getVoices() || []), !(!window.YCHLanguage || !window.YCHLanguage.isEnglish())));
+        } catch (_e) {
+            missing = !1;
+        }
+        return el.textContent = dealText(VOICE_WARNING_TEXT, VOICE_WARNING_TEXT_EN), el.hidden = !missing, 
+        missing;
+    }
+    "speechSynthesis" in window && (window.speechSynthesis.onvoiceschanged = () => {
+        try {
+            updateVoiceWarning();
+        } catch (_e) {}
+    });
+    let recoveryPauseActive = !1, lastWrongItemType = "";
     function triggerRecoveryPause() {
         if (recoveryPauseActive) return;
         recoveryPauseActive = !0, state.running = !1;
+        try {
+            trackPromptReset(!1);
+        } catch (_e) {}
         const tier = getDistractorCount();
         let simpleMsg = "", simpleCanto = "";
         const thR = getTheme(), catsR = getCategories(), itemWordR = thR.itemWord, fAR = catsR[0].itemLabel, fBR = catsR[1].itemLabel, tAR = catsR[0].targetLabel, tBR = catsR[1].targetLabel;
         0 === tier ? (simpleMsg = `<div style="font-size:28px; color:#ffd166; margin-bottom:12px;">慢慢來</div><div style="font-size:26px; line-height:1.5;">有<b style="color:#8fe388;">${fAR}</b>——放去<b style="color:#8fe388;">${tAR}</b></div><div style="font-size:26px; line-height:1.5; margin-top:8px;">有<b style="color:#8fe388;">${fBR}</b>——放去<b style="color:#8fe388;">${tBR}</b></div>`, 
         simpleCanto = `慢慢來。看住手上嘅${itemWordR}，${fAR}就放去${tAR}，${fBR}就放去${tBR}。`) : (simpleMsg = `<div style="font-size:28px; color:#ffd166; margin-bottom:12px;">慢慢來</div><div style="font-size:26px; line-height:1.5;">✓ 只拿<b style="color:#8fe388;">${itemWordR}</b>（${fAR}、${fBR}）</div><div style="font-size:26px; line-height:1.5; margin-top:8px;">✗ <b style="color:#ff8b8b;">不要拿動物</b></div>`, 
-        simpleCanto = `慢慢來。只拿${itemWordR}。就係${fAR}和${fBR}。大象、貓、狗、都不要拿。`), simpleCanto = `慢慢嚟。${fAR}放去${tAR}。${fBR}放去${tBR}。` + (0 === tier ? "" : "動物阻住就搬開佢。");
+        simpleCanto = `慢慢來。只拿${itemWordR}。就係${fAR}和${fBR}。大象、貓、狗、都不要拿。`), simpleCanto = function(tier, cat) {
+            if (0 !== tier) return dealText("慢慢嚟，先搬開隻動物。", "Take your time. First, move the animal away.");
+            let item = cat && cat.itemLabel || "";
+            const target = cat && cat.targetLabel || "";
+            isDimsumOrderGame() && dimsumOrder && dimsumOrder.lines[0] && (item = dimsumOrder.lines[0].label);
+            const tr = t => {
+                const named = enName(t, 1);
+                if (named) return named;
+                const out = window.YCHLanguage && window.YCHLanguage.translateToEnglish ? String(window.YCHLanguage.translateToEnglish(t) || "") : "";
+                return !out || /^Follow the/.test(out) || /[\u3400-\u9fff]/.test(out) ? "" : out.toLowerCase();
+            }, itemEn = tr(item), targetEn = tr(target), generic = "Take your time. First, put one item in its matching place.";
+            if (item && item === target) {
+                const steamer = "dimsum" === state.theme;
+                return dealText("慢慢嚟，先將" + item + "放去同款嗰" + (steamer ? "籠" : "度") + "。", itemEn ? "Take your time. First, put the " + itemEn + " in the matching " + (steamer ? "steamer" : "place") + "." : generic);
+            }
+            return isDimsumOrderGame() ? dealText("慢慢嚟，先將" + item + "放去" + target + "。", itemEn ? "Take your time. First, put the " + itemEn + " on the plate." : "Take your time. First, check the dim sum shown at the top.") : dealText("慢慢嚟，先將" + item + "放去" + target + "。", itemEn && targetEn ? "Take your time. First, put the " + itemEn + " in the " + targetEn + "." : generic);
+        }(tier, catsR.find(c => c && c.type === lastWrongItemType) || catsR[0]), simpleMsg = '<div style="font-size:34px; line-height:1.55; font-weight:800; max-width:20em;">' + simpleCanto + "</div>";
         let overlay = document.getElementById("recoveryOverlay");
         overlay || (overlay = document.createElement("div"), overlay.id = "recoveryOverlay", 
         overlay.style.cssText = "position:absolute; inset:0; z-index:50; background:rgba(0,0,0,0.86); color:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px; text-align:center;", 
@@ -6083,8 +6520,8 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                 try {
                     window.speechSynthesis.cancel();
                 } catch (e) {}
-                overlay.style.display = "none", recoveryPauseActive = !1, wrongStreak = 0, heldItem = null, 
-                gripActive = !1, dwellTarget = null, releaseDwellStart = 0, releaseDwellPlate = null, 
+                overlay.style.display = "none", recoveryPauseActive = !1, wrongStreak = 0, lastWrongItemType = "", 
+                heldItem = null, gripActive = !1, dwellTarget = null, releaseDwellStart = 0, releaseDwellPlate = null, 
                 releaseDwellPauseAt = 0, releaseDwellLastOpenAt = 0, posHistory = [], dotEmaX = -1, 
                 dotEmaY = -1, cursorX = -1, cursorY = -1, ensureFoodCount(), state.running = !0, 
                 gameRAF && cancelAnimationFrame(gameRAF), gameRAF = requestAnimationFrame(gameLoop);
@@ -6584,7 +7021,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                     }
                 }(allLandmarks[selected]), selected;
             }(results, inputMirrored);
-            if (selectedHandIndex < 0) return {
+            if (trackNoteHandFrame(results, selectedHandIndex), selectedHandIndex < 0) return {
                 detected: !1,
                 reason: "affected-hand-not-detected"
             };
@@ -6819,7 +7256,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                 source: "pose-wrist"
             };
         }
-        return {
+        return trackNoteHandFrame(results, -1), {
             detected: !1,
             reason: "no-hand-detected"
         };
@@ -7130,6 +7567,9 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         privacySegMask = null, privacySeed = null, privacySegLastTs = 0, privacySegLastRunAt = 0;
     }
     function updateCalibrationCopy() {
+        try {
+            updateVoiceWarning();
+        } catch (_e) {}
         const hint = document.getElementById("calibHint"), openCheck = document.getElementById("calibOpenCheck"), closeCheck = document.getElementById("calibCloseCheck");
         if (isShoulderFlexionLevel()) hint.textContent = "已選患側肩、手肘及軀幹入鏡；患臂自然垂低。"; else if (isLevel6RealToolTask()) {
             const w = level6ToolWords();
@@ -7592,9 +8032,9 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             title: "荃灣街景相片",
             goal: "把荃灣街景相片送到同名的大型相片目標",
             shoulderTitle: "香港遊",
-            shoulderGoal: "到站落車，舉起望遠鏡睇風景，望清楚就影到一張閃咭",
+            shoulderGoal: "到站落車，舉起望遠鏡睇風景，望清楚就影到一張風景卡",
             shoulderThumbnail: "img/advanced/hk_tour_thumb.jpg",
-            shoulderThumbnailAlt: "望遠鏡同三張香港地標閃咭",
+            shoulderThumbnailAlt: "望遠鏡同三張香港風景卡",
             itemWord: "街景相片",
             difficulty: "容易至中等",
             targetStyle: "panel",
@@ -8219,6 +8659,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     function isDimsumBasicGame() {
         return isDimsumBowlGame() && "complex" !== state.dimsumDifficulty;
     }
+    const DIMSUM_ORDER_DONE_TEXT = "上齊喇，多謝晒！";
     function newDimsumOrder() {
         const pool = DIMSUM_ORDER_MENU.slice();
         for (let i = pool.length - 1; i > 0; i--) {
@@ -8226,7 +8667,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             [pool[i], pool[j]] = [ pool[j], pool[i] ];
         }
         dimsumOrder = {
-            lines: pool.slice(0, 2).map(m => ({
+            lines: pool.slice(0, 1).map(m => ({
                 type: m.type,
                 label: m.label,
                 need: 2 + Math.floor(3 * Math.random()),
@@ -8235,7 +8676,14 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             done: !1
         }, dimsumPlateContents = [], dimsumOrderCelebrateUntil = 0;
         try {
-            speakCantonese(dimsumOrder ? "我想食" + dimsumOrder.lines.map(l => l.need + "個" + l.label).join("，") + "。" : "", {
+            stepSay(dealText(function() {
+                if (!dimsumOrder) return "";
+                const line = dimsumOrder.lines[0];
+                return line ? "我想食" + line.need + "個" + line.label + "。" : "";
+            }(), function() {
+                const line = dimsumOrder && dimsumOrder.lines[0], name = line ? enName(line.label, line.need) : "";
+                return name ? "I would like " + line.need + " " + name + "." : "Check the dim sum shown at the top.";
+            }()), {
                 rate: .82
             });
         } catch (e) {}
@@ -8271,8 +8719,9 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                 try {
                     playApplauseSound();
                 } catch (e) {}
+                stepRepeatClear();
                 try {
-                    speakCantonese("好嘢！上齊點心喇！多謝晒！", {
+                    speakCantonese(DIMSUM_ORDER_DONE_TEXT, {
                         rate: .85
                     });
                 } catch (e) {}
@@ -8437,14 +8886,24 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             return choices[Math.floor(Math.random() * choices.length)];
         }(), laundryOrderCelebrateUntil = 0;
         try {
-            speakCantonese(function() {
+            stepSay(dealText(function() {
                 if (!laundryOrder) return "";
                 if (isLaundryZoneGame()) {
                     const line = laundryOrder.lines[0];
-                    return "將" + (line ? line.label : "件衫") + "夾去閃燈嗰個架。";
+                    return "將" + (line ? line.label : "件衫") + "擺去着燈嗰個架。";
                 }
-                return "將" + laundryOrder.lines.map(l => l.need + l.unit + l.label).join("、") + "夾上衫架。";
-            }(), {
+                const first = laundryOrder.lines[0];
+                return first ? "將" + first.need + first.unit + first.label + "擺上衫架。" : "";
+            }(), function() {
+                const line = laundryOrder && laundryOrder.lines[0];
+                if (!line) return "";
+                if (isLaundryZoneGame()) {
+                    const one = enName(line.label, 1);
+                    return one ? "Put the " + one + " on the lit rack." : "Put it on the lit rack.";
+                }
+                const name = enName(line.label, line.need);
+                return name ? "Put " + line.need + " " + name + " on the rack." : "Put the garment on the rack.";
+            }()), {
                 rate: .82
             });
         } catch (e) {}
@@ -8466,7 +8925,8 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             laundryWrongSpokenAt = now;
             try {
                 speakCantonese(msg, {
-                    rate: .9
+                    rate: .9,
+                    priority: "correct"
                 });
             } catch (e) {}
         }
@@ -8506,14 +8966,14 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         if (!item) return !1;
         if (isLaundryBasicGame()) return !0;
         const idx = laundryRackIndexOf(rack);
-        if (isLaundryZoneGame()) return !(!laundryOrderAccepts(item) || idx !== laundryLitRack && (laundryNoteWrongRack(idx, "要夾喺閃燈嗰個架呀。"), 
+        if (isLaundryZoneGame()) return !(!laundryOrderAccepts(item) || idx !== laundryLitRack && (laundryNoteWrongRack(idx, "擺去着燈嗰個架。"), 
         1));
         if (isLaundrySortGame()) {
             const want = laundrySortRackFor(item.targetType);
             if (want < 0) return !1;
             if (idx !== want) {
-                const racks = laundrySortRacks();
-                return laundryNoteWrongRack(idx, (item.label || "呢件") + "係" + racks[want].label + "，要夾喺「" + racks[want].label + "」嗰個架呀。"), 
+                const racks = laundrySortRacks(), enItem = enName(item.label, 1), enRack = enName(racks[want].label, 1);
+                return laundryNoteWrongRack(idx, dealText((item.label || "呢件") + "要擺去「" + racks[want].label + "」架。", enRack ? "The " + (enItem || "garment") + ' goes on the "' + enRack + '" rack.' : "Put it on the matching rack.")), 
                 !1;
             }
             return !0;
@@ -8973,6 +9433,27 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             });
         } catch (e) {}
     }
+    const COOK_STEP_SOUNDS = [ "rustle", "crack", "stir", "water", "chop", "ignite", "sizzle", "sizzleBig", "shake", "sizzle", "click", "clang" ], COOK_SOUND_GAIN = .12;
+    function cookNoiseBurst(ctx, t0, dur, type, freq, q, gain, attack) {
+        const src = ctx.createBufferSource();
+        src.buffer = function(ctx, seconds) {
+            const len = Math.max(1, Math.floor(ctx.sampleRate * seconds)), buf = ctx.createBuffer(1, len, ctx.sampleRate), d = buf.getChannelData(0);
+            for (let i = 0; i < len; i++) d[i] = 2 * Math.random() - 1;
+            return buf;
+        }(ctx, dur + .05);
+        const f = ctx.createBiquadFilter();
+        f.type = type, f.frequency.value = freq, f.Q.value = q || .8;
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(1e-4, t0), g.gain.exponentialRampToValueAtTime(Math.max(2e-4, gain), t0 + (attack || .01)), 
+        g.gain.exponentialRampToValueAtTime(1e-4, t0 + dur), src.connect(f), f.connect(g), 
+        g.connect(ctx.destination), src.start(t0), src.stop(t0 + dur + .05);
+    }
+    function cookTone(ctx, t0, dur, type, f0, f1, gain) {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = type, o.frequency.setValueAtTime(f0, t0), f1 && f1 !== f0 && o.frequency.exponentialRampToValueAtTime(f1, t0 + dur), 
+        g.gain.setValueAtTime(Math.max(2e-4, gain), t0), g.gain.exponentialRampToValueAtTime(1e-4, t0 + dur), 
+        o.connect(g), g.connect(ctx.destination), o.start(t0), o.stop(t0 + dur + .03);
+    }
     let mahjongClackAt = 0, mahjongClackNoise = null;
     function playWrongSound() {
         try {
@@ -9274,6 +9755,27 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         const nearestX = Math.max(rect.left, Math.min(x, rect.right)), nearestY = Math.max(rect.top, Math.min(y, rect.bottom));
         return Math.hypot(x - nearestX, y - nearestY) < radius;
     }
+    function ensureFoodsClearOfInstructions() {
+        if (!foods.length) return;
+        if (isPublicLevel5DimsumLayout()) return void foods.filter(food => !food.removed && !food.isDistractor).forEach((food, index) => {
+            const slot = function(index, cw, ch) {
+                const geometry = publicLevel5DimsumGeometry(cw, ch);
+                return geometry.slots[index % geometry.slots.length];
+            }(index, gameCanvas.width, gameCanvas.height, food.r);
+            food.x = slot.x, food.y = slot.y, food.baseX = slot.x, food.baseY = slot.y;
+        });
+        const exclusion = getInstructionExclusionRect(gameCanvas.width, gameCanvas.height, Math.max(18, .16 * (foods[0]?.r || 100)));
+        if (!exclusion) return;
+        const defs = getDimSumDefs();
+        foods.forEach((food, index) => {
+            if (food.isDistractor || food.held || food.removed) return;
+            if (!circleOverlapsRect(food.x, food.y, food.r, exclusion)) return;
+            const def = defs.find(item => item.type === food.type) || defs[0];
+            if (!def) return;
+            const others = foods.filter((_, otherIndex) => otherIndex !== index);
+            foods[index] = makeFoodAt(def, others);
+        });
+    }
     function foodParkingPositionIsClear(food, x, y) {
         const cw = gameCanvas.width, ch = gameCanvas.height, edge = Math.max(14, .18 * food.r);
         if (x - food.r < edge || x + food.r > cw - edge || y - food.r < edge || y + food.r > ch - edge) return !1;
@@ -9415,6 +9917,13 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             if (isLaundryRackGame()) {
                 if (existingFoods.every(f => f.removed || Math.hypot(x - f.x, y - f.y) >= r + (f.r || baseR) + 16)) return createFood(x, y);
             } else if (positionIsClear(x, y)) return createFood(x, y);
+        }
+        if (isDimsumOrderGame() && !portrait) {
+            const sideGap = Math.max(16, .12 * r) + 2, edge = Math.max(14, .18 * r);
+            for (const ratio of [ slotRatios[0], slotRatios[slotRatios.length - 1] ]) {
+                const x = Math.max(centerMin, Math.min(centerMax, cw * ratio[0])), y = Math.max(spawnYmin, Math.min(spawnYmax, ch * ratio[1])) + 2 * r + sideGap;
+                if (!(y + r > ch - edge) && positionIsClear(x, y)) return createFood(x, y);
+            }
         }
         for (let attempt = 0; attempt < 120; attempt++) {
             const x = randRange(centerMin, centerMax), y = randRange(spawnYmin, spawnYmax);
@@ -9616,7 +10125,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                     if (trackLive && staleFor < PUBLIC_CAMERA_STALL_REACQUIRE_MS && publicCameraStall.playAttempts < 2) {
                         publicCameraStall.playAttempts++, console.warn("camera stall watchdog: replay video", Math.round(staleFor), reason);
                         try {
-                            setActionPrompt("鏡頭畫面停頓，重新連接中", "請稍等");
+                            setActionPrompt("鏡頭重新連接緊", "等一等");
                         } catch (_e) {}
                         return gameVideo.srcObject !== state.stream && state.stream && (gameVideo.srcObject = state.stream), 
                         void gameVideo.play().catch(() => {});
@@ -9624,7 +10133,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                     if (!(publicCameraStall.reacquireAttempts >= 1)) {
                         publicCameraStall.reacquireAttempts++, publicCameraStall.busy = !0, console.warn("camera stall watchdog: re-acquire camera", Math.round(staleFor), reason, trackLive ? "track live" : "track not live");
                         try {
-                            setActionPrompt("鏡頭畫面停頓，重新連接中", "請稍等");
+                            setActionPrompt("鏡頭重新連接緊", "等一等");
                         } catch (_e) {}
                         cameraRequestAttempted = !1, resetHandFrameAdmission(), startCamera("gameVideo").then(ok => {
                             ok && (publicCameraStall.lastFreshAt = performance.now(), hideCameraError());
@@ -9912,22 +10421,93 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                         "laundry" === advCurrent && laundrySetup(), "flowers" === advCurrent && flowersSetup()), 
                         isLevel6DigiflexTask()) handDetected ? (nowMs() < cook.outcomeUntil || nowMs() < cook.readyAt) && setActionPrompt("放鬆", "") : setActionPrompt("患手入鏡", ""); else if (handDetected) {
                             const advancedHeld = !(!carrier.heldId && !picker.heldId), advancedHover = !(!carrier.hoverId && !picker.hoverId);
-                            if ("peg_laundry" === advCurrent) setActionPrompt(advancedHeld ? "移到目的地停住" : advancedHover ? "揸實衣夾" : "移手去着燈位置", ""); else if (advancedHeld) setActionPrompt(level6AutoPlaceEnabled() ? "移到目標停住" : isGrasping ? "保持揸住" : "張開手放低", ""); else if (advancedHover) {
+                            if ("peg_laundry" === advCurrent) setActionPrompt(advancedHeld ? "移到目的地，等一等" : advancedHover ? "捏住衣夾" : "移手去着燈位置", ""); else if (advancedHeld) setActionPrompt(level6AutoPlaceEnabled() ? "移到目標，等一等" : isGrasping ? "保持捏住" : "打開隻手放低", ""); else if (advancedHover) {
                                 const advancedArmed = !(!carrier.armed && !picker.armed);
-                                setActionPrompt(isGrasping ? !level6AutoPlaceEnabled() || advancedArmed || level6QuickReadyEnabled() ? "揸實" : "先張開手" : "揸實拿起", "");
-                            } else setActionPrompt("張開手", "");
+                                setActionPrompt(isGrasping ? !level6AutoPlaceEnabled() || advancedArmed || level6QuickReadyEnabled() ? "捏住" : "先打開隻手" : "捏住攞起", "");
+                            } else setActionPrompt("打開隻手", "");
                         } else setActionPrompt("患手入鏡", "");
-                        advDom && advDom.reward.classList.contains("show") || advDom && advDom.keep && advDom.keep.classList.contains("show") || ("cooking" === advCurrent ? (cook.announceAt && nowMs() >= cook.announceAt && (cook.announceAt = 0, 
+                        rewardIsOpen() || advDom && advDom.keep && advDom.keep.classList.contains("show") || ("cooking" === advCurrent ? (cook.announceAt && nowMs() >= cook.announceAt && (cook.announceAt = 0, 
                         cookAnnounce()), !state.qaMode && poseLandmarker && advPoseFrame++ % 2 == 0 && detectPose(document.getElementById("gameVideo")), 
                         function() {
                             if (cook.done) return;
+                            if (cook.rest.phase) return void function(now) {
+                                if (cook.step(), "rest" === cook.rest.phase) return cookDigiflexDetect(0, now, () => !1), 
+                                cook.metric = COOK_REST_BANNER, setActionPrompt(COOK_REST_BANNER, ""), void (now >= cook.rest.until && (cook.rest = {
+                                    phase: "wait",
+                                    until: 0
+                                }, speakCantonese(COOK_REST_READY_SAY)));
+                                let started = !1;
+                                cookDigiflexDetect(0, now, () => (started = !0, !0)), cook.metric = COOK_REST_READY_BANNER, 
+                                setActionPrompt(COOK_REST_READY_BANNER, ""), started && function(now) {
+                                    cook.rest = {
+                                        phase: "",
+                                        until: 0
+                                    }, cook.reps = 0, cook.lastRepAt = 0, cook.digi.squeezing = !1, cook.digi.hist = [], 
+                                    cook.digi.peak = 0, cook.digi.animAt = 0, cook.introUntil = now + 2600, cook.readyAt = cook.introUntil + 400, 
+                                    cook.announceAt = cook.introUntil - 400, playCorrectSound(), cookRenderPanel(), 
+                                    setActionPrompt("揸一下", "");
+                                }(now);
+                            }(nowMs());
                             const st = cook.step(), th = COOK_TH[state.level] || COOK_TH[4], now = nowMs(), lm = lastHandLm, L = cook.layout;
                             let m = "";
                             if (now < cook.outcomeUntil) return cook.metric = "請先觀看目前成果，稍後自動開始下一步。", void cookLiveFeedback();
                             if (now < cook.readyAt) return cook.metric = "準備中，請先回到舒適的起始位置。", void cookLiveFeedback();
                             const bumpRep = () => !(now - cook.lastRepAt < th.repCooldown || (cook.lastRepAt = now, 
-                            cook.reps++, isLevel6DigiflexTask() && (cook.digi.animAt = now, cook.digi.animSign = -cook.digi.animSign), 
-                            cook.reps < cookStepNeed(st) && (playCorrectSound(), rewardSmall({
+                            cook.reps++, isLevel6DigiflexTask() && (cook.digi.animAt = now, cook.digi.animSign = -cook.digi.animSign, 
+                            function(idx) {
+                                const kind = COOK_STEP_SOUNDS[idx];
+                                if (!kind) return "";
+                                try {
+                                    const ctx = getAudioCtx();
+                                    "suspended" === ctx.state && "function" == typeof ctx.resume && ctx.resume();
+                                    const t = ctx.currentTime + .01, G = COOK_SOUND_GAIN;
+                                    switch (kind) {
+                                      case "rustle":
+                                        cookNoiseBurst(ctx, t, .22, "highpass", 3200, .7, .7 * G, .04);
+                                        break;
+
+                                      case "crack":
+                                        cookNoiseBurst(ctx, t, .05, "bandpass", 2400, 2.5, G, .002), cookTone(ctx, t, .05, "triangle", 900, 300, .6 * G);
+                                        break;
+
+                                      case "stir":
+                                        cookNoiseBurst(ctx, t, .16, "bandpass", 900, 1.2, .8 * G, .05), cookNoiseBurst(ctx, t + .17, .16, "bandpass", 1200, 1.2, .8 * G, .05);
+                                        break;
+
+                                      case "water":
+                                        cookNoiseBurst(ctx, t, .42, "bandpass", 1800, .5, .8 * G, .08), cookTone(ctx, t + .05, .12, "sine", 500, 1100, .35 * G);
+                                        break;
+
+                                      case "chop":
+                                        cookTone(ctx, t, .07, "sine", 190, 90, 1.1 * G), cookNoiseBurst(ctx, t, .04, "lowpass", 900, .7, .9 * G, .002);
+                                        break;
+
+                                      case "ignite":
+                                        cookTone(ctx, t, .03, "square", 1500, 1200, .5 * G), cookNoiseBurst(ctx, t + .06, .5, "lowpass", 420, .6, G, .12);
+                                        break;
+
+                                      case "sizzle":
+                                        cookNoiseBurst(ctx, t, .45, "highpass", 4500, .6, .75 * G, .05);
+                                        break;
+
+                                      case "sizzleBig":
+                                        cookNoiseBurst(ctx, t, .7, "highpass", 3600, .6, G, .04);
+                                        break;
+
+                                      case "shake":
+                                        cookNoiseBurst(ctx, t, .07, "highpass", 5200, .8, .7 * G, .01), cookNoiseBurst(ctx, t + .13, .07, "highpass", 5200, .8, .7 * G, .01);
+                                        break;
+
+                                      case "click":
+                                        cookTone(ctx, t, .03, "square", 1300, 900, .5 * G);
+                                        break;
+
+                                      case "clang":
+                                        cookTone(ctx, t, .35, "triangle", 1560, 1540, .8 * G), cookTone(ctx, t, .25, "sine", 2340, 2320, .4 * G);
+                                    }
+                                } catch (e) {}
+                            }(cook.idx)), cook.reps < cookStepNeed(st) && (isLevel6DigiflexTask() || playCorrectSound(), 
+                            rewardSmall({
                                 achievement: "第 " + (cook.idx + 1) + " 步 · " + cook.reps + "/" + cookStepNeed(st),
                                 detail: cookStepGoal(st),
                                 x: cursorX > 0 ? cursorX : gameCanvas.width / 2,
@@ -9936,43 +10516,8 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                 tts: !1,
                                 simpleHide: !0
                             })), 0));
-                            if (isLevel6DigiflexTask()) return function(st, now, bumpRep) {
-                                const d = cook.digi;
-                                if (!handDetected || !Number.isFinite(lastGraspScore)) return cook.metric = "未偵測到患手，請將揸住握力器嘅手放入鏡頭。", 
-                                setActionPrompt("等待偵測手部", ""), void (d.level = 0);
-                                d.hist.push(lastGraspScore), d.hist.length > 3 && d.hist.shift();
-                                const sc = medianValue(d.hist);
-                                d.lastScore = sc;
-                                const calibrated = Number.isFinite(state.personalGraspEnter) && Number.isFinite(state.personalGraspExit), enter = calibrated ? state.personalGraspEnter : .56, exit = calibrated ? state.personalGraspExit : .5, gap = calibrated ? Math.max(.03, (enter - exit) / .25) : DIGIFLEX_DEFAULT_GAP, rise = Math.min(DIGIFLEX_MAX_RISE, Math.max(DIGIFLEX_MIN_RISE, gap * DIGIFLEX_RELATIVE_RISE));
-                                if (d.rise = rise, d.squeezing) {
-                                    sc > d.peak && (d.peak = sc);
-                                    const riseNow = Math.min(2 * rise, Math.max(.6 * rise, d.peak - (null == d.baseline ? exit : d.baseline))), frac = now - d.since > DIGIFLEX_LATE_MS ? DIGIFLEX_OFF_FRACTION_LATE : DIGIFLEX_OFF_FRACTION, off = sc <= d.peak - riseNow * frac || sc <= d.baseline + .5 * rise;
-                                    if (d.level = clamp01((sc - d.baseline) / rise), off) {
-                                        d.squeezing = !1;
-                                        const held = now - d.since;
-                                        d.base = [ {
-                                            t: now,
-                                            v: sc
-                                        } ], d.baseline = sc, held >= DIGIFLEX_MIN_SQUEEZE_MS && bumpRep();
-                                    } else now - d.since > DIGIFLEX_STUCK_MS && (d.squeezing = !1, d.base = [ {
-                                        t: now,
-                                        v: sc
-                                    } ], d.baseline = sc, d.unsettledSince = 0);
-                                } else {
-                                    for (d.base || (d.base = []), null == d.baseline || sc < d.baseline + .4 * rise ? (d.unsettledSince = 0, 
-                                    d.base.push({
-                                        t: now,
-                                        v: sc
-                                    })) : (d.unsettledSince || (d.unsettledSince = now), now - d.unsettledSince > DIGIFLEX_RESEED_MS && (d.base = [ {
-                                        t: now,
-                                        v: sc
-                                    } ], d.unsettledSince = 0)); d.base.length && now - d.base[0].t > DIGIFLEX_BASELINE_WINDOW_MS; ) d.base.shift();
-                                    d.base.length ? d.baseline = Math.min(...d.base.map(b => b.v)) : null == d.baseline && (d.baseline = sc), 
-                                    d.level = clamp01((sc - d.baseline) / rise), sc >= d.baseline + rise && (d.squeezing = !0, 
-                                    d.since = now, d.peak = sc, d.lastOnAt = now, d.unsettledSince = 0);
-                                }
-                                cook.metric = d.squeezing ? "揸實中 ✊ — 而家放鬆" : "放鬆 🖐 — 而家揸實握力器", setActionPrompt(d.squeezing ? "放鬆" : "揸實", "");
-                            }(0, now, bumpRep), cookLiveFeedback(), void (cook.reps >= cookStepNeed(st) && cookAdvance(!0));
+                            if (isLevel6DigiflexTask()) return cookDigiflexDetect(0, now, bumpRep), cookLiveFeedback(), 
+                            void (cook.reps >= cookStepNeed(st) && cookAdvance(!0));
                             switch (st.kind) {
                               case "grasp":
                                 isGrasping && !cook.graspPrev && (cook.graspPhase = 1), !isGrasping && cook.graspPrev && 1 === cook.graspPhase && (cook.graspPhase = 0, 
@@ -10298,11 +10843,18 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                     tts: !1,
                                     silent: !0
                                 }), playCorrectSound();
-                            } else cards.combo = 0, score = Math.max(0, score - 3), grabCount++, totalWrong++, 
-                            updateHUD(), triggerFeedback(!1), adaptiveNoteTrial("cards_place", "failure", {
-                                reason: "wrong_suit"
-                            }), c.gone = !0, fxRing(c.x, c.y), cards.msg = "呢張係" + CARD_SUIT_NAME[c.suit] + "，要揀" + CARD_SUIT_NAME[cards.suit] + "。", 
-                            speakCantonese("呢張係" + CARD_SUIT_NAME[c.suit] + "。要揀" + CARD_SUIT_NAME[cards.suit] + "。");
+                            } else {
+                                cards.combo = 0, score = Math.max(0, score - 3), grabCount++, totalWrong++, updateHUD(), 
+                                triggerFeedback(!1), adaptiveNoteTrial("cards_place", "failure", {
+                                    reason: "wrong_suit"
+                                }), c.gone = !0, fxRing(c.x, c.y);
+                                const pickEn = "Pick " + (enName(CARD_SUIT_NAME[cards.suit]) || "the suit shown at the top") + ".";
+                                cards.msg = plainSay(dealText("要揀" + CARD_SUIT_NAME[cards.suit] + "。", pickEn), (CARD_SUIT_NAME[c.suit], 
+                                CARD_SUIT_NAME[cards.suit])), speakCantonese(plainSay(dealText("要揀" + CARD_SUIT_NAME[cards.suit] + "。", pickEn), (CARD_SUIT_NAME[c.suit], 
+                                CARD_SUIT_NAME[cards.suit])), {
+                                    priority: "correct"
+                                });
+                            }
                             cardsPanel();
                         }() : "laundry" === advCurrent ? function() {
                             const items = laundry.garments.filter(g => !g.gone), zones = laundry.baskets.map(b => ({
@@ -10354,11 +10906,17 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                         y: b.y - .3 * b.h,
                                         tts: laundry.correct % 3 == 0 && nextEncourage()
                                     }), laundryRefill()), laundry.msg = "";
-                                } else g.x = g.baseX, g.y = g.baseY, laundry.wrong++, score = Math.max(0, score - 3), 
-                                grabCount++, totalWrong++, updateHUD(), triggerFeedback(!1), adaptiveNoteTrial("laundry_place", "failure", {
-                                    reason: "wrong_basket"
-                                }), laundry.msg = b ? "呢個係" + LAUNDRY_COLORS[b.color].name + "籃，" + g.name + "要放" + LAUNDRY_COLORS[g.color].name + "籃。" : plainSay("未放入籃，再試過。"), 
-                                speakCantonese(laundry.msg);
+                                } else {
+                                    g.x = g.baseX, g.y = g.baseY, laundry.wrong++, score = Math.max(0, score - 3), grabCount++, 
+                                    totalWrong++, updateHUD(), triggerFeedback(!1), adaptiveNoteTrial("laundry_place", "failure", {
+                                        reason: "wrong_basket"
+                                    });
+                                    const gEn = EN_GARMENT_NAMES[g.name], cEn = enName(LAUNDRY_COLORS[g.color].name);
+                                    laundry.msg = b ? plainSay(dealText(g.name + "放去" + LAUNDRY_COLORS[g.color].name + "籃。", gEn && cEn ? "The " + gEn[0] + (gEn[1] ? " go" : " goes") + " in the " + cEn + " basket." : "Put it in the basket of the same colour."), (LAUNDRY_COLORS[b.color].name, 
+                                    g.name, LAUNDRY_COLORS[g.color].name)) : plainSay("未放入籃，再試過。"), speakCantonese(laundry.msg, {
+                                        priority: "correct"
+                                    });
+                                }
                                 laundryPanel();
                             }
                             var correct;
@@ -10464,7 +11022,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                             const key = advCurrent + ":" + held;
                             key !== heldPromptKey && (heldPromptKey = key, isLevel6RealToolTask() ? (level6ToolWords().open, 
                             level6ToolWords().noun) : level6AutoPlaceEnabled() || isLevel67BareMode() || isPegMode(), 
-                            speakCantonese(isLevel6RealToolTask() ? isLaundryPegStoryGame() ? "夾住喇，擺過去。" : "夾住喇，擺去衫架。" : level6AutoPlaceEnabled() ? "攞住喇，" + plainHeldWhere() + "。" : "攞住喇。" + plainHeldWhere() + "，打開隻手。"));
+                            speakCantonese(isLevel6RealToolTask() ? isLaundryPegStoryGame() ? "攞住喇，擺過去。" : "攞住喇，擺去衫架。" : level6AutoPlaceEnabled() ? "攞住喇，" + plainHeldWhere() + "。" : "攞住喇。" + plainHeldWhere() + "，打開隻手。"));
                         }());
                     }(), function() {
                         const ctx = gameCtx;
@@ -10803,24 +11361,32 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                         shadow: !0
                                     });
                                 }
-                                now < cook.introUntil && (cook.rounds > 0 ? drawCookDigiflexBanner(ctx, cw, g, "再煮多一碟蛋炒飯！", cook.rounds) : drawCookDigiflexBanner(ctx, cw, g, "買完餸返到屋企，而家煮蛋炒飯！"));
-                                {
+                                if (cook.rest.phase ? drawCookDigiflexBanner(ctx, cw, g, dealText("rest" === cook.rest.phase ? COOK_REST_BANNER : COOK_REST_READY_BANNER, "rest" === cook.rest.phase ? "Rest for a moment" : "Cook again? Squeeze once")) : now < cook.introUntil && (cook.rounds > 0 ? drawCookDigiflexBanner(ctx, cw, g, dealText("第 " + (cook.rounds + 1) + " 碟", "Plate " + (cook.rounds + 1))) : drawCookDigiflexBanner(ctx, cw, g, "返到屋企喇，而家煮蛋炒飯！")), 
+                                cook.rest.phase && (cookStepLabelRect = null), !cook.rest.phase) {
                                     const f = g.titleFont;
                                     ctx.save(), ctx.font = "900 " + f + 'px "PingFang TC","Noto Sans TC",sans-serif';
                                     const t1 = "第 " + (cook.idx + 1) + " 步／" + COOK_STEPS.length + "：" + (COOK_DIGIFLEX_TITLES[st.id] || st.text), pw = ctx.measureText(t1).width + 1.3 * f, ph = 1.7 * f, px = 14 * g.cssScale, py = 14 * g.cssScale;
-                                    rrPath(ctx, px, py, pw, ph, ph / 2), ctx.fillStyle = "rgba(255,255,255,0.94)", ctx.fill(), 
-                                    ctx.lineWidth = 3, ctx.strokeStyle = "#1A6B5A", ctx.stroke(), ctx.fillStyle = "#17463d", 
+                                    cookStepLabelRect = {
+                                        left: px,
+                                        top: py,
+                                        right: px + pw,
+                                        bottom: py + ph
+                                    }, rrPath(ctx, px, py, pw, ph, ph / 2), ctx.fillStyle = "rgba(255,255,255,0.94)", 
+                                    ctx.fill(), ctx.lineWidth = 3, ctx.strokeStyle = "#1A6B5A", ctx.stroke(), ctx.fillStyle = "#17463d", 
                                     ctx.textAlign = "left", ctx.textBaseline = "middle", ctx.fillText(t1, px + .65 * f, py + ph / 2 + .04 * f), 
                                     ctx.restore();
                                 }
-                                ctx.save();
-                                const pillFont = Math.round(.055 * Math.min(cw, ch));
-                                ctx.font = "900 " + pillFont + 'px "PingFang TC","Noto Sans TC",sans-serif';
-                                const label = "已揸 " + cook.reps + " / " + need + " 下", pw = ctx.measureText(label).width + 1.6 * pillFont, ph = 1.7 * pillFont;
-                                rrPath(ctx, cx - pw / 2, g.countY - ph / 2, pw, ph, ph / 2), ctx.fillStyle = "rgba(255,255,255,0.94)", 
-                                ctx.fill(), ctx.lineWidth = 4, ctx.strokeStyle = cook.digi.squeezing ? "#E07B39" : "#1A6B5A", 
-                                ctx.stroke(), ctx.fillStyle = "#17463d", ctx.textAlign = "center", ctx.textBaseline = "middle", 
-                                ctx.fillText(label, cx, g.countY + .04 * pillFont), ctx.restore(), cook.outcomeIdx >= 0 && now < cook.outcomeUntil && drawCookOutcomeVisual(ctx, cook.outcomeIdx, .5 * cw, .4 * ch, .22 * Math.min(cw, ch), !0), 
+                                if (!cook.rest.phase) {
+                                    ctx.save();
+                                    const pillFont = Math.round(.055 * Math.min(cw, ch));
+                                    ctx.font = "900 " + pillFont + 'px "PingFang TC","Noto Sans TC",sans-serif';
+                                    const label = "已揸 " + cook.reps + " / " + need + " 次", pw = ctx.measureText(label).width + 1.6 * pillFont, ph = 1.7 * pillFont;
+                                    rrPath(ctx, cx - pw / 2, g.countY - ph / 2, pw, ph, ph / 2), ctx.fillStyle = "rgba(255,255,255,0.94)", 
+                                    ctx.fill(), ctx.lineWidth = 4, ctx.strokeStyle = cook.digi.squeezing ? "#E07B39" : "#1A6B5A", 
+                                    ctx.stroke(), ctx.fillStyle = "#17463d", ctx.textAlign = "center", ctx.textBaseline = "middle", 
+                                    ctx.fillText(label, cx, g.countY + .04 * pillFont), ctx.restore();
+                                }
+                                cook.outcomeIdx >= 0 && now < cook.outcomeUntil && drawCookOutcomeVisual(ctx, cook.outcomeIdx, .5 * cw, .4 * ch, .22 * Math.min(cw, ch), !0), 
                                 ctx.save();
                                 const dotR = Math.max(6, .009 * Math.min(cw, ch)), gap = 3.2 * dotR, startX = cw / 2 - (COOK_STEPS.length - 1) * gap / 2;
                                 for (let i = 0; i < COOK_STEPS.length; i++) ctx.beginPath(), ctx.arc(startX + i * gap, g.dotsY, dotR, 0, 2 * Math.PI), 
@@ -10843,7 +11409,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                     }
                                     const f = Math.round(.17 * g.badgeS);
                                     ctx.font = "900 " + f + 'px "PingFang TC","Noto Sans TC",sans-serif';
-                                    const txt = handDetected ? sq ? "揸實 ✊" : "放鬆 🖐" : "請將手入鏡", pw = ctx.measureText(txt).width + 1.2 * f, ph = 1.6 * f, px = g.badgeX, py = g.badgeY + .5 * g.badgeS + 8 * g.cssScale + ph / 2;
+                                    const txt = handDetected ? sq ? "揸緊 ✊" : "放鬆 🖐" : "請將手入鏡", pw = ctx.measureText(txt).width + 1.2 * f, ph = 1.6 * f, px = g.badgeX, py = g.badgeY + .5 * g.badgeS + 8 * g.cssScale + ph / 2;
                                     rrPath(ctx, px - pw / 2, py - ph / 2, pw, ph, ph / 2), ctx.fillStyle = sq ? "#E07B39" : "rgba(255,255,255,0.94)", 
                                     ctx.fill(), ctx.lineWidth = 2, ctx.strokeStyle = sq ? "#E07B39" : "#1A6B5A", ctx.stroke(), 
                                     ctx.fillStyle = sq ? "#fff" : "#17463d", ctx.textAlign = "center", ctx.textBaseline = "middle", 
@@ -10954,7 +11520,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                 ctx.restore();
                             }
                             const hover = picker.hoverId, held = picker.heldId;
-                            drawAffectedSelectionZone(ctx, "收牌區");
+                            drawAffectedSelectionZone(ctx, "放牌區");
                             for (const c of cards.field) {
                                 if (c.gone) continue;
                                 const heldAt = held === c.id ? level6HeldDrawPoint() : null, drawX = heldAt ? heldAt.x : c.x, drawY = heldAt ? heldAt.y : c.y;
@@ -11272,7 +11838,8 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                             onPlate.label, adaptiveNoteTrial("transport_place", "success"), showLevelUpBanner(), 
                                             dimsumReward()) : dwellFridgeDrop || dwellLaundryOrderDrop && laundryRackRejectedWithoutPenalty() ? (triggerFeedback(!1), 
                                             heldItem.label) : (score = Math.max(0, score - 3), wrongStreak++, totalWrong++, 
-                                            triggerFeedback(!1), heldItem.label, onPlate.label, adaptiveNoteTrial("transport_place", "failure", {
+                                            lastWrongItemType = heldItem.targetType || "", triggerFeedback(!1), heldItem.label, 
+                                            onPlate.label, adaptiveNoteTrial("transport_place", "failure", {
                                                 reason: "wrong_target"
                                             }), wrongStreak >= 5 && triggerRecoveryPause()), updateHUD(), heldItem.removed = !0, 
                                             heldItem = null, gripActive = !1, dwellTarget = null, advanceLevel3RoundVariant(), 
@@ -11838,7 +12405,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                     if (cur && "rep" === cur.kind && shopStory.spokenIdx !== shopStory.idx && "idle" === shopStory.anim.phase) {
                                         shopStory.spokenIdx = shopStory.idx;
                                         try {
-                                            speakCantonese(storySay(cur.text));
+                                            stepSay(storySay(cur.text));
                                         } catch (e) {}
                                     }
                                 }();
@@ -12481,7 +13048,75 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                             f.held && (ctx.beginPath(), ctx.arc(drawX, drawY, visualR + 6, 0, 2 * Math.PI), 
                             ctx.strokeStyle = "#D4A017", ctx.lineWidth = 3, ctx.stroke()), ctx.restore();
                         }
-                        isDimsumOrderGame() && dimsumOrder && (dimsumOrderBannerRect = null), isLaundryOrderGame() && laundryOrder && (laundryOrderBannerRect = null), 
+                        (function(ctx, cw, ch) {
+                            if (!isDimsumOrderGame() || !dimsumOrder) return void (dimsumOrderBannerRect = null);
+                            const line = dimsumOrder.lines[0];
+                            if (!line) return void (dimsumOrderBannerRect = null);
+                            const celebrating = nowMs() < dimsumOrderCelebrateUntil, menu = DIMSUM_ORDER_MENU.find(m => m.type === line.type), img = menu ? menu.img() : null, font = '"PingFang TC","Noto Sans TC",-apple-system,sans-serif';
+                            let maxBw = isPortrait() ? cw - 24 : Math.min(cw - 24, .38 * cw);
+                            if (!isPortrait()) {
+                                const sample = foods.find(f => !f.removed && !f.isDistractor), itemR = sample && sample.r || 116, sideReach = Math.max(.2 * cw, 1.5 * itemR) + itemR + Math.max(18, .16 * itemR) + 12;
+                                maxBw = Math.max(200, Math.min(maxBw, cw - 2 * sideReach - 20));
+                            }
+                            let s = Math.max(44, Math.min(72, Math.round(.075 * Math.min(cw, ch))));
+                            isPortrait() && (s = Math.min(s, 56));
+                            const layout = size => {
+                                const box = Math.round(.78 * size), numW = Math.round(1.05 * size);
+                                return {
+                                    box: box,
+                                    numW: numW,
+                                    w: 28 + size + 10 + numW + 10 + line.need * box + 8 * (line.need - 1)
+                                };
+                            };
+                            let lay = layout(s);
+                            for (lay.w > maxBw && (s = Math.max(34, Math.floor(s * maxBw / lay.w)), lay = layout(s)); lay.w > maxBw && s > 30; ) s -= 2, 
+                            lay = layout(s);
+                            const bw = lay.w, bh = s + 1.4 * 14, bx = cw / 2 - bw / 2;
+                            let by = isPortrait() ? 5 : 76;
+                            const prevRect = dimsumOrderBannerRect;
+                            dimsumOrderBannerRect = null;
+                            const islands = getInstructionExclusionRect(cw, ch, 6);
+                            if (dimsumOrderBannerRect = prevRect, islands) for (const isl of islands) isl.right > bx && isl.left < bx + bw && (by = Math.max(by, isl.bottom + 6));
+                            by = Math.min(by, .34 * ch - bh), dimsumOrderBannerRect = {
+                                left: bx - 10,
+                                top: by - 10,
+                                right: bx + bw + 10,
+                                bottom: by + bh + 10
+                            }, (!prevRect || Math.abs(prevRect.left - dimsumOrderBannerRect.left) > 8 || Math.abs(prevRect.right - dimsumOrderBannerRect.right) > 8 || Math.abs(prevRect.bottom - dimsumOrderBannerRect.bottom) > 8) && ensureFoodsClearOfInstructions(), 
+                            ctx.save(), ctx.fillStyle = celebrating ? "rgba(27,111,74,0.94)" : "rgba(255,255,255,0.94)", 
+                            rrPath(ctx, bx, by, bw, bh, 18), ctx.fill(), ctx.strokeStyle = celebrating ? "#14523A" : "#1A6B5A", 
+                            ctx.lineWidth = 3, rrPath(ctx, bx, by, bw, bh, 18), ctx.stroke();
+                            const cy = by + bh / 2;
+                            if (celebrating) {
+                                let fs = Math.round(.5 * s);
+                                ctx.font = `bold ${fs}px ${font}`;
+                                const shown = dealText(DIMSUM_ORDER_DONE_TEXT, "All served. Thank you!"), tw = ctx.measureText(shown).width;
+                                return tw > bw - 28 && (fs = Math.max(16, Math.floor(fs * (bw - 28) / tw)), ctx.font = `bold ${fs}px ${font}`), 
+                                ctx.fillStyle = "#FFFFFF", ctx.textAlign = "center", ctx.textBaseline = "middle", 
+                                ctx.fillText(shown, cw / 2, cy), void ctx.restore();
+                            }
+                            let x = bx + 14;
+                            img && img.complete && img.naturalWidth && drawSprite(ctx, img, x + s / 2, cy, s), 
+                            x += s + 10, ctx.fillStyle = "#173F32", ctx.textAlign = "center", ctx.textBaseline = "middle", 
+                            ctx.font = `900 ${Math.round(.5 * s)}px ${font}`, ctx.fillText("× " + line.need, x + lay.numW / 2, cy + .02 * s), 
+                            x += lay.numW + 10;
+                            const done = Math.min(line.placed, line.need);
+                            for (let i = 0; i < line.need; i++) {
+                                const lit = i < done, b = lay.box, bx2 = x + i * (b + 8), by2 = cy - b / 2;
+                                if (rrPath(ctx, bx2, by2, b, b, 10), ctx.fillStyle = lit ? "#E4F5EC" : "#F1EEE6", 
+                                ctx.fill(), ctx.lineWidth = lit ? 4 : 2, ctx.strokeStyle = lit ? "#1B8A5A" : "#B9B2A2", 
+                                lit || ctx.setLineDash([ 5, 4 ]), rrPath(ctx, bx2, by2, b, b, 10), ctx.stroke(), 
+                                ctx.setLineDash([]), img && img.complete && img.naturalWidth && (ctx.save(), ctx.globalAlpha = lit ? 1 : .22, 
+                                drawSprite(ctx, img, bx2 + b / 2, by2 + b / 2, .82 * b), ctx.restore()), lit) {
+                                    const r = Math.max(8, .2 * b), tx = bx2 + b - .7 * r, ty = by2 + .7 * r;
+                                    ctx.beginPath(), ctx.arc(tx, ty, r, 0, 2 * Math.PI), ctx.fillStyle = "#1B8A5A", 
+                                    ctx.fill(), ctx.strokeStyle = "#fff", ctx.lineWidth = Math.max(2, .28 * r), ctx.lineCap = "round", 
+                                    ctx.lineJoin = "round", ctx.beginPath(), ctx.moveTo(tx - .45 * r, ty), ctx.lineTo(tx - .1 * r, ty + .35 * r), 
+                                    ctx.lineTo(tx + .48 * r, ty - .35 * r), ctx.stroke();
+                                }
+                            }
+                            ctx.restore();
+                        })(ctx, cw, ch), isLaundryOrderGame() && laundryOrder && (laundryOrderBannerRect = null), 
                         isFridgeGame() && fridgeQueue.length && (fridgeBannerRect = null), function(ctx, cw, ch) {
                             usesAdvancedThemeModule() || "67" === state.level && "cards" === state.theme && isPatientVisualCueMode() && drawCardsBigChip(ctx, "♥ 放紅心牌堆　♠ 放黑桃牌堆", "#2C3E50", cardsBigChipY(cw, ch));
                         }(ctx, cw, ch);
@@ -12568,15 +13203,196 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                         const p = framePerfSnapshot();
                         if (!detailed) return el.style.font = '700 17px/1.45 -apple-system,"PingFang TC",sans-serif', 
                         el.textContent = function(p) {
-                            return window.YCHLanguage && window.YCHLanguage.isEnglish() ? `Speed v147  ${Math.round(p.fps)} frames/s\nTracking ${Math.round(p.trackMs)} ms  Camera ${p.video[0]}×${p.video[1]}` : `速度 v147  每秒 ${Math.round(p.fps)} 幀\n追蹤 ${Math.round(p.trackMs)} 毫秒  鏡頭 ${p.video[0]}×${p.video[1]}`;
+                            return window.YCHLanguage && window.YCHLanguage.isEnglish() ? `Speed v148  ${Math.round(p.fps)} frames/s\nTracking ${Math.round(p.trackMs)} ms  Camera ${p.video[0]}×${p.video[1]}` : `速度 v148  每秒 ${Math.round(p.fps)} 幀\n追蹤 ${Math.round(p.trackMs)} 毫秒  鏡頭 ${p.video[0]}×${p.video[1]}`;
                         }(p), void (el.style.display = state.running ? "block" : "none");
-                        el.textContent = `perf v147  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}  姿勢模型 ${poseDelegateUsed || "-"}\n偵測框 ${detectBoxRegion(gameVideo, 0) ? Math.round(100 * detectBox.x0) + "–" + Math.round(100 * detectBox.x1) + "%" : "全闊"}  主角鎖定 ${subjectLock ? subjectLock.state.lastReason : "-"}  路人拒絕 ${subjectLock ? subjectLock.state.rejected : 0}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}\n左右手檢查 ${"off" === p.hand.check ? "關" : "開"}  鎖定手形 ${p.hand.lockSize || "-"}  大小拒絕 ${p.hand.sizeRejected}  遠處拒絕 ${p.hand.farRejected}` + (p.tool ? `\n衣夾 近指 ${p.tool.near} 放手≥${p.tool.nearExit} 張開≥${p.tool.nearOpen}  遠指 ${p.tool.far} 放手≥${p.tool.farExit} 張開≥${p.tool.farOpen}  門檻 ${p.tool.source}\n衣夾 合併 ${p.tool.combo} 拎起≤${p.tool.enter} 放手閘≥${p.tool.gate}\n衣夾 相對 基線 近${p.tool.relBaseNear} 遠${p.tool.relBaseFar} 合併${p.tool.relBaseCombo} 相對放手 ${p.tool.relOpen}` : ""), 
+                        el.textContent = `perf v148  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}  姿勢模型 ${poseDelegateUsed || "-"}\n偵測框 ${detectBoxRegion(gameVideo, 0) ? Math.round(100 * detectBox.x0) + "–" + Math.round(100 * detectBox.x1) + "%" : "全闊"}  主角鎖定 ${subjectLock ? subjectLock.state.lastReason : "-"}  路人拒絕 ${subjectLock ? subjectLock.state.rejected : 0}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}\n左右手檢查 ${"off" === p.hand.check ? "關" : "開"}  鎖定手形 ${p.hand.lockSize || "-"}  大小拒絕 ${p.hand.sizeRejected}  遠處拒絕 ${p.hand.farRejected}` + (p.tool ? `\n衣夾 近指 ${p.tool.near} 放手≥${p.tool.nearExit} 張開≥${p.tool.nearOpen}  遠指 ${p.tool.far} 放手≥${p.tool.farExit} 張開≥${p.tool.farOpen}  門檻 ${p.tool.source}\n衣夾 合併 ${p.tool.combo} 拎起≤${p.tool.enter} 放手閘≥${p.tool.gate}\n衣夾 相對 基線 近${p.tool.relBaseNear} 遠${p.tool.relBaseFar} 合併${p.tool.relBaseCombo} 相對放手 ${p.tool.relOpen}` : ""), 
                         el.style.display = state.running ? "block" : "none";
                     }(perfT2);
                 } catch (e) {
                     if (state.qaMode) throw e;
                     console.error("game frame failed", e);
                 }
+            }
+            if (!state.qaMode || "off" !== trackQa.mode) try {
+                !function() {
+                    const now = nowMs(), input = "manual" === trackQa.mode && trackQa.input ? trackQa.input : function(now) {
+                        const suppressed = function(now) {
+                            if (!state.running || state.paused || recoveryPauseActive) return !0;
+                            if (now - trackGameStartedAt < TRACK_GRACE_MS) return !0;
+                            try {
+                                if (rewardIsOpen()) return !0;
+                            } catch (_e) {}
+                            return function() {
+                                try {
+                                    if ("object" == typeof cook && cook.active && cook.rest && cook.rest.phase) return !0;
+                                    if (laundryStory.active) {
+                                        const st = laundryCurrentStep();
+                                        if (st && "scene" === st.kind) return !0;
+                                    }
+                                    if (shopStory.active) {
+                                        const st = shopCurrentStep();
+                                        if (st && "scene" === st.kind) return !0;
+                                    }
+                                } catch (_e) {}
+                                return !1;
+                            }();
+                        }(now);
+                        let c = {
+                            cond: "",
+                            ok: !0
+                        };
+                        return suppressed || (!state.qaMode && publicCameraStall.lastFreshAt && (publicCameraStall.busy || performance.now() - publicCameraStall.lastFreshAt >= PUBLIC_CAMERA_STALL_PLAY_MS) ? c = {
+                            cond: "T7",
+                            ok: !0
+                        } : isShoulderFlexionLevel() ? c = function(lm, opts) {
+                            const o = opts || {};
+                            if (!Array.isArray(lm) || !function(lm) {
+                                if (!Array.isArray(lm)) return null;
+                                const left = "left" === activeAffectedSide(), arm = {
+                                    shoulder: lm[left ? 11 : 12],
+                                    elbow: lm[left ? 13 : 14],
+                                    wrist: lm[left ? 15 : 16],
+                                    otherShoulder: lm[left ? 12 : 11]
+                                };
+                                return [ arm.shoulder, arm.elbow, arm.wrist ].every(level4PosePointUsable) ? arm : null;
+                            }(lm)) return {
+                                cond: "T2",
+                                ok: !1
+                            };
+                            const aspect = o.aspect || 1, left = "left" === activeAffectedSide(), a = lm[11], b = lm[12];
+                            if (level4PosePointUsable(a) && level4PosePointUsable(b)) {
+                                const width = Math.hypot((a.x - b.x) * aspect, a.y - b.y);
+                                if (Number.isFinite(trackRef.shoulderRef)) {
+                                    if (trackRef.shoulderRef > 0) {
+                                        const ratio = width / trackRef.shoulderRef;
+                                        if (ratio > TRACK_SHOULDER_NEAR_RATIO) return {
+                                            cond: "T3",
+                                            ok: !0
+                                        };
+                                        if (ratio < TRACK_SHOULDER_FAR_RATIO) return {
+                                            cond: "T4",
+                                            ok: !0
+                                        };
+                                    }
+                                } else trackRef.shoulder.push(width), trackRef.shoulder.length >= TRACK_REF_SAMPLES && (trackRef.shoulderRef = level4Median(trackRef.shoulder));
+                            }
+                            const target = Number(o.targetDeg);
+                            if (!o.bothHands && Number.isFinite(target) && target > 0) {
+                                const mine = trackArmRaiseDeg(lm[left ? 11 : 12], lm[left ? 13 : 14], aspect), other = trackArmRaiseDeg(lm[left ? 12 : 11], lm[left ? 14 : 13], aspect);
+                                if (Number.isFinite(mine) && Number.isFinite(other) && other >= target && mine < target / 2) return {
+                                    cond: "T5",
+                                    ok: !0
+                                };
+                            }
+                            return {
+                                cond: "",
+                                ok: !0
+                            };
+                        }(level4SelectedOverlayPose, {
+                            aspect: level4VideoAspect(gameVideo),
+                            targetDeg: shoulderFlexionState && shoulderFlexionState.selectedTargetDeg,
+                            bothHands: "assisted-stick" === state.shoulderExerciseMode
+                        }) : "5" !== state.level && "67" !== state.level || (c = function(now) {
+                            const s = trackHandSnap;
+                            if (!s.at || now - s.at > TRACK_SNAP_STALE_MS) return {
+                                cond: "",
+                                ok: !0
+                            };
+                            if (!s.hands) return {
+                                cond: "T1",
+                                ok: !1
+                            };
+                            if (s.opposite) return {
+                                cond: "T5",
+                                ok: s.present
+                            };
+                            if (s.present && Number.isFinite(s.span)) if (Number.isFinite(trackRef.handRef)) {
+                                const ratio = s.span / trackRef.handRef;
+                                if (ratio >= TRACK_HAND_NEAR_RATIO) return {
+                                    cond: "T3",
+                                    ok: !0
+                                };
+                                if (ratio <= TRACK_HAND_FAR_RATIO) return {
+                                    cond: "T4",
+                                    ok: !0
+                                };
+                            } else s.at !== trackRef.handAt && (trackRef.handAt = s.at, trackRef.hand.push(s.span), 
+                            trackRef.hand.length >= TRACK_REF_SAMPLES && (trackRef.handRef = level4Median(trackRef.hand)));
+                            return s.sizeDir ? {
+                                cond: s.sizeDir > 0 ? "T3" : "T4",
+                                ok: !1
+                            } : {
+                                cond: s.present ? "" : "T6",
+                                ok: s.present
+                            };
+                        }(now))), {
+                            cond: c.cond,
+                            ok: c.ok,
+                            suppressed: suppressed,
+                            canSpeak: speechCanSay("track")
+                        };
+                    }(now), out = function(st, input, now) {
+                        const out = {
+                            chip: "",
+                            say: ""
+                        }, inp = input || {};
+                        if (inp.suppressed) return st.cond = "", st.condSince = 0, st.active = "", st.episodeAt = 0, 
+                        st.spoken = 0, st.clearSince = 0, st.drops.length = 0, st.wasOk = !0, out;
+                        const ok = !1 !== inp.ok, canSpeak = !1 !== inp.canSpeak;
+                        for (st.wasOk && !ok && st.drops.push(now), st.wasOk = ok; st.drops.length && now - st.drops[0] > TRACK_DROP_WINDOW_MS; ) st.drops.shift();
+                        const cond = TRACK_PROMPTS[inp.cond] ? inp.cond : "";
+                        cond !== st.cond && (st.cond = cond, st.condSince = now);
+                        let active = "";
+                        if ("T7" === cond ? active = "T7" : cond && now - st.condSince >= TRACK_HOLD_MS ? active = cond : st.drops.length >= TRACK_DROP_COUNT && (active = "T6"), 
+                        active) st.episodeAt || (st.episodeAt = Math.max(1, active === cond && "T7" !== active ? st.condSince : now), 
+                        st.spoken = 0), st.active = active, st.clearSince = 0; else if (st.episodeAt) if (!cond && ok) {
+                            if (st.clearSince || (st.clearSince = now), now - st.clearSince >= TRACK_CLEAR_MS) {
+                                const spoke = st.spoken > 0;
+                                st.episodeAt = 0, st.active = "", st.clearSince = 0, st.spoken = 0;
+                                const last = st.lastSaid.T9;
+                                return spoke && canSpeak && (null == last || now - last >= TRACK_COOLDOWN_MS) && (st.lastSaid.T9 = now, 
+                                out.say = "T9"), out;
+                            }
+                        } else st.clearSince = 0;
+                        if (!st.episodeAt) return out;
+                        const target = "T7" !== st.active && now - st.episodeAt >= TRACK_ESCALATE_MS ? "T8" : st.active;
+                        out.chip = target;
+                        const lastSaid = st.lastSaid[target];
+                        return active && canSpeak && st.spoken < TRACK_MAX_SPOKEN && (null == lastSaid || now - lastSaid >= TRACK_COOLDOWN_MS) && (st.lastSaid[target] = now, 
+                        st.spoken++, out.say = target), out;
+                    }(trackPromptState, input, now);
+                    if (trackPromptShow(out.chip), out.say) {
+                        const t = trackPromptText(out.say, activeAffectedSide());
+                        trackPromptLog.push({
+                            code: out.say,
+                            at: Math.round(now),
+                            text: t.say
+                        }), trackPromptLog.length > 30 && trackPromptLog.shift();
+                        try {
+                            speakCantonese(dealText(t.say, t.en), {
+                                priority: "track"
+                            });
+                        } catch (_e) {}
+                    }
+                    !function(now, suppressed) {
+                        if (!stepRepeat.text) return !1;
+                        const again = function(st, input, now) {
+                            const inp = input || {};
+                            return !(!st.text || (inp.suppressed || inp.moved || inp.speaking ? (st.at = now, 
+                            1) : st.count >= STEP_REPEAT_MAX || now - st.at < STEP_REPEAT_IDLE_MS || (st.count++, 
+                            st.at = now, 0)));
+                        }(stepRepeat, {
+                            suppressed: suppressed,
+                            moved: stepRepeatMoved(),
+                            speaking: speechBusyRank() > 0
+                        }, now);
+                        if (again) try {
+                            speakCantonese(stepRepeat.text, stepRepeat.opts);
+                        } catch (_e) {}
+                    }(now, !!input.suppressed || !!trackPromptState.episodeAt);
+                }();
+            } catch (e) {
+                if (state.qaMode) throw e;
             }
             gameRAF = requestAnimationFrame(gameLoop);
         } else {
@@ -12913,6 +13729,12 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     function level4PosePointUsable(point) {
         return !!point && Number.isFinite(point.x) && Number.isFinite(point.y) && (null == point.visibility || point.visibility >= .05);
     }
+    function level4Median(values) {
+        const sorted = values.filter(Number.isFinite).slice().sort((a, b) => a - b);
+        if (!sorted.length) return null;
+        const mid = Math.floor(sorted.length / 2);
+        return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+    }
     function level4VideoAspect(videoEl) {
         const aspect = Number(videoEl && videoEl.videoWidth) / Number(videoEl && videoEl.videoHeight);
         return Number.isFinite(aspect) && aspect >= .25 && aspect <= 4 ? aspect : 1;
@@ -12981,7 +13803,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     }
     function publicPatientVoiceSay(phase, itemId, silent = !1) {
         const phrase = function(phase) {
-            return "contact" === phase ? "5" === state.level ? "揸拳頭" : "夾住" : "reopen" === phase ? level6AutoPlaceEnabled() ? "張開手" : "" : "raise" === phase ? "舉高手" : "target" === phase ? "5" === state.level ? "打開隻手" : isLevel6Chopsticks() ? "打開筷子" : isLevel6() && "peg" === state.level6Task ? laundryAutoHangEnabled() || isLaundryPegStoryGame() ? "停住" : "放手" : level6AutoPlaceEnabled() ? "停住" : "打開隻手" : "";
+            return "contact" === phase ? "5" === state.level ? "揸拳頭" : isLevel6Chopsticks() ? PLAIN_VERB_CHOPSTICK_HOLD : PLAIN_VERB_PINCH_HOLD : "reopen" === phase ? level6AutoPlaceEnabled() ? "打開隻手" : "" : "raise" === phase ? "舉高隻手" : "target" === phase ? "5" === state.level ? "打開隻手" : isLevel6Chopsticks() ? "鬆開筷子" : isLevel6() && "peg" === state.level6Task ? laundryAutoHangEnabled() || isLaundryPegStoryGame() ? "等一等" : "放手" : level6AutoPlaceEnabled() ? "等一等" : "打開隻手" : "";
         }(phase);
         if (!phrase) return "";
         const now = nowMs(), key = publicPatientVoiceGuide.cycle + ":" + phase + ":" + String(itemId || "");
@@ -13035,7 +13857,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         const statusBar = document.getElementById("statusBar");
         if (!statusBar) return;
         "等待偵測手部" === main && (main = "鏡頭對準", detail = "");
-        const gestureCue = /張開|放鬆|鬆開|放下|放低|已放開|對準|等待|入鏡/.test(main) ? "open" : "close", toolHint = function() {
+        const gestureCue = /張開|打開|放鬆|鬆開|放下|放低|已放開|對準|等待|入鏡/.test(main) ? "open" : "close", toolHint = function() {
             if (!isLevel6RealToolTask()) return null;
             const live = lastToolPinchLive;
             if (!live || nowMs() - live.at > 900) return null;
@@ -13058,10 +13880,10 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         }
     }
     function graspPrompt(key) {
-        if (laundryAutoHangEnabled() && isLevel6RealToolTask()) return "prep" === key ? "鬆開衣夾" : "hold" === key ? "揸實衣夾拿起" : "carry" === key ? "舉高去衣架" : "對準衣架，自動掛上";
+        if (laundryAutoHangEnabled() && isLevel6RealToolTask()) return "prep" === key ? "鬆開衣夾" : "hold" === key ? "捏住衣夾攞起" : "carry" === key ? "舉高去衣架" : "對準衣架，自動掛上";
         if (isLevel6RealToolTask()) {
             const w = level6ToolWords();
-            return "prep" === key ? w.open + w.noun : "hold" === key ? w.close + w.noun + "拿起" : "carry" === key ? "保持夾住" : w.open + w.noun + "放下";
+            return "prep" === key ? w.open + w.noun : "hold" === key ? "peg" === state.level6Task ? "捏住衣夾攞起" : w.close + w.noun + "拿起" : "carry" === key ? "保持夾住" : w.open + w.noun + "放下";
         }
         return isLevel6() || isLevel67BareMode() ? "prep" === key ? "張開三指" : "hold" === key ? "三指輕捏" : "carry" === key ? "保持輕捏" : "張開三指放下" : isPegMode() ? "prep" === key ? "放鬆張開手指" : "hold" === key ? "輕輕合手指" : "carry" === key ? "保持手指輕合" : "放鬆張開手指放下" : isChopsticksMode() ? "prep" === key ? "食指及中指稍伸直" : "hold" === key ? "食指及中指稍屈曲" : "carry" === key ? "保持兩指稍屈曲" : "食指及中指稍伸直放下" : "prep" === key ? "張開手" : "hold" === key ? "輕輕合手拿起" : "carry" === key ? "保持輕握" : "張開手放下";
     }
@@ -13137,7 +13959,8 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                         onPlate.label, adaptiveNoteTrial("grasp_release", "success"), showLevelUpBanner(), 
                         dimsumReward()) : fridgeDrop || laundryOrderDrop && laundryRackRejectedWithoutPenalty() ? (triggerFeedback(!1), 
                         heldItem.label) : (score = Math.max(0, score - 3), wrongStreak++, totalWrong++, 
-                        triggerFeedback(!1), heldItem.label, onPlate.label, adaptiveNoteTrial("grasp_release", "failure", {
+                        lastWrongItemType = heldItem.targetType || "", triggerFeedback(!1), heldItem.label, 
+                        onPlate.label, adaptiveNoteTrial("grasp_release", "failure", {
                             reason: "wrong_target"
                         }), wrongStreak >= 5 && triggerRecoveryPause()), updateHUD(), heldItem.removed = !0, 
                         heldItem.held = !1, heldItem = null, basicPostReleaseOpenStart = level5PostReleaseOpenMs() ? now : 0, 
@@ -13427,6 +14250,9 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     function endGame(endReason) {
         const reason = endReason || "time_up";
         try {
+            trackPromptReset(!1), stepRepeatClear();
+        } catch (_e) {}
+        try {
             !function() {
                 const p = framePerfSnapshot();
                 if (state.qaMode) return {
@@ -13528,7 +14354,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             const cardLine = isPhotoCardTheme() ? function() {
                 if (!photoCards.card && !photoCards.collected.length) return "";
                 const n = photoCards.collected.length;
-                return n > 0 ? dealText("香港遊：今次去咗 " + n + " 個地方，集到 " + n + " 張閃咭。", "Hong Kong tour: " + n + " places visited and " + n + " cards collected today.") : dealText("香港遊：差少少就影到第一張閃咭，下次繼續。", "Hong Kong tour: almost got the first card. Continue next time.");
+                return n > 0 ? dealText("香港遊：今次去咗 " + n + " 個地方，集到 " + n + " 張風景卡。", "Hong Kong tour: " + n + " places visited and " + n + " scenery cards collected today.") : dealText("香港遊：差少少就影到第一張風景卡，下次繼續。", "Hong Kong tour: almost got the first scenery card. Continue next time.");
             }() : "";
             cardLine && (dealSummary.hidden = !1, dealSummary.textContent = cardLine);
             const yumLine = isYumChaTheme() ? function() {
@@ -13777,7 +14603,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         const d = buildAdvDom();
         d.note.style.display = text ? "block" : "none", text && (d.note.textContent = text);
     }
-    const ENCOURAGE_PLAIN = [ "做得好！", "好準呀！", "好穩陣！", "好叻呀！", "好嘢！" ];
+    const ENCOURAGE_PLAIN = [ "做得好！", "手勢好準！", "好穩陣！", "夠晒力！", "師傅級喎！", "好嘢！" ];
     let encourageIdx = 0;
     function nextEncourage() {
         const t = ENCOURAGE_PLAIN[encourageIdx % ENCOURAGE_PLAIN.length];
@@ -13834,8 +14660,9 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             t.classList.remove("show");
         }, 2200)), null != o.x && (fxBurst(o.x, o.y, {
             count: o.big ? 34 : 20
-        }), fxRing(o.x, o.y)), o.silent || playCorrectSound(), !1 !== o.tts && speakCantonese(o.tts || nextEncourage()), 
-        lastRewardLog.push({
+        }), fxRing(o.x, o.y)), o.silent || playCorrectSound(), !1 !== o.tts && speakCantonese(o.tts || nextEncourage(), {
+            priority: "praise"
+        }), lastRewardLog.push({
             achievement: o.achievement || "",
             detail: o.detail || "",
             progress: o.progressLabel || ""
@@ -13869,6 +14696,9 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             detail: o.sub || "",
             progress: o.progressLabel || ""
         });
+    }
+    function rewardIsOpen() {
+        return advDom && advDom.reward.classList.contains("show");
     }
     const SEL_TOL = {
         grasp: 52,
@@ -13910,13 +14740,13 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     }
     let heldPromptKey = "";
     function plainHeldWhere() {
-        return "cards" === advCurrent ? "擺去收牌區" : "mahjong" === advCurrent ? "擺去放牌區" : "flowers" === advCurrent ? isLevel6() ? "擺去花盤" : "擺入花瓶" : "laundry" === advCurrent ? "擺入同色嘅籃" : "擺過去";
+        return "cards" === advCurrent || "mahjong" === advCurrent ? "擺去放牌區" : "flowers" === advCurrent ? isLevel6() ? "擺去花瓶" : "擺入花瓶" : "laundry" === advCurrent ? "擺入同色嘅籃" : "擺過去";
     }
     function advDrawHeldReleasePrompt(ctx, held) {
         if (!isGraspStyleMode() || !held) return;
         const labelAt = level6HeldDrawPoint();
         if (!labelAt) return;
-        const text = isLevel6RealToolTask() ? "已夾住 · " + level6ToolWords().open + level6ToolWords().noun + "放下" : level6AutoPlaceEnabled() ? "mahjong" === advCurrent || "cards" === advCurrent ? "已拿住 · 移到放牌區，停住自動放低" : "已拿住 · 移到花盤，停住自動放低" : "mahjong" === advCurrent || "cards" === advCurrent ? "已拿住 · 移到放牌區" : isLevel67BareMode() ? "已捏住 · 請張開三指放下" : isPegMode() ? "已夾住 · 請放鬆夾仔" : "已拿住 · 請張開手放下";
+        const text = isLevel6RealToolTask() ? "已夾住 · " + level6ToolWords().open + level6ToolWords().noun + "放下" : level6AutoPlaceEnabled() ? "mahjong" === advCurrent || "cards" === advCurrent ? "已拿住 · 移到放牌區，停住自動放低" : "已拿住 · 移到花瓶，停住自動放低" : "mahjong" === advCurrent || "cards" === advCurrent ? "已拿住 · 移到放牌區" : isLevel67BareMode() ? "已捏住 · 請張開三指放下" : isPegMode() ? "已夾住 · 請放鬆夾仔" : "已拿住 · 請張開手放下";
         ctx.save(), ctx.font = 'bold 18px "PingFang TC","Noto Sans TC",sans-serif';
         const w = Math.min(360, ctx.measureText(advHeldPromptShown(text)).width + 30), x = Math.max(w / 2 + 8, Math.min(gameCanvas.width - w / 2 - 8, labelAt.x)), y = Math.max(46, labelAt.y - 66);
         ctx.fillStyle = "rgba(18,86,74,0.96)", rrPath(ctx, x - w / 2, y - 21, w, 42, 12), 
@@ -13928,8 +14758,9 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         return {
             "請張開手放下": "打開隻手",
             "移到放牌區": "擺去放牌區",
-            "移到花盤": "擺去花盤",
-            "請放鬆夾仔": "放鬆衣夾"
+            "移到花瓶": "擺去花瓶",
+            "請放鬆夾仔": "擺過去，放鬆衣夾",
+            "鬆開衣夾放下": "擺過去，放鬆衣夾"
         }[short] || short;
     }
     function nearestItem(items) {
@@ -14441,14 +15272,14 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             moveMin: 36,
             repCooldown: 700
         }
-    }, COOK_DIGIFLEX_NEED = [ 3, 4, 4, 3, 5, 2, 2, 3, 4, 5, 1, 8 ], COOK_SQUEEZE_AMOUNTS = {
+    }, COOK_DIGIFLEX_NEED = [ 2, 2, 2, 2, 2, 1, 1, 2, 2, 2, 1, 3 ], COOK_SQUEEZE_AMOUNTS = {
         less: .5,
         normal: 1,
         more: 1.5
     }, COOK_SQUEEZE_LABELS = {
-        less: "少（25 下）",
-        normal: "中（44 下）",
-        more: "多（69 下）"
+        less: "少（13 下）",
+        normal: "中（22 下）",
+        more: "多（35 下）"
     };
     function cookSqueezeAmountKey() {
         return COOK_SQUEEZE_AMOUNTS[state.cookSqueezeAmount] ? state.cookSqueezeAmount : "normal";
@@ -14460,7 +15291,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         }(cook.idx) : st.need;
     }
     function cookStepGoal(st) {
-        return isLevel6DigiflexTask() ? "揸實握力器再放鬆，" + cookStepNeed(st) + " 下" : st.goal;
+        return isLevel6DigiflexTask() ? "揸一下握力器再放鬆，" + cookStepNeed(st) + " 次" : st.goal;
     }
     const DIGIFLEX_RELATIVE_RISE = .25, DIGIFLEX_MIN_RISE = .03, DIGIFLEX_MAX_RISE = .08, DIGIFLEX_DEFAULT_GAP = .16, DIGIFLEX_OFF_FRACTION = .4, DIGIFLEX_OFF_FRACTION_LATE = .2, DIGIFLEX_LATE_MS = 2e3, DIGIFLEX_BASELINE_WINDOW_MS = 2500, DIGIFLEX_RESEED_MS = 3e3, DIGIFLEX_STUCK_MS = 4e3, DIGIFLEX_MIN_SQUEEZE_MS = 80, DIGIFLEX_ANIM_MS = 520, cook = {
         rounds: 0,
@@ -14515,6 +15346,10 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             lastScore: NaN
         },
         introUntil: 0,
+        rest: {
+            phase: "",
+            until: 0
+        },
         reset() {
             this.idx = 0, this.reps = 0, this.holdStart = 0, this.done = !1, this.msg = "", 
             this.metric = "", this.ring = [], this.angAccum = 0, this.rollSign = 0, this.rollPeak = 0, 
@@ -14537,7 +15372,10 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                 animAt: 0,
                 animSign: 1,
                 lastScore: NaN
-            }, this.introUntil = 0;
+            }, this.introUntil = 0, this.rest = {
+                phase: "",
+                until: 0
+            };
         },
         step() {
             return COOK_STEPS[Math.min(this.idx, COOK_STEPS.length - 1)];
@@ -14585,6 +15423,43 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         const c = Math.max(-1, Math.min(1, (a.x * b.x + a.y * b.y) / (na * nb)));
         return 180 * Math.acos(c) / Math.PI;
     }
+    function cookDigiflexDetect(st, now, bumpRep) {
+        const d = cook.digi;
+        if (!handDetected || !Number.isFinite(lastGraspScore)) return cook.metric = TRACK_PROMPTS.T1.say, 
+        setActionPrompt(TRACK_PROMPTS.T1.chip, ""), void (d.level = 0);
+        d.hist.push(lastGraspScore), d.hist.length > 3 && d.hist.shift();
+        const sc = medianValue(d.hist);
+        d.lastScore = sc;
+        const calibrated = Number.isFinite(state.personalGraspEnter) && Number.isFinite(state.personalGraspExit), enter = calibrated ? state.personalGraspEnter : .56, exit = calibrated ? state.personalGraspExit : .5, gap = calibrated ? Math.max(.03, (enter - exit) / .25) : DIGIFLEX_DEFAULT_GAP, rise = Math.min(DIGIFLEX_MAX_RISE, Math.max(DIGIFLEX_MIN_RISE, gap * DIGIFLEX_RELATIVE_RISE));
+        if (d.rise = rise, d.squeezing) {
+            sc > d.peak && (d.peak = sc);
+            const riseNow = Math.min(2 * rise, Math.max(.6 * rise, d.peak - (null == d.baseline ? exit : d.baseline))), frac = now - d.since > DIGIFLEX_LATE_MS ? DIGIFLEX_OFF_FRACTION_LATE : DIGIFLEX_OFF_FRACTION, off = sc <= d.peak - riseNow * frac || sc <= d.baseline + .5 * rise;
+            if (d.level = clamp01((sc - d.baseline) / rise), off) {
+                d.squeezing = !1;
+                const held = now - d.since;
+                d.base = [ {
+                    t: now,
+                    v: sc
+                } ], d.baseline = sc, held >= DIGIFLEX_MIN_SQUEEZE_MS && bumpRep();
+            } else now - d.since > DIGIFLEX_STUCK_MS && (d.squeezing = !1, d.base = [ {
+                t: now,
+                v: sc
+            } ], d.baseline = sc, d.unsettledSince = 0);
+        } else {
+            for (d.base || (d.base = []), null == d.baseline || sc < d.baseline + .4 * rise ? (d.unsettledSince = 0, 
+            d.base.push({
+                t: now,
+                v: sc
+            })) : (d.unsettledSince || (d.unsettledSince = now), now - d.unsettledSince > DIGIFLEX_RESEED_MS && (d.base = [ {
+                t: now,
+                v: sc
+            } ], d.unsettledSince = 0)); d.base.length && now - d.base[0].t > DIGIFLEX_BASELINE_WINDOW_MS; ) d.base.shift();
+            d.base.length ? d.baseline = Math.min(...d.base.map(b => b.v)) : null == d.baseline && (d.baseline = sc), 
+            d.level = clamp01((sc - d.baseline) / rise), sc >= d.baseline + rise && (d.squeezing = !0, 
+            d.since = now, d.peak = sc, d.lastOnAt = now, d.unsettledSince = 0);
+        }
+        cook.metric = d.squeezing ? "揸緊 ✊ — 而家放鬆" : "放鬆 🖐 — 而家揸一下握力器", setActionPrompt(d.squeezing ? "放鬆" : "揸一下", "");
+    }
     let cookFeedbackFrame = 0;
     function cookLiveFeedback() {
         if (cookFeedbackFrame++ % 4 != 0) return;
@@ -14612,7 +15487,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                 title: "蛋炒飯完成！",
                 simpleSub: cook.rounds > 1 ? "第 " + cook.rounds + " 碟" : "",
                 sub: (cook.rounds > 1 ? "第 " + cook.rounds + " 碟 · " : "") + "12 / 12 步全部完成 · 成就：一人一鍋蛋炒飯",
-                detail: isLevel6DigiflexTask() ? "你完成咗全部 12 個步驟，每一步都係揸實握力器、再放鬆，一下一下煮出嚟。<br><small>本活動為虛擬煮食訓練；網頁不識別實體工具，亦不量度握力或捏力。</small>" : "你完成了所有 12 個步驟，包括握放、手腕畫圈、前臂旋轉估算、手肘屈伸、伸手及舀取轉移。<br><small>本活動為虛擬煮食訓練，動作回饋屬估算，並非臨床運動學量度。</small>",
+                detail: isLevel6DigiflexTask() ? "你完成咗全部 12 個步驟，每一步都係揸一下握力器、再放鬆，一次一次煮出嚟。<br><small>本活動為虛擬煮食訓練；網頁不識別實體工具，亦不量度握力或捏力。</small>" : "你完成了所有 12 個步驟，包括握放、手腕畫圈、前臂旋轉估算、手肘屈伸、伸手及舀取轉移。<br><small>本活動為虛擬煮食訓練，動作回饋屬估算，並非臨床運動學量度。</small>",
                 progressLabel: "進度：12 / 12 步",
                 progressPct: 1,
                 canvasH: 280,
@@ -14651,19 +15526,22 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         cook.announceAt = cook.outcomeUntil + 250) : (cook.outcomeUntil = 0, cook.readyAt = nowMs() + 1e3, 
         cookAnnounce());
     }
-    const COOK_REPEAT_MIN_LEFT_S = 15;
+    const COOK_REPEAT_MIN_LEFT_S = 40, COOK_REST_MS = 2e4, COOK_REST_SAY = "煮好一碟喇，放鬆隻手，休息一陣。", COOK_REST_READY_SAY = "想再煮，就揸一下。攰就休息。", COOK_REST_BANNER = "休息一陣", COOK_REST_READY_BANNER = "想再煮？揸一下";
     function cookStartNextRound() {
         if ("cooking" !== advCurrent || !state.running || !cook.done) return;
         const digi = cook.digi;
         cook.reset(), cook.digi = digi, cook.digi.squeezing = !1, cook.digi.hist = [], cook.digi.peak = 0, 
-        cook.digi.animAt = 0, cook.layout = cookLayout(), isLevel6DigiflexTask() ? (cook.introUntil = nowMs() + 2600, 
-        cook.readyAt = cook.introUntil + 400, cookRenderPanel(), speakCantonese("做得好，再煮多一碟蛋炒飯。"), 
-        cook.announceAt = cook.introUntil - 400, setActionPrompt("揸實", "")) : cookAnnounce();
+        cook.digi.animAt = 0, cook.layout = cookLayout(), isLevel6DigiflexTask() ? (cook.rest = {
+            phase: "rest",
+            until: nowMs() + COOK_REST_MS
+        }, cook.readyAt = 0, cookRenderPanel(), speakCantonese(COOK_REST_SAY), setActionPrompt(COOK_REST_BANNER, "")) : cookAnnounce();
     }
     function cookAnnounce() {
         const st = cook.step();
-        cookRenderPanel(), speakCantonese(function(st) {
-            return isLevel6DigiflexTask() ? dealText((COOK_DIGIFLEX_TITLES[st.id] || st.text) + "。揸實，放鬆，做" + cookStepNeed(st) + "下。", (COOK_DIGIFLEX_TITLES_EN[st.id] || "Next step") + ". Squeeze, then relax, " + cookStepNeed(st) + " times.") : st.tts;
+        cookRenderPanel(), stepSay(function(st) {
+            if (!isLevel6DigiflexTask()) return st.tts;
+            const n = cookStepNeed(st);
+            return dealText((COOK_DIGIFLEX_TITLES[st.id] || st.text) + "。揸一下，放鬆，做" + n + "次。", (COOK_DIGIFLEX_TITLES_EN[st.id] || "Next step") + ". Squeeze once, then relax. Do it " + n + (1 === n ? " time." : " times."));
         }(st));
     }
     function cookRenderPanel() {
@@ -15075,7 +15953,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             const j = Math.floor(mjRand() * (i + 1)), t = gs[i];
             gs[i] = gs[j], gs[j] = t;
         }
-        mj.groups = gs, mj.msg = "", mj.hint = def.hint, picker.reset(), mjPanel(), speakCantonese(plainSay("新一局。揀一組牌，砌到食糊。", (mj.hand.length, 
+        mj.groups = gs, mj.msg = "", mj.hint = def.hint, picker.reset(), mjPanel(), stepSay(plainSay("新一局。揀一組牌，擺去放牌區。", (mj.hand.length, 
         mj.hand.length)));
     }
     function mjNeed() {
@@ -15240,7 +16118,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         const cfg = cards.cfg(), bonusLeft = cfg.bonus ? Math.max(0, Math.ceil((cards.bonusEndsAt - nowMs()) / 1e3)) : 0;
         advSetPanel({
             stepNo: "Tier " + cfg.tier + (cfg.bonus ? " · 剩 " + bonusLeft + " 秒" : "") + " · 連續正確 " + cards.combo + " 次",
-            text: isPatientVisualCueMode() ? "拿起" + CARD_SUIT_NAME[cards.suit] + "牌，放到" + (isPublicLevel5VerticalFlow() ? "上方收牌區。" : (affectedSideSign() > 0 ? "右邊" : "左邊") + "收牌區。") : "收集 " + CARD_SUIT_NAME[cards.suit] + " " + CARD_SUIT_SYM[cards.suit] + "：" + cards.got + " / " + cards.need,
+            text: isPatientVisualCueMode() ? "拿起" + CARD_SUIT_NAME[cards.suit] + "牌，放到" + (isPublicLevel5VerticalFlow() ? "上方放牌區。" : (affectedSideSign() > 0 ? "右邊" : "左邊") + "放牌區。") : "收集 " + CARD_SUIT_NAME[cards.suit] + " " + CARD_SUIT_SYM[cards.suit] + "：" + cards.got + " / " + cards.need,
             goal: cards.msg || (isLevel4Tabletop() ? "在牌上停住，沿中線向前滑，再在放牌區停住。" : "67" === state.level ? activeLevel67ToolProfile().actionCue + " · 移到患側外方放牌區" : "從中間拿牌，移到患側外方放牌區，再張開手。"),
             metric: "下一階段：完成 " + Math.max(0, 3 === cardsTierFor(cards.rounds) ? 0 : [ 2, 4, 6 ][cardsTierFor(cards.rounds)] - cards.rounds) + " 輪後升級",
             pct: cards.got / cards.need,
@@ -15869,7 +16747,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
 <script src="level4-three-games-module.js"></script>
 <script>
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
-  const LEVEL_APP_BUILD = "v147-20261127-detect-box";
+  const LEVEL_APP_BUILD = "v148-20261127-wording";
   const levelAppHadController = Boolean(navigator.serviceWorker.controller);
   let levelAppReloading = false;
 
