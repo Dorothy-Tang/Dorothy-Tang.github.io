@@ -3322,7 +3322,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                     laundryStory.spokenKey = key;
                     const pegSay = isLaundryPegStoryGame() && "rep" === cur.kind && LAUNDRY_PEG_TEXT[cur.action];
                     try {
-                        speakCantonese(pegSay ? pegSay.say : cur.text);
+                        speakCantonese(pegSay ? pegSay.say : storySay(cur.text));
                     } catch (e) {}
                 }
             }
@@ -5599,9 +5599,40 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             tail: "此活動不計分，慢慢享受創作。",
             tts: "插花。自由創作。揀花材，插入花瓶。可以旋轉、放大、縮小。完成之後按完成作品結束。"
         }
+    }, PLAIN_SHOULDER_DO = {
+        bowlinglane: "打保齡",
+        basketball: "射籃",
+        supermarket: "買餸",
+        tsuenwan: "用望遠鏡睇風景",
+        laundry: "洗衫晾衫",
+        cards: "揭牌",
+        mahjong: "摸牌"
     };
+    function plainSay(plain, formal) {
+        return plain;
+    }
+    function storySay(text) {
+        return window.YCHLanguage && window.YCHLanguage.isEnglish && window.YCHLanguage.isEnglish() ? text : String(text || "").replace(/^抬高手，/, "舉高隻手，");
+    }
+    function plainStartLines() {
+        const th = getTheme(), theme = state.theme, item = th && th.itemWord || "物件";
+        if ("3" === state.level || "4" === state.level) {
+            const act = "dimsum" === theme ? isTeahouseDimsumMode() ? "揭開蒸籠" : "攞點心" : PLAIN_SHOULDER_DO[theme] || "攞" + item;
+            return "assisted-stick" === state.shoulderExerciseMode ? [ "兩隻手揸住支棍", "一齊舉高，" + act, "放低支棍，再嚟過" ] : [ "舉高隻手，" + act, "放低隻手，再嚟過" ];
+        }
+        if ("67" === state.level) {
+            const task = state.level6Task;
+            return "cooking" === task ? [ "揸實握力器", "再放鬆", "咁就計一下" ] : "chopsticks" === task ? "complex" === state.dimsumDifficulty ? [ "聽清楚要邊款點心", "筷子尖指住佢，停一停", "夾去隻碟，停一停" ] : [ "筷子尖指住點心", "停一停，就夾起", "夾去隻碟，停一停" ] : "peg" === task ? !1 !== state.laundryPegStory ? [ "隻手去着燈嗰度", "揸實衣夾，夾起", "擺到目的地，停一停" ] : [ "揸實衣夾，夾起件衫", "舉高，擺去衫架", "停一停，就掛好" ] : "cards" === task ? [ "睇上面要邊隻花", "三隻手指，揸起張牌", "擺去收牌區，停一停" ] : "mahjong" === task ? [ "揀一組牌", "三隻手指，揸起佢", "擺去放牌區，停一停" ] : [ "三隻手指，揸起枝花", "擺去花盤", "停一停，就放低" ];
+        }
+        return "cards" === theme ? [ "睇上面要邊隻花", "揸拳頭，攞起張牌", "擺去收牌區，打開隻手" ] : "mahjong" === theme ? [ "揀一組牌", "揸拳頭，攞起佢", "擺去放牌區，打開隻手" ] : "flowers" === theme ? [ "揸拳頭，攞起枝花", "擺入花瓶", "打開隻手，放低" ] : "laundry" === theme ? [ "揸拳頭，攞起件衫", "擺入同色嘅籃", "打開隻手，放低" ] : "fridge" === theme ? [ "揸拳頭，攞起食物", isFridgeZoneMode() ? "擺入着燈嗰格" : "擺入雪櫃", "打開隻手，放低" ] : "dimsum" === theme ? [ "揸拳頭，攞起點心", "擺去同款嗰籠", "打開隻手，放低" ] : [ "揸拳頭，攞起" + item, "擺去同款嗰度", "打開隻手，放低" ];
+    }
     function updateRulesForActivity() {
         const th = getTheme(), shoulderModeCue = shoulderExerciseModeAvailable() ? shoulderExerciseProfile().cue + " · " : "", actionCue = "2" === state.level ? "患臂桌面承托 → 由中線向患側外滑 → 返回中線" : "3" === state.level ? shoulderModeCue + "0° 起點 → 治療師選定 30°／40°／50°／60° 目標 → 返回 0°" : "4" === state.level ? shoulderModeCue + "0° 起點 → 治療師選定 60° 或以上目標 → 返回 0°" : "67" === state.level ? activeLevel67ToolProfile().actionCue : "張手 → 輕握 → 放手";
+        if ("2" !== state.level) {
+            const rulesPlain = document.getElementById("rulesContent");
+            return rulesPlain && (rulesPlain.innerHTML = '<div style="font-size:22px;font-weight:800;color:#0a7d75;margin-bottom:14px;">' + themeShownTitle(th) + "</div>" + plainStartLines().map((line, i) => '<div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;"><span style="flex:0 0 auto;display:inline-block;width:46px;height:46px;line-height:46px;text-align:center;background:#1a1a1a;color:#fff;border-radius:50%;font-weight:800;font-size:24px;">' + (i + 1) + '</span><span style="font-size:clamp(28px,4.4vw,40px);font-weight:900;line-height:1.3;">' + line + "</span></div>").join("") + '<div style="padding-top:12px;margin-top:6px;border-top:1px dashed #d0c9be;color:#5a5a5a;font-size:22px;font-weight:700;">慢慢嚟，唔使急</div>'), 
+            void (window.__CURRENT_RULES_CANTONESE = plainStartLines().concat([ "慢慢嚟，唔使急" ]).join("。") + "。");
+        }
         if (usesAdvancedThemeModule()) {
             const r = "cooking" === state.theme && isLevel6DigiflexTask() ? ADV_RULES.cooking_digiflex : ADV_RULES[state.theme], rulesEl0 = document.getElementById("rulesContent");
             return rulesEl0 && (rulesEl0.innerHTML = `<div style="font-size:22px;font-weight:800;color:#0a7d75;margin-bottom:12px;">${themeShownTitle(th)}</div><div style="font-size:clamp(28px,4vw,38px);font-weight:900;line-height:1.35;margin-bottom:16px;">${actionCue}</div><div style="font-size:17px;color:#5a5a5a;line-height:1.5;">${r.lines[0]}</div>`), 
@@ -5946,9 +5977,9 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         const itemWord0 = getTheme().itemWord, okTag = "2" === state.level ? '<span style="color:#0a7d75;">由中線向患側外滑 → 返回中線</span>' : `<span style="color:#0a7d75;">中線拿取 → ${affectedDirectionLabel()}</span>`;
         0 === tier ? (msg = "2" === state.level ? '<div style="font-size:20px;font-weight:900;">桌面肩水平外展：向外，再返回</div>' : `<div style="font-size:20px;font-weight:900;">中線拿取 → ${affectedDirectionLabel()}</div>`, 
         cantoneseMsg = "2" === state.level ? "遊戲開始。患側前臂放在桌面承托，由中線向患側外滑，再返回中線。" : "4" === state.level ? `遊戲開始。前臂放在桌面。手掌或滑墊停在${itemWord0}上，沿中線慢慢向前，再在目標停住。` : "67" === state.level ? `遊戲開始。${activeLevel67ToolProfile().actionCue}。將${itemWord0}移到同款目標。` : `遊戲開始。張開手，輕輕合手拿起${itemWord0}。移到同款目標，再張開手放下。`, 
-        persistText = okTag) : 1 === tier ? (msg = '<div style="font-size:20px;font-weight:900;">動物阻路可搬開</div>', 
-        cantoneseMsg = "有動物阻路，可以拿起，搬到空白位置再放手。", persistText = okTag + "<br><span>動物阻路：搬到空白位</span>") : (msg = `<div style="font-size:20px;font-weight:900;">${tier} 隻動物 · 阻路可搬開</div>`, 
-        cantoneseMsg = `有${tier}隻動物。阻住目標時，可以搬到空白位置再放手。`, persistText = okTag + "<br><span>動物阻路：搬到空白位</span>"), 
+        "2" !== state.level && (cantoneseMsg = ""), persistText = okTag) : 1 === tier ? (msg = '<div style="font-size:20px;font-weight:900;">動物阻路可搬開</div>', 
+        cantoneseMsg = "有動物阻住，搬開佢。", persistText = okTag + "<br><span>動物阻路：搬到空白位</span>") : (msg = `<div style="font-size:20px;font-weight:900;">${tier} 隻動物 · 阻路可搬開</div>`, 
+        cantoneseMsg = `有${tier}隻動物。阻住就搬開佢。`, persistText = okTag + "<br><span>動物阻路：搬到空白位</span>"), 
         banner.innerHTML = msg, banner.style.fontSize = "17px", banner.style.padding = "10px 12px", 
         banner.style.background = "rgba(0,0,0,0.88)", persistBar && (persistBar.innerHTML = persistText), 
         setPromptSlot("intro"), tier >= 1 ? (playApplause(), state.running && speakAfterFeedback(cantoneseMsg, 1550)) : state.running && cantoneseMsg && speakCantonese(cantoneseMsg), 
@@ -5966,7 +5997,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         const thR = getTheme(), catsR = getCategories(), itemWordR = thR.itemWord, fAR = catsR[0].itemLabel, fBR = catsR[1].itemLabel, tAR = catsR[0].targetLabel, tBR = catsR[1].targetLabel;
         0 === tier ? (simpleMsg = `<div style="font-size:28px; color:#ffd166; margin-bottom:12px;">慢慢來</div><div style="font-size:26px; line-height:1.5;">有<b style="color:#8fe388;">${fAR}</b>——放去<b style="color:#8fe388;">${tAR}</b></div><div style="font-size:26px; line-height:1.5; margin-top:8px;">有<b style="color:#8fe388;">${fBR}</b>——放去<b style="color:#8fe388;">${tBR}</b></div>`, 
         simpleCanto = `慢慢來。看住手上嘅${itemWordR}，${fAR}就放去${tAR}，${fBR}就放去${tBR}。`) : (simpleMsg = `<div style="font-size:28px; color:#ffd166; margin-bottom:12px;">慢慢來</div><div style="font-size:26px; line-height:1.5;">✓ 只拿<b style="color:#8fe388;">${itemWordR}</b>（${fAR}、${fBR}）</div><div style="font-size:26px; line-height:1.5; margin-top:8px;">✗ <b style="color:#ff8b8b;">不要拿動物</b></div>`, 
-        simpleCanto = `慢慢來。只拿${itemWordR}。就係${fAR}和${fBR}。大象、貓、狗、都不要拿。`);
+        simpleCanto = `慢慢來。只拿${itemWordR}。就係${fAR}和${fBR}。大象、貓、狗、都不要拿。`), simpleCanto = `慢慢嚟。${fAR}放去${tAR}。${fBR}放去${tBR}。` + (0 === tier ? "" : "動物阻住就搬開佢。");
         let overlay = document.getElementById("recoveryOverlay");
         overlay || (overlay = document.createElement("div"), overlay.id = "recoveryOverlay", 
         overlay.style.cssText = "position:absolute; inset:0; z-index:50; background:rgba(0,0,0,0.86); color:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px; text-align:center;", 
@@ -8187,9 +8218,9 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                 if (!laundryOrder) return "";
                 if (isLaundryZoneGame()) {
                     const line = laundryOrder.lines[0];
-                    return "請將" + (line ? line.label : "衣物") + "夾到閃燈嗰個晾衫架。";
+                    return "將" + (line ? line.label : "件衫") + "夾去閃燈嗰個架。";
                 }
-                return "請將" + laundryOrder.lines.map(l => l.need + l.unit + l.label).join("、") + "放上晾衫架。";
+                return "將" + laundryOrder.lines.map(l => l.need + l.unit + l.label).join("、") + "夾上衫架。";
             }(), {
                 rate: .82
             });
@@ -8422,9 +8453,9 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         fridgeQueueIndex = 0, fridgePlacedFoods = [], fridgeCelebrateUntil = 0, fridgeCrashUntil = 0, 
         fridgeCrashMsg = "", fridgeCrashPoint = null;
         try {
-            firstRound ? isFridgeZoneMode() ? speakCantonese("買完餸返嚟喇！請將食物放入雪櫃着燈嗰格。", {
+            firstRound ? isFridgeZoneMode() ? speakCantonese("買完餸返嚟喇！放入着燈嗰格。", {
                 rate: .82
-            }) : speakCantonese("買完餸返嚟喇！請將啲食物一樣一樣放入雪櫃。", {
+            }) : speakCantonese("買完餸返嚟喇！將啲嘢放入雪櫃。", {
                 rate: .82
             }) : speakCantonese("又有新食物要放喇！", {
                 rate: .85
@@ -8779,7 +8810,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         const shoulder = shoulderFlexionState || {}, overlay = document.getElementById("targetHoldOverlay"), number = document.getElementById("targetHoldNumber");
         if ("target-hold" === shoulder.phase && shoulder.holdInterrupted) return hideTargetHoldCountdown(), 
         shoulderHoldSpokenSecond = null, void (shoulderHoldInterruptedSpoken || (shoulderHoldInterruptedSpoken = !0, 
-        speakCantonese("請再抬高手臂，保持住。", {
+        speakCantonese("舉高啲，停住。", {
             rate: .82
         })));
         if (shoulderHoldInterruptedSpoken = !1, shoulder.holdFeedbackActive) return hideTargetHoldCountdown(), 
@@ -8788,7 +8819,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             const remaining = Math.max(1, Math.min(5, Number(shoulder.holdRemainingSec)));
             return number && (number.textContent = String(remaining)), overlay && (overlay.classList.add("show"), 
             overlay.setAttribute("aria-hidden", "false")), void (remaining !== shoulderHoldSpokenSecond && (shoulderHoldSpokenSecond = remaining, 
-            speakCantonese((remaining === Math.ceil(Number(shoulder.holdDurationMs) / 1e3) ? "保持舉高手臂。" : "") + (SHOULDER_HOLD_COUNT_CANTONESE[remaining] || remaining) + "。", {
+            speakCantonese((remaining === Math.ceil(Number(shoulder.holdDurationMs) / 1e3) ? "舉住唔好放。" : "") + (SHOULDER_HOLD_COUNT_CANTONESE[remaining] || remaining) + "。", {
                 rate: .76
             })));
         }
@@ -9913,7 +9944,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                     const nextTierFan = mj.fanTotal < 3 ? 3 : mj.fanTotal < 5 ? 5 : mj.fanTotal < 10 ? 10 : null;
                                     rewardBig({
                                         tier: tier.label + " · " + res.fan + " 番",
-                                        title: "和牌！",
+                                        title: plainSay("食糊！"),
                                         sub: res.names.join("　"),
                                         simpleSub: res.names.join("　"),
                                         detail: detail,
@@ -9943,7 +9974,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                             }), c.fillStyle = "#fff", c.font = 'bold 18px "PingFang TC","Noto Sans TC",sans-serif', 
                                             c.textAlign = "center", c.textBaseline = "top";
                                         }(c, w, h, res),
-                                        tts: "和牌！" + res.names.join("，") + "，" + res.fan + "番。" + nextEncourage(),
+                                        tts: plainSay("食糊！") + res.names.join("，") + "，" + res.fan + "番。" + nextEncourage(),
                                         onContinue: () => mjStartRound()
                                     });
                                 }(res);
@@ -9980,7 +10011,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                             const n = cards.need, cwid = Math.min(90, (w - 40) / n);
                                             for (let i = 0; i < n; i++) drawCard2(cx, cards.suit, CARD_RANKS[3 * i % CARD_RANKS.length], w / 2 + (i - (n - 1) / 2) * (cwid + 8), h / 2, cwid);
                                         },
-                                        tts: "完成一輪。升級到" + CARD_TIERS[cards.tierIdx].label + "。" + nextEncourage(),
+                                        tts: plainSay("完成一輪，升級喇！", CARD_TIERS[cards.tierIdx].label) + nextEncourage(),
                                         onContinue: () => cardsNewBoard(!0)
                                     }) : (rewardSmall({
                                         achievement: "完成 " + CARD_SUIT_NAME[cards.suit] + "收集 ×" + cards.need,
@@ -10002,7 +10033,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                             } else cards.combo = 0, score = Math.max(0, score - 3), grabCount++, totalWrong++, 
                             updateHUD(), triggerFeedback(!1), adaptiveNoteTrial("cards_place", "failure", {
                                 reason: "wrong_suit"
-                            }), cards.msg = "呢張係" + CARD_SUIT_NAME[c.suit] + "，要揀" + CARD_SUIT_NAME[cards.suit] + "。", 
+                            }), c.gone = !0, fxRing(c.x, c.y), cards.msg = "呢張係" + CARD_SUIT_NAME[c.suit] + "，要揀" + CARD_SUIT_NAME[cards.suit] + "。", 
                             speakCantonese("呢張係" + CARD_SUIT_NAME[c.suit] + "。要揀" + CARD_SUIT_NAME[cards.suit] + "。");
                             cardsPanel();
                         }() : "laundry" === advCurrent ? function() {
@@ -10045,7 +10076,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                                 cx.textBaseline = "top", cx.fillText(LAUNDRY_COLORS[c].name, x, .8 * h);
                                             });
                                         },
-                                        tts: "升級。現在有" + laundry.colors.length + "種顏色。" + nextEncourage(),
+                                        tts: plainSay(dealText("升級喇，而家有" + laundry.colors.length + "隻色。", "Level up. Now " + laundry.colors.length + " colours. "), laundry.colors.length) + nextEncourage(),
                                         onContinue: () => {}
                                     })) : (rewardSmall({
                                         achievement: "正確 · " + LAUNDRY_COLORS[g.color].name + g.name,
@@ -10058,7 +10089,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                 } else g.x = g.baseX, g.y = g.baseY, laundry.wrong++, score = Math.max(0, score - 3), 
                                 grabCount++, totalWrong++, updateHUD(), triggerFeedback(!1), adaptiveNoteTrial("laundry_place", "failure", {
                                     reason: "wrong_basket"
-                                }), laundry.msg = b ? "呢個係" + LAUNDRY_COLORS[b.color].name + "籃，" + g.name + "要放" + LAUNDRY_COLORS[g.color].name + "籃。" : "未放入衫籃，衣物返回原位。", 
+                                }), laundry.msg = b ? "呢個係" + LAUNDRY_COLORS[b.color].name + "籃，" + g.name + "要放" + LAUNDRY_COLORS[g.color].name + "籃。" : plainSay("未放入籃，再試過。"), 
                                 speakCantonese(laundry.msg);
                                 laundryPanel();
                             }
@@ -10121,7 +10152,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                 } else existing && flowers.moveOrigin ? (existing.x = flowers.moveOrigin.x, existing.y = flowers.moveOrigin.y, 
                                 existing.rot = flowers.moveOrigin.rot, flowers.msg = "請把花材放回花瓶口。", totalWrong++, 
                                 isLevel6() || grabCount++, updateHUD()) : p && (flowers.msg = "未放到花瓶口，請再試一次。", totalWrong++, 
-                                isLevel6() || grabCount++, updateHUD(), speakCantonese("請將花材放到花瓶口。"));
+                                isLevel6() || grabCount++, updateHUD(), speakCantonese(plainSay("將枝花插入花瓶。")));
                                 p && (flowers.movingId = "", flowers.moveOrigin = null, flowersPanel());
                             }
                         }() : "peg_laundry" === advCurrent && function() {
@@ -10163,7 +10194,9 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                             const held = picker.heldId || carrier.heldId || "";
                             if (!held) return void (heldPromptKey = "");
                             const key = advCurrent + ":" + held;
-                            key !== heldPromptKey && (heldPromptKey = key, speakCantonese(isLevel6RealToolTask() ? "夾住咗。移到目標後" + level6ToolWords().open + level6ToolWords().noun + "放低。" : level6AutoPlaceEnabled() ? "mahjong" === advCurrent || "cards" === advCurrent ? "攞住咗。移到患側外方放牌區停住，就會自動放低。" : "攞住咗。移到花盤停住，就會自動放低。" : isLevel67BareMode() ? "捏住咗。請張開三指放低。" : isPegMode() ? "夾住咗。移到目標後放鬆打開夾仔。" : "mahjong" === advCurrent || "cards" === advCurrent ? "攞住咗。移到患側外方放牌區，再張開手。" : "攞住咗。移到目標後，請張開手放低。"));
+                            key !== heldPromptKey && (heldPromptKey = key, isLevel6RealToolTask() ? (level6ToolWords().open, 
+                            level6ToolWords().noun) : level6AutoPlaceEnabled() || isLevel67BareMode() || isPegMode(), 
+                            speakCantonese(isLevel6RealToolTask() ? isLaundryPegStoryGame() ? "夾住喇，擺過去。" : "夾住喇，擺去衫架。" : level6AutoPlaceEnabled() ? "攞住喇，" + plainHeldWhere() + "。" : "攞住喇。" + plainHeldWhere() + "，打開隻手。"));
                         }());
                     }(), function() {
                         const ctx = gameCtx;
@@ -11537,7 +11570,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                                     if (cur && "rep" === cur.kind && shopStory.spokenIdx !== shopStory.idx && "idle" === shopStory.anim.phase) {
                                         shopStory.spokenIdx = shopStory.idx;
                                         try {
-                                            speakCantonese(cur.text);
+                                            speakCantonese(storySay(cur.text));
                                         } catch (e) {}
                                     }
                                 }();
@@ -12270,7 +12303,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                         el.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:99998;pointer-events:none;background:rgba(10,20,18,.82);color:#e8fff6;font:12px/1.4 -apple-system,"PingFang TC",sans-serif;padding:6px 9px;border-radius:10px;white-space:pre;', 
                         document.body.appendChild(el), framePerf.overlayEl = el);
                         const p = framePerfSnapshot();
-                        el.textContent = `perf v145  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}\n左右手檢查 ${"off" === p.hand.check ? "關" : "開"}  鎖定手形 ${p.hand.lockSize || "-"}  大小拒絕 ${p.hand.sizeRejected}  遠處拒絕 ${p.hand.farRejected}` + (p.tool ? `\n衣夾 近指 ${p.tool.near} 放手≥${p.tool.nearExit} 張開≥${p.tool.nearOpen}  遠指 ${p.tool.far} 放手≥${p.tool.farExit} 張開≥${p.tool.farOpen}  門檻 ${p.tool.source}\n衣夾 合併 ${p.tool.combo} 拎起≤${p.tool.enter} 放手閘≥${p.tool.gate}\n衣夾 相對 基線 近${p.tool.relBaseNear} 遠${p.tool.relBaseFar} 合併${p.tool.relBaseCombo} 相對放手 ${p.tool.relOpen}` : ""), 
+                        el.textContent = `perf v146  ${p.fps} fps  幀 ${p.frameMs} ms\n追蹤 ${p.trackMs} ms  繪圖 ${p.renderMs} ms  長幀 ${p.longFrames}\n鏡頭 ${p.video[0]}×${p.video[1]}  畫布 ${p.canvas[0]}×${p.canvas[1]}  dpr ${p.dpr}  手模型 ${p.handDelegate || "-"}\n手 ${p.hand.hands} 隻  標籤 ${p.hand.label || "-"} ${p.hand.score}  接納 ${p.hand.path || "-"}  嚴格 ${p.hand.strict} 連續 ${p.hand.continuity} 單手 ${p.hand.lone} 拒絕 ${p.hand.rejected}\n左右手檢查 ${"off" === p.hand.check ? "關" : "開"}  鎖定手形 ${p.hand.lockSize || "-"}  大小拒絕 ${p.hand.sizeRejected}  遠處拒絕 ${p.hand.farRejected}` + (p.tool ? `\n衣夾 近指 ${p.tool.near} 放手≥${p.tool.nearExit} 張開≥${p.tool.nearOpen}  遠指 ${p.tool.far} 放手≥${p.tool.farExit} 張開≥${p.tool.farOpen}  門檻 ${p.tool.source}\n衣夾 合併 ${p.tool.combo} 拎起≤${p.tool.enter} 放手閘≥${p.tool.gate}\n衣夾 相對 基線 近${p.tool.relBaseNear} 遠${p.tool.relBaseFar} 合併${p.tool.relBaseCombo} 相對放手 ${p.tool.relOpen}` : ""), 
                         el.style.display = state.running ? "block" : "none";
                     }(perfT2);
                 } catch (e) {
@@ -13475,10 +13508,10 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         const d = buildAdvDom();
         d.note.style.display = text ? "block" : "none", text && (d.note.textContent = text);
     }
-    const ENCOURAGE = [ "做得好，繼續保持。", "好準，再嚟一次。", "控制得好穩。", "非常好，繼續動。", "掌握得好，再嚟一局。" ];
+    const ENCOURAGE_PLAIN = [ "做得好！", "好準呀！", "好穩陣！", "好叻呀！", "好嘢！" ];
     let encourageIdx = 0;
     function nextEncourage() {
-        const t = ENCOURAGE[encourageIdx % ENCOURAGE.length];
+        const t = ENCOURAGE_PLAIN[encourageIdx % ENCOURAGE_PLAIN.length];
         return encourageIdx++, t;
     }
     let fxParticles = [];
@@ -13501,6 +13534,14 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         }
         fxParticles.length > 400 && (fxParticles = fxParticles.slice(-400));
     }
+    function fxRing(x, y) {
+        fxRings.push({
+            x: x,
+            y: y,
+            r: 24,
+            life: 1
+        });
+    }
     let fxRings = [];
     function fxUpdateDraw(ctx) {
         for (const p of fxParticles) p.x += p.vx, p.y += p.vy, p.vy += .22, p.vx *= .99, 
@@ -13518,19 +13559,13 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     let lastRewardLog = [];
     function rewardSmall(o) {
         const t = buildAdvDom().toast;
-        var x, y;
         t.innerHTML = "<span>🎉 " + (o.simple || o.achievement || "完成") + "</span>" + (o.detail, 
         "") + (o.progressLabel, ""), clearTimeout(window._advToastTimer), o.simpleHide ? t.classList.remove("show") : (t.classList.add("show"), 
         window._advToastTimer = setTimeout(() => {
             t.classList.remove("show");
         }, 2200)), null != o.x && (fxBurst(o.x, o.y, {
             count: o.big ? 34 : 20
-        }), x = o.x, y = o.y, fxRings.push({
-            x: x,
-            y: y,
-            r: 24,
-            life: 1
-        })), o.silent || playCorrectSound(), !1 !== o.tts && speakCantonese(o.tts || nextEncourage()), 
+        }), fxRing(o.x, o.y)), o.silent || playCorrectSound(), !1 !== o.tts && speakCantonese(o.tts || nextEncourage()), 
         lastRewardLog.push({
             achievement: o.achievement || "",
             detail: o.detail || "",
@@ -13605,6 +13640,9 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         return Math.hypot(cursorX - nearestX, cursorY - nearestY) <= r;
     }
     let heldPromptKey = "";
+    function plainHeldWhere() {
+        return "cards" === advCurrent ? "擺去收牌區" : "mahjong" === advCurrent ? "擺去放牌區" : "flowers" === advCurrent ? isLevel6() ? "擺去花盤" : "擺入花瓶" : "laundry" === advCurrent ? "擺入同色嘅籃" : "擺過去";
+    }
     function advDrawHeldReleasePrompt(ctx, held) {
         if (!isGraspStyleMode() || !held) return;
         const labelAt = level6HeldDrawPoint();
@@ -13617,7 +13655,13 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         ctx.fillText(advHeldPromptShown(text), x, y), ctx.restore();
     }
     function advHeldPromptShown(text) {
-        return String(text).replace(/^已[拿夾捏]住 · /, "").replace(/，停住自動放低$/, "");
+        const short = String(text).replace(/^已[拿夾捏]住 · /, "").replace(/，停住自動放低$/, "");
+        return {
+            "請張開手放下": "打開隻手",
+            "移到放牌區": "擺去放牌區",
+            "移到花盤": "擺去花盤",
+            "請放鬆夾仔": "放鬆衣夾"
+        }[short] || short;
     }
     function nearestItem(items) {
         let best = null, bd = 1 / 0;
@@ -14273,7 +14317,10 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         const bar = document.getElementById("advStepBar");
         bar && (bar.style.width = Math.round((cook.idx + Math.min(1, cook.reps / need)) / total * 100) + "%");
     }
-    const COOK_OUTCOME_LABELS = [ "冷飯已完全抓鬆", "雞蛋已打散", "蛋液已均勻拌入白飯", "青蔥已洗淨", "青蔥已切成蔥花", "炒鍋已預熱", "油已加入炒鍋", "蛋液白飯已倒入炒鍋", "已加入鹽調味", "已加入蔥花", "爐火已關掉", "蛋炒飯已上碟" ];
+    const COOK_OUTCOME_LABELS = [ "冷飯已完全抓鬆", "雞蛋已打散", "蛋液已均勻拌入白飯", "青蔥已洗淨", "青蔥已切成蔥花", "炒鍋已預熱", "油已加入炒鍋", "蛋液白飯已倒入炒鍋", "已加入鹽調味", "已加入蔥花", "爐火已關掉", "蛋炒飯已上碟" ], COOK_PLAIN_DONE = [ "啲飯抓鬆喇", "打好蛋喇", "蛋同飯撈勻喇", "洗好蔥喇", "切好蔥花喇", "個鑊熱喇", "落咗油喇", "啲飯落鑊喇", "落咗鹽喇", "落咗蔥花喇", "熄咗火喇", "上碟喇" ];
+    function cookOutcomeLabel(idx) {
+        return (isLevel6DigiflexTask() ? COOK_PLAIN_DONE[idx] : COOK_OUTCOME_LABELS[idx]) || "";
+    }
     function cookAdvance(earned) {
         const st = cook.step(), total = COOK_STEPS.length;
         earned && (score += 10, correctCount++, grabCount++, updateHUD());
@@ -14302,7 +14349,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                         c.fillText(i + 1 + ". " + st.text.slice(0, 6), cx, cy + .32 * chh);
                     });
                 }(c, w, h),
-                tts: "恭喜，蛋炒飯完成。十二個步驟全部做完，做得非常好。",
+                tts: isLevel6DigiflexTask() ? "蛋炒飯煮好喇！好叻呀！" : "恭喜，蛋炒飯完成。十二個步驟全部做完，做得非常好。",
                 autoMs: 6500,
                 onContinue: again ? cookStartNextRound : null
             });
@@ -14322,8 +14369,9 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             y: cursorY > 0 ? cursorY : gameCanvas.height / 2,
             big: !0,
             tts: !1
-        }), speakCantonese("完成。" + COOK_OUTCOME_LABELS[finishedIdx] + "。"), cook.announceAt = cook.outcomeUntil + 250) : (cook.outcomeUntil = 0, 
-        cook.readyAt = nowMs() + 1e3, cookAnnounce());
+        }), speakCantonese(isLevel6DigiflexTask() ? cookOutcomeLabel(finishedIdx) + "。" : "完成。" + COOK_OUTCOME_LABELS[finishedIdx] + "。"), 
+        cook.announceAt = cook.outcomeUntil + 250) : (cook.outcomeUntil = 0, cook.readyAt = nowMs() + 1e3, 
+        cookAnnounce());
     }
     const COOK_REPEAT_MIN_LEFT_S = 15;
     function cookStartNextRound() {
@@ -14337,7 +14385,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
     function cookAnnounce() {
         const st = cook.step();
         cookRenderPanel(), speakCantonese(function(st) {
-            return isLevel6DigiflexTask() ? st.text + "。揸實握力器，再放鬆，做" + cookStepNeed(st) + "下。" : st.tts;
+            return isLevel6DigiflexTask() ? dealText((COOK_DIGIFLEX_TITLES[st.id] || st.text) + "。揸實，放鬆，做" + cookStepNeed(st) + "下。", (COOK_DIGIFLEX_TITLES_EN[st.id] || "Next step") + ". Squeeze, then relax, " + cookStepNeed(st) + " times.") : st.tts;
         }(st));
     }
     function cookRenderPanel() {
@@ -14417,7 +14465,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             ctx.fillStyle = "#0a7d75", ctx.font = '800 14px "PingFang TC","Noto Sans TC",sans-serif', 
             ctx.textAlign = "center", ctx.textBaseline = "top", ctx.fillText("這一步完成", cx, cy - h / 2 + 12), 
             ctx.fillStyle = "#222", ctx.font = '900 20px "PingFang TC","Noto Sans TC",sans-serif', 
-            ctx.fillText(COOK_OUTCOME_LABELS[idx] || "已完成", cx, cy - h / 2 + 34), cy += 26;
+            ctx.fillText(cookOutcomeLabel(idx) || "已完成", cx, cy - h / 2 + 34), cy += 26;
         }
         const s = size;
         0 === idx ? drawSprite(ctx, advImg("rice_bowl"), cx, cy, s, {
@@ -14465,6 +14513,19 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         onion: "落蔥花",
         off: "熄火",
         plate: "上碟"
+    }, COOK_DIGIFLEX_TITLES_EN = {
+        loosen: "Loosen the rice",
+        beat: "Beat the eggs",
+        mix: "Mix egg and rice",
+        wash: "Wash the spring onion",
+        chop: "Chop the spring onion",
+        heat: "Heat the wok",
+        oil: "Add oil",
+        pour: "Rice into the wok",
+        salt: "Add salt",
+        onion: "Add spring onion",
+        off: "Turn off the heat",
+        plate: "Serve"
     };
     function cookSeeded(i, k) {
         const x = 43758.5453 * Math.sin(12.9898 * i + 78.233 * k);
@@ -14736,7 +14797,8 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             const j = Math.floor(mjRand() * (i + 1)), t = gs[i];
             gs[i] = gs[j], gs[j] = t;
         }
-        mj.groups = gs, mj.msg = "", mj.hint = def.hint, picker.reset(), mjPanel(), speakCantonese("新一局。手上有 " + mj.hand.length + " 隻牌，仲需要 " + (14 - mj.hand.length) + " 隻。睇清楚，揀一組牌拼出和牌。");
+        mj.groups = gs, mj.msg = "", mj.hint = def.hint, picker.reset(), mjPanel(), speakCantonese(plainSay("新一局。揀一組牌，砌到食糊。", (mj.hand.length, 
+        mj.hand.length)));
     }
     function mjNeed() {
         return 14 - mj.hand.length;
@@ -14888,7 +14950,12 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
                 h: cardH
             });
         })(s, i)), cards.field = field, cfg.bonus && (cards.bonusEndsAt = nowMs() + 3e4), 
-        picker.reset(), cardsPanel(), speakCantonese("新一輪。請收集" + CARD_SUIT_NAME[cards.suit] + "，共" + cards.need + "張。");
+        picker.reset(), cardsPanel(), speakCantonese(plainSay(dealText("新一輪。攞" + cards.need + "張" + CARD_SUIT_NAME[cards.suit] + "。", "New round. Collect " + cards.need + " " + {
+            S: "spades",
+            H: "hearts",
+            D: "diamonds",
+            C: "clubs"
+        }[cards.suit] + "."), (CARD_SUIT_NAME[cards.suit], cards.need)));
     }
     function cardsPanel() {
         updatePatientGameInstruction();
@@ -15082,7 +15149,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
             y: isLevel4Tabletop() ? ch * (.42 + .15 * Math.floor(i / cols)) : level5VerticalFlow ? basketTop + Math.floor(i / cols) * basketRowGap : patientLarge ? ch * (.76 + .16 * Math.floor(i / cols)) : rows > 1 ? ch * (.74 + .15 * Math.floor(i / cols)) : .84 * ch,
             w: bw,
             h: bh
-        })), laundry.garments = [], laundryRefill(), carrier.reset(), laundryPanel(), speakCantonese("把衣物放入相同顏色的衫籃。");
+        })), laundry.garments = [], laundryRefill(), carrier.reset(), laundryPanel(), speakCantonese(plainSay("將件衫放入同色嘅籃。"));
     }
     function laundryRefill() {
         const cfg = laundryConfig(laundry.tier), cw = gameCanvas.width, ch = gameCanvas.height, narrow = cw < 700, patientLarge = isPatientVisualCueMode(), level5VerticalFlow = isPublicLevel5VerticalFlow(), single = isLaundrySingleGarmentMode() ? laundrySingleGarmentLayout(cw, ch, laundry.colors.length) : null, size = single ? single.garment.size : patientLarge ? Math.max(narrow ? 176 : 210, Math.min(narrow ? 230 : 280, .34 * Math.min(cw, ch))) : Math.max(narrow ? 96 : 110, Math.min(narrow ? 132 : 170, .22 * Math.min(cw, ch))), types = GARMENT_TYPES.slice(0, cfg.types), cols = narrow ? 2 : Math.min(4, cfg.items), rows = Math.ceil(cfg.items / cols), slot = index => {
@@ -15312,7 +15379,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
         run: () => startFlowersKeepsake()
     } : {
         run() {
-            playApplause(), speakCantonese("作品完成，非常好！" + nextEncourage()), endGame();
+            playApplause(), speakCantonese(plainSay("插好喇，好靚！", nextEncourage())), endGame();
         }
     }, LEVEL6_LAST_SEEN_CURSOR_ALPHA = {
         pinch: .62,
@@ -15524,7 +15591,7 @@ html[lang^="en"] .game-stage.patient-simple-hud .action-main{
 <script src="level4-three-games-module.js"></script>
 <script>
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
-  const LEVEL_APP_BUILD = "v145-20261127-yum-cha";
+  const LEVEL_APP_BUILD = "v146-20261127-plain-instructions";
   const levelAppHadController = Boolean(navigator.serviceWorker.controller);
   let levelAppReloading = false;
 
